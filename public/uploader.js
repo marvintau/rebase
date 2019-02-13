@@ -30,8 +30,12 @@ var updateProgressBar = function(percent){
     document.getElementById("progressBar").value = percent;
 }
 
+var updateIndicator = function(message){
+    document.getElementById('indicator').innerText = message;
+}
+
 socket.on('more', function (data) { 
-    console.log(data);
+    updateIndicator("已上传 " + data.percent.toFixed(1)+"%");
     updateProgressBar(data.percent);
     var position = data.position * 524288;
     var fileSlice = null;
@@ -44,8 +48,18 @@ socket.on('more', function (data) {
         currFileReader.readAsBinaryString(fileSlice); // trigger upload event
 });
 
-socket.on('done', function (data) {
-    delete currFileReader;
-    delete currFile;
-    updateProgressBar(100);
+socket.on('msg', function (data) {
+    switch(data.type){
+        case "UPLOAD_DONE":
+            delete currFileReader;
+            delete currFile;
+            updateProgressBar(100);
+            updateIndicator("上传完成，开始数据复原，可能花几分钟");
+            break;
+        case "RESTORE_DONE":
+            updateIndicator("数据恢复完成， 准备生成明细账");
+            break;
+        default :
+            updateIndicator("服务器发来了不知道什么类型的消息，有可能是个bug :"+data);
+    }
 });

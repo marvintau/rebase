@@ -2,8 +2,10 @@ const express = require('express');
 const path    = require('path');
 const cors    = require('cors');
 const fs      = require('fs').promises;
-const SQLConn = require('tedious').Connection;
-const SQLReq  = require('tedious').Request;
+// const SQLConn = require('tedious').Connection;
+// const SQLReq  = require('tedious').Request;
+
+const sql = require('mssql');
 const Files = {};
 
 class FileEntry {
@@ -43,6 +45,10 @@ class FileEntry {
         return fs.open(this.filePath, 'a', 0o755);
     }
 
+    close(){
+        return this.handler.close();
+    }
+
     progress(){
         return  {
             'position': this.getPosition(),
@@ -52,7 +58,7 @@ class FileEntry {
 }
 
 var config = {
-    userName: "marvin",
+    user: "marvin",
     password: "asdasdasd",
     server: "192.168.0.127",
     // If you're on Windows Azure, you will need this:
@@ -87,38 +93,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 
 var restoreBackupQuery = function(path){
-    console.log("begin to restore backup", path);
     return "" +
+    "USE master;" +
     "RESTORE DATABASE rebase FROM  DISK = N'"+path+"' WITH  FILE = 1," + 
     "MOVE N'Ufmodel'     TO N'C:\\Program Files\\Microsoft SQL Server\\MSSQL10_50.SQLEXPRESS\\MSSQL\\DATA\\rebase.mdf',"+ 
     "MOVE N'Ufmodel_LOG' TO N'C:\\Program Files\\Microsoft SQL Server\\MSSQL10_50.SQLEXPRESS\\MSSQL\\DATA\\rebase.ldf',"+ 
     "NOUNLOAD,  REPLACE,  STATS = 10";
     
-}
-
-var restoreBackup = function(filePath, doneCallback){
-
-    var query = restoreBackupQuery(filePath);
-    var sqlConn = new SQLConn(config);
-
-    sqlConn.on('connect', function(err) {  
-        
-        if(err) console.log(err);
-
-        sqlReq = new SQLReq(query, function(err, rowCount) {
-            console.log(err);
-        });
-        sqlReq.on("doneProc", function(rowCount, more, returnStatus, rows){
-            console.log(more, returnStatus);
-        })
-        sqlReq.on("done", function(rowCount, more, rows){
-            doneCallback();
-        })
-
-        sqlConn.execSql(sqlReq);
-
-    });  
-
 }
 
 io.sockets.on('connection', function (socket) {
@@ -146,20 +127,24 @@ io.sockets.on('connection', function (socket) {
         if (fileStub.isFinished()) {
 
             fileStub.write().then(function(){
-                return fileStub.handler.close();
+                return fileStub.close();
             }).then(function(){
-                socket.emit('done', { file: fileStub.name });
-                restoreBackup(fileStub.filePath, function(){});
-            // }).then(function(){
-            //     return fs.unlink(fileStub.filePath)
+                socket.emit('msg', { type:"UPLOAD_DONE", file: fileStub.name });
+                return sql.connect(config);
+            }).then(function(pool){
+                return pool.request()
+                .query(restoreBackupQuery(fileStub.filePath));
+            }).then(function(result){
+                socket.emit('msg', {type:"RESTORE_DONE"});
+                return fs.unlink(fileStub.filePath);
             }).then(function(){
                 delete fileStub;
+                return sql.close();
             }).catch(function(err){
                 console.error(err);
             });
         
         } else if (fileStub.data.length > 10485760) { //buffer >= 10MB
-            console.log("flush the buffer and require for more data");
             fileStub.write().then(function(){
                 fileStub.data = ''; //reset the buffer
                 socket.emit('more', fileStub.progress());
@@ -168,11 +153,9 @@ io.sockets.on('connection', function (socket) {
             });
 
         } else {
-            console.log("okay for more data");
             socket.emit('more', fileStub.progress());
         }
     });
 });
-
 
 
