@@ -1,12 +1,55 @@
-var express = require('express');
-var path    = require('path');
-var cors    = require('cors');
-var fs      = require('fs');
+const express = require('express');
+const path    = require('path');
+const cors    = require('cors');
+const fs      = require('fs').promises;
+const SQLConn = require('tedious').Connection;
+const SQLReq  = require('tedious').Request;
+const Files = {};
 
-var SQLConn = require('tedious').Connection;
-var SQLReq  = require('tedious').Request;
+class FileEntry {
 
-var Files = {};
+    constructor(size, path){
+        this.fileSize = size,
+        this.filePath = path,
+        this.data     = '',
+        this.currLen  = 0,
+        this.handler  = null
+    }
+
+    getPercent () {
+        return parseInt((this.currLen / this.fileSize) * 100);
+    };
+    getPosition () {
+        return this.currLen / 524288;
+    };
+
+    updateLen(data){
+        this.data    += data;
+        this.currLen += data.length;
+    }
+
+    isFinished(){
+        return this.fileSize === this.currLen;
+    }
+
+    write(){
+        // returns a promise
+        return this.handler.write(this.data, 0, "Binary");
+    }
+
+    open(){
+        // https://nodejs.org/api/fs.html#fs_fspromises_open_path_flags_mode
+        // returns a Promise that finally resolved a FileHandle object
+        return fs.open(this.filePath, 'a', 0o755);
+    }
+
+    progress(){
+        return  {
+            'position': this.getPosition(),
+            'percent':  this.getPercent()
+        }
+    }
+}
 
 var config = {
     userName: "marvin",
@@ -27,6 +70,10 @@ var config = {
 // for this subtle part, checkout 
 // https://stackoverflow.com/questions/17696801/express-js-app-listen-vs-server-listen/17697134#17697134
 // https://stackoverflow.com/questions/24172909/socket-io-connection-reverts-to-polling-never-fires-the-connection-handler
+
+// Express creates an application instance (app). By listening to port, app creates
+// a server instance (server). Socket.io needs to listen to the server instance. Or
+// the socket.io-client will continuously poll and not able to connect.
 
 var app = express();
 
@@ -78,70 +125,51 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('start', function (data) { 
 
-        console.log("received upload request:", data);
+        var fileStub;
+        Files[data.name] = fileStub = new FileEntry(data.size, path.join('D:/temp', data.name));
 
-        var name = data.name;
-        var size = data.size;
-        var filePath = path.join('D:/temp', name);
-        Files[name] = { // define storage structure
-            fileSize: size,
-            data: '',
-            currLen: 0,
-            handler: null,
-            filePath: filePath,
-        };
-        Files[name].getPercent = function () {
-            return parseInt((this.currLen / this.fileSize) * 100);
-        };
-        Files[name].getPosition = function () {
-            return this.currLen / 524288;
-        };
-        fs.open(Files[name].filePath, 'a', 0755, function (err, fd) {
-            if (err)
-                console.log('[start] file open error: ' + err.toString());
-            else {
-                console.log("file " + name + " desc created, ready to receive more.");
-                Files[name].handler = fd; // the file descriptor
-                socket.emit('more', { 'position': 0, 'percent': 0 });
-            }
-        });        
+        fileStub.open().then(function(fd){
+            console.log("[start] file " + data.name + " desc created, ready to receive more.");
+            fileStub.handler = fd;
+            socket.emit('more', { 'position': 0, 'percent': 0 });
+        }).catch(function(err){
+            console.error('[start] file open error: ' + err.toString());
+        });
     });
 
     socket.on('upload', function (data) {
-        var name    = data.name;
-        var segment = data.segment;
-    
-        Files[name].currLen += segment.length;
-        Files[name].data += segment;
 
-        if (Files[name].currLen === Files[name].fileSize) {
-            fs.write(Files[name].handler, Files[name].data, null, 'Binary', 
-              function (err, written) {
-                
-                if(err) {console.log(err);} else fs.close(Files[name].handler, function(err){
-                    if(err) {console.log(err);} else {
-                        socket.emit('done', { file: Files[name].name });
-                        restoreBackup(Files[name].filePath)
-                        delete Files[name];                            
-                    }
-                }) 
+        var fileStub = Files[data.name];
+    
+        fileStub.updateLen(data.segment);
+
+        if (fileStub.isFinished()) {
+
+            fileStub.write().then(function(){
+                return fileStub.handler.close();
+            }).then(function(){
+                socket.emit('done', { file: fileStub.name });
+                restoreBackup(fileStub.filePath, function(){});
+            // }).then(function(){
+            //     return fs.unlink(fileStub.filePath)
+            }).then(function(){
+                delete fileStub;
+            }).catch(function(err){
+                console.error(err);
             });
         
-        } else if (Files[name].data.length > 10485760) { //buffer >= 1MB
-          console.log(Files[name].handler);
-          fs.write(Files[name].handler, Files[name].data, null, 'Binary', 
-              function (err, written) {
-                Files[name].data = ''; //reset the buffer
-                socket.emit('more', {
-                    'position': Files[name].getPosition(),
-                    'percent': Files[name].getPercent()
-                });
+        } else if (fileStub.data.length > 10485760) { //buffer >= 10MB
+            console.log("flush the buffer and require for more data");
+            fileStub.write().then(function(){
+                fileStub.data = ''; //reset the buffer
+                socket.emit('more', fileStub.progress());
+            }).catch(function(err){
+                console.error(err);
             });
+
         } else {
-            socket.emit('more', {
-                'position': Files[name].getPosition(),
-                'percent': Files[name].getPercent()
-            });
+            console.log("okay for more data");
+            socket.emit('more', fileStub.progress());
         }
     });
 });

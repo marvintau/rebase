@@ -31,6 +31,7 @@ var updateProgressBar = function(percent){
 }
 
 socket.on('more', function (data) { 
+    console.log(data);
     updateProgressBar(data.percent);
     var position = data.position * 524288;
     var fileSlice = null;
