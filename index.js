@@ -59,7 +59,7 @@ class FileEntry {
 
 var config = {
     user: "marvin",
-    password: "asdasdasd",
+    password: "1q0o2w9i3e8u",
     server: "192.168.0.127",
     // If you're on Windows Azure, you will need this:
     options: {encrypt: true},
@@ -67,7 +67,7 @@ var config = {
       type: "default",
       options: {  
         userName: "marvin",
-        password: "asdasdasd",
+        password: "1q0o2w9i3e8u",
     }
   }
 };
@@ -92,14 +92,70 @@ var io = require('socket.io').listen(server);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(cors());
 
-var restoreBackupQuery = function(path){
-    return "" +
-    "USE master;" +
-    "RESTORE DATABASE rebase FROM  DISK = N'"+path+"' WITH  FILE = 1," + 
-    "MOVE N'Ufmodel'     TO N'C:\\Program Files\\Microsoft SQL Server\\MSSQL10_50.SQLEXPRESS\\MSSQL\\DATA\\rebase.mdf',"+ 
-    "MOVE N'Ufmodel_LOG' TO N'C:\\Program Files\\Microsoft SQL Server\\MSSQL10_50.SQLEXPRESS\\MSSQL\\DATA\\rebase.ldf',"+ 
-    "NOUNLOAD,  REPLACE,  STATS = 10";
-    
+
+var restore = function(pool, path){
+    const query = 
+            "declare @mdfpath nvarchar(max),"                          +
+            "        @ldfpath nvarchar(max)"                           +
+            ""                                                         +
+            "select @mdfpath = [0], @ldfpath = [1]"                    +
+            "    from (select type, physical_name "                    +
+            "            from sys.master_files"                        +
+            "            WHERE database_id = DB_ID(N'rebase'))"        +
+            "    as paths "                                            +
+            "pivot(max(physical_name) for type in ([0], [1])) as pvt;" +
+            ""                                                         +
+            "restore database rebase from disk = N'"+path+"' WITH FILE = 1," +
+            "MOVE N'Ufmodel'     TO @mdfpath,"                         +
+            "MOVE N'Ufmodel_LOG' TO @ldfpath, "                        +
+            "NOUNLOAD,  REPLACE,  STATS = 10;"                         ;                                                      ;
+
+    return pool.request().query(query);
+}
+
+var summary = function(pool){
+
+    const query = 
+    "select rowstat.Tablename, lines, Tabledefine from ("                                              +
+    "    select tab.name as Tablename, "                                                               +
+    "        sum(part.rows) as lines "                                                                 +
+    "    from [rebase].sys.tables tab "                                                                +
+    "        inner join [rebase].sys.partitions part "                                                 +
+    "            on tab.object_id = part.object_id "                                                   +
+    "    where part.index_id IN (1, 0) "                                                               +
+    "    group by tab.name "                                                                           +
+    ") rowstat inner join rebase.dbo.RPT_GRPDEF existing on rowstat.Tablename = existing.Tablename "   +
+    "where rowstat.Tablename like 'GL_acc%' ";
+
+    return pool.request().query(query);
+}
+
+var voucher = function(pool){
+
+    const query =
+    "use rebase; "                                                                           +
+    " "                                                                                      +
+    "declare @query nvarchar(max), "                                                         +
+    "        @tablename nvarchar(max); "                                                     +
+    "set @tablename = 'GL_accvouch'; "                                                       +
+    " "                                                                                      +
+    "select @query = 'select ' + SUBSTRING( "                                                +
+    "    (select ', '+cols.COLUMN_NAME + ' as ' + defs.FieldDef "                            +
+    "        from rebase.INFORMATION_SCHEMA.COLUMNS cols "                                   +
+    "            inner join (select * from RPT_ItmDEF where  "                               +
+    "                FieldName not like '%engl' and  "                                       +
+    "                FieldName not like 'cdefine%' and  "                                    +
+    "                FieldName not like '%edit' and "                                        +
+    "                FieldName not like '%Input' "                                           +
+    "            ) defs "                                                                    +
+    "            on cols.COLUMN_NAME = defs.FieldName and cols.TABLE_NAME = defs.TableName " +
+    "            where cols.TABLE_NAME= @tablename "                                         +
+    "        for xml path('')), "                                                            +
+    "3, 9999) + ' from ' + @tablename; "                                                     +
+    " "                                                                                      +
+    "exec(@query) "                                                                          ;
+
+    return pool.request().query(query);
 }
 
 io.sockets.on('connection', function (socket) {
@@ -118,11 +174,22 @@ io.sockets.on('connection', function (socket) {
         });
     });
 
+    // socket.on('disconnect', function(){
+    //     // handle the case that user incidentally refresh the page.
+    //     // Since the local file is saved on half, we have to start
+    //     // 
+    //     for (let filename in Files) if(Files[filename] !== undefined){
+    //         fs.unlink(Files[filename].filePath);
+    //     }
+    // })
+
     socket.on('upload', function (data) {
 
         var fileStub = Files[data.name];
     
         fileStub.updateLen(data.segment);
+
+
 
         if (fileStub.isFinished()) {
 
@@ -132,11 +199,27 @@ io.sockets.on('connection', function (socket) {
                 socket.emit('msg', { type:"UPLOAD_DONE", file: fileStub.name });
                 return sql.connect(config);
             }).then(function(pool){
-                return pool.request()
-                .query(restoreBackupQuery(fileStub.filePath));
-            }).then(function(result){
-                socket.emit('msg', {type:"RESTORE_DONE"});
-                return fs.unlink(fileStub.filePath);
+                return restore(pool, fileStub.filePath)
+                        .then(function(res){
+                            socket.emit('msg', {type:"RESTORE_DONE"});
+                            return summary(pool);
+                        })
+                        .then(function(res){
+                            console.log(res);
+                            socket.emit('msg', {type:"SUMMARY", summary: res.recordset});
+                            return voucher(pool);
+                        })
+                        .then(function(res){
+                            console.log("voucher length: " + res.recordset.length);
+                            console.log("table size: " + JSON.stringify(res.recordset).length / 1048576);
+                            socket.emit('msg', {type:"VOUCHER", voucher: res.recordset});
+                        }).catch(function(err){
+                            socket.emit('err', {type: err});
+                        }).finally(function(){
+                            // DURING DEVELOPMENT: delete the file anyway. 
+                            return fs.unlink(fileStub.filePath);
+                        });
+
             }).then(function(){
                 delete fileStub;
                 return sql.close();
