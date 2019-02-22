@@ -1,9 +1,18 @@
 import io from 'socket.io-client';
 import FileSaver from 'file-saver';
+import {Series, Dataframe} from 'pandas-js';
 
 var socket         = io.connect(),
     currFile       = null,
     currFileReader = null;
+
+Array.prototype.groupBy = function(key) {
+    return this.reduce(function(acc, x) {
+        (acc[x[key]] = acc[x[key]] || []).push(x);
+        return acc;
+    }, {});
+};
+      
 
 $('#choose-file').on('change', function () {
     currFile = document.getElementById('choose-file').files[0];
@@ -35,6 +44,8 @@ $('#choose-local-file').on('change', function () {
             let data = JSON.parse(evnt.target.result);
             clearAllTables();
             tabulate(currFile.name, data);
+
+            processTable(currFile.name, data);
         };
     }
 });
@@ -42,6 +53,42 @@ $('#choose-local-file').on('change', function () {
 $('#clear-all-tables').on('click', function(){
     clearAllTables();
 })
+
+function processTable(name, data){
+    if(name.includes('voucher')){
+        tabulate("balance", balance(data));
+    }
+}
+
+function balance(data){
+    let grouped = data.groupBy('科目编码'),
+        balance = [];
+
+    for (let type in grouped){
+        
+        let entry = {"科目":type, "期初余额":{"借方":0, "贷方":0}, "本期发生额":{"借方":0, "贷方":0}, "期末余额": {'借方':0, '贷方':0}};
+
+        for (let item of grouped[type]){
+            if (item["摘要"].includes("结转余额")){
+                entry["期初余额"]['借方'] = item['借方金额'];
+                entry["期初余额"]['贷方'] = item['贷方金额'];
+                entry["期末余额"]['借方'] = item['借方金额'];
+                entry["期末余额"]['贷方'] = item['贷方金额'];
+            } else {
+                entry["本期发生额"]['借方'] += item['借方金额'];
+                entry["本期发生额"]['贷方'] += item['贷方金额'];
+                entry["期末余额"]['借方']   += item['借方金额'];
+                entry["期末余额"]['贷方']   += item['贷方金额'];
+                entry["期末余额"]['借方']   -= item['贷方金额'];
+                entry["期末余额"]['贷方']   -= item['借方金额'];
+            }
+        }
+
+        balance.push(entry);
+    }
+
+    return balance;
+}
 
 function clearAllTables(){
     var myNode = document.getElementById("table-area");
@@ -62,6 +109,8 @@ function createDownloadButton(id, data){
 }
 
 function tabulate(id, data, columns) {
+
+    console.log(data);
 
     columns = columns ? columns : Object.keys(data[0]).map(elem=>({field:elem, title:elem, filterControl:"input"}));
 
@@ -104,16 +153,20 @@ var updateIndicatorErr = function(message){
     document.getElementById('indicator').innerText += "\n" + message;
 }
 
-var updateSummaryTable = function(table){
-    tabulate('summary-table',table, [
-        {field: "Tablename", title:"表格名称"},
-        {field: "lines", title: "表格行数（尺寸）"},
-        {field: "Tabledefine", title: "表格描述"}
-    ]);
-}
 
-var updateVoucherTable = function(table){
-    tabulate('general-acc-voucher',table);
+var accCodeProcess = function(codeTable){
+    let grouped = codeTable.map(elem => ({
+        type: elem["科目类型"],
+        code: elem["科目编码"],
+        name: elem["科目名称"],
+        level: elem["编码级次"]
+    })).groupBy('type');
+
+    for (let key in grouped){
+        grouped[key] = grouped[key].groupBy('level');
+    }
+
+    return grouped;
 }
 
 socket.on('more', function (data) { 
@@ -130,7 +183,6 @@ socket.on('more', function (data) {
 });
 
 socket.on('msg', function (data) {
-    console.log(data);
     switch(data.type){
         case "UPLOAD_DONE":
             currFileReader = currFile = undefined;
@@ -143,15 +195,27 @@ socket.on('msg', function (data) {
             updateIndicator("数据恢复完成， 准备生成数据摘要。");
             break;
         case "SUMMARY":
-            updateIndicator("数据摘要生成完毕， 准备生成明细账。");
-            updateSummaryTable(data.summary);
+            updateIndicator("数据摘要生成完毕， 准备获取会计科目。");
+            
+            tabulate('summary-table', data.summary, [
+                {field: "Tablename", title:"表格名称"},
+                {field: "lines", title: "表格行数（尺寸）"},
+                {field: "Tabledefine", title: "表格描述"}
+            ]);
+            
+            break;
+        case "CODE":
+            updateIndicator("会计科目获取完毕， 准备生成明细账。");
+            tabulate('general-code',data.code);
             break;
         case "VOUCHER":
+            console.log(data);
             updateIndicator("明细账已生成。");
+
             $('#choose-file').prop('disabled', false);
             $('#choose-local-file').prop('disabled', false);
+            tabulate('general-acc-voucher',data.voucher);
 
-            updateVoucherTable(data.voucher);
             break;
 
         default :
@@ -161,10 +225,10 @@ socket.on('msg', function (data) {
 
 socket.on('err', function(data){
     switch(data.type){
-        case "TIMEOUT":
+        case "ETIMEOUT":
             updateIndicatorErr("尴尬了，数据库那边没响应，您稍后再试一下。");
             break;
         default:
-            updateIndicatorErr("尴尬了，发生了一个未知的错误 : "+data.type);
+            updateIndicatorErr("尴尬了，发生了一个未知的错误 : "+ JSON.stringify(data.type));
     }
 })

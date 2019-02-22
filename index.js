@@ -158,6 +158,35 @@ var voucher = function(pool){
     return pool.request().query(query);
 }
 
+var code = function(pool){
+
+    const query =
+    "use rebase; "                                                                           +
+    " "                                                                                      +
+    "declare @query nvarchar(max), "                                                         +
+    "        @tablename nvarchar(max); "                                                     +
+    "set @tablename = 'code'; "                                                              +
+    " "                                                                                      +
+    "select @query = 'select ' + SUBSTRING( "                                                +
+    "    (select ', '+cols.COLUMN_NAME + ' as ' + defs.FieldDef "                            +
+    "        from rebase.INFORMATION_SCHEMA.COLUMNS cols "                                   +
+    "            inner join (select * from RPT_ItmDEF where  "                               +
+    "                FieldName not like '%engl' and  "                                       +
+    "                FieldName not like 'cdefine%' and  "                                    +
+    "                FieldName not like '%edit' and "                                        +
+    "                FieldName not like '%Input' "                                           +
+    "            ) defs "                                                                    +
+    "            on cols.COLUMN_NAME = defs.FieldName and cols.TABLE_NAME = defs.TableName " +
+    "            where cols.TABLE_NAME= @tablename "                                         +
+    "        for xml path('')), "                                                            +
+    "3, 9999) + ' from ' + @tablename; "                                                     +
+    " "                                                                                      +
+    "exec(@query) "                                                                          ;
+
+    return pool.request().query(query);
+
+}
+
 io.sockets.on('connection', function (socket) {
 
     socket.on('start', function (data) { 
@@ -207,9 +236,12 @@ io.sockets.on('connection', function (socket) {
                         .then(function(res){
                             console.log(res);
                             socket.emit('msg', {type:"SUMMARY", summary: res.recordset});
+                            return code(pool);
+                        }).then(function(res){
+                            console.log(res);
+                            socket.emit('msg', {type:"CODE", code: res.recordset});
                             return voucher(pool);
-                        })
-                        .then(function(res){
+                        }).then(function(res){
                             console.log("voucher length: " + res.recordset.length);
                             console.log("table size: " + JSON.stringify(res.recordset).length / 1048576);
                             socket.emit('msg', {type:"VOUCHER", voucher: res.recordset});
