@@ -28,18 +28,31 @@
         margin-bottom: 5px;
     }
 
+    .item{
+        margin: 10px;
+    }
+
+    .btn-area{
+        display: inline-block;
+    }
+
+    .bg{
+        background-color: rgb(255, 251, 247);
+    }
+
     </style>
 </head>
-<body class="bg-light">
+<body class="bg">
     <div class="container" style="margin-top:10px;">
 
         <h1 class="col-md-6" style="letter-spacing: -0.07em;">Auditool</h1>
-        <div class="label col-md-6" style=" margin-bottom:10px;" id="indicator">就绪</div>
+        <div class="label col-md-12" style=" margin-bottom:10px;" id="indicator">就绪</div>
         <div class="row container">
             <div class="desc col-md-4">在这里上传由ERP导出的SQL Server备份文件(.BAK文件)。上传文件会在后端服务器进行处理。</div>
             <div class="v-divider"></div>
-            <div class="desc col-md-4">或者您也可以在这里上传一个之前已经导出到本地的.JSON文件。上传文件会在浏览器页面内进行处理。</div>
+            <div class="desc col-md-4">或者您也可以在这里上传一个之前已经导出到本地的.JSON文件。上传文件会在浏览器页面内进行处理。您上传的第一个文件应当是会计科目表</div>
             <div class="v-divider"></div>
+            <button class="btn btn-primary" id="single-voucher">单独请求voucher（测试）</button>
         </div>
         <div class="row container">
             <!-- SQL server .bak file uploading -->
@@ -76,4 +89,4 @@
 
 
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
-<script src="bundle.js"></script>
+<script src="dist.js"></script>
