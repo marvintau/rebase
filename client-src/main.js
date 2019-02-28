@@ -2,9 +2,30 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 
 var socket         = io.connect(),
-    currFile       = null,
-    currFileReader = null,
     currTables     = {};
+
+class FileStub {
+
+    constructor(onload){
+        this.file       = null;
+        this.fileReader = new FileReader();
+        this.fileReader.onload = onload;
+
+    }
+
+    uploadFromId(id){
+        this.file = document.getElementById(id).files[0];
+
+        if (this.file) {
+            socket.emit('start', {
+                name: currFile.name,
+                size: currFile.size
+            });
+        }
+    }
+}
+
+const backupFile = new FileStub(socket);
 
 Array.prototype.groupBy = function(key, func) {
 
@@ -91,6 +112,8 @@ $('#choose-file').on('change', function () {
             size: currFile.size
         });
     }
+
+    // 
 });
 
 $('#choose-local-file').on('change', function () {
@@ -309,7 +332,7 @@ function tabulate(id, data) {
 }
 
 var sliceEnd = function(pos, size){
-    return pos + Math.min(524288, size - pos)
+    return pos + Math.min(10485760, size - pos)
 }
 
 var updateIndicator = function(message){
@@ -322,7 +345,7 @@ var updateIndicatorErr = function(message){
 
 socket.on('more', function (data) { 
     updateIndicator("已上传 " + data.percent.toFixed(1)+"% 注意请不要这个时候刷新页面");
-    var position = data.position * 524288;
+    var position = data.position * 10485760;
     var fileSlice = null;
 
     for (let method of ["slice", "webkitSlice", "mozSlice"]) if (currFile[method]){
