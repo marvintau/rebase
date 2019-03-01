@@ -52,14 +52,14 @@
             <div class="v-divider"></div>
             <div class="desc col-md-4">或者您也可以在这里上传一个之前已经导出到本地的.JSON文件。上传文件会在浏览器页面内进行处理。您上传的第一个文件应当是会计科目表</div>
             <div class="v-divider"></div>
-            <button class="btn btn-primary" id="single-voucher">单独请求voucher（测试）</button>
+            <button class="btn btn-primary" id="single-table-request">远程单独请求数据表</button>
         </div>
         <div class="row container">
             <!-- SQL server .bak file uploading -->
             <div id="backup-upload-area" class="input-group col-md-4">
                 <div class="custom-file">
-                    <input type="file" class="custom-file-input" id="choose-file" aria-describedby="inputGroupFileAddon01">
-                    <label class="custom-file-label" for="choose-file">选择.BAK文件</label>
+                    <input type="file" class="custom-file-input" id="choose-backup-file" aria-describedby="inputGroupFileAddon01">
+                    <label class="custom-file-label" for="choose-backup-file">选择.BAK文件</label>
                 </div>
             </div>
             <div class="v-divider"></div>
@@ -87,6 +87,4 @@
 <script src="https://unpkg.com/bootstrap-table@1.13.4/dist/bootstrap-table.min.js"></script>
 <script src="https://unpkg.com/bootstrap-table@1.13.4/dist/extensions/filter-control/bootstrap-table-filter-control.min.js"></script>
 
-
-<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <script src="dist.js"></script>

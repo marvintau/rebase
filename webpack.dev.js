@@ -53,7 +53,7 @@ const clientConfigure = {
 	},
 	output: {
 		path: path.resolve(__dirname),
-		filename: '[name]/dist.js'
+		filename: 'public/dist.js'
 	},
 	module: {
 		rules: [

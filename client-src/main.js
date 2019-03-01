@@ -1,119 +1,35 @@
 import io from 'socket.io-client';
 import FileSaver from 'file-saver';
+import FileSend from './file-send';
+
 
 var socket         = io.connect(),
     currTables     = {};
 
-class FileStub {
 
-    constructor(onload){
-        this.file       = null;
-        this.fileReader = new FileReader();
-        this.fileReader.onload = onload;
+let backupFile = new FileSend();
 
-    }
+backupFile.setStartFunc((instance) =>{
+    socket.emit('start', {
+        name: instance.file.name,
+        size: instance.file.size
+    });
+});
 
-    uploadFromId(id){
-        this.file = document.getElementById(id).files[0];
+backupFile.setOnload((event, instance) => {
+    socket.emit('upload', {
+        name: instance.file.name,
+        segment: event.target.result
+    });
+});
 
-        if (this.file) {
-            socket.emit('start', {
-                name: currFile.name,
-                size: currFile.size
-            });
-        }
-    }
-}
-
-const backupFile = new FileStub(socket);
-
-Array.prototype.groupBy = function(key, func) {
-
-    if (func === undefined) func = (e) => e;
-
-    return this.reduce(function(acc, x) {
-
-        (acc[func(x[key])] = acc[func(x[key])] || []).push(x);
-        return acc;
-    }, {});
-};
-
-Object.flatten = function(obj, func, prefix){
-
-    if(prefix === undefined) prefix = "";
-
-    if(func === undefined) func = (p, k) => (p ? p+"-" : "") + k;
-
-    if((typeof obj !== "object") || (obj.length !== undefined))
-        return {[prefix]: obj};
-
-    let result = {};
-    for (let key in obj)
-        if (typeof obj[key] === "object" && obj[key] !== null)
-            Object.assign(result, Object.flatten(obj[key], func, func(prefix, key)));
-        else
-            result[key] = obj[key];
-
-    return result;
-}
-
-Object.nestedKeys = function(obj, delim, func) {
-
-    if (func === undefined) func = e => e;
-
-    let keys    = Object.keys(obj),
-        layers  = [],
-        allDone = array => array.every(e => e.lastIndexOf(delim) < 0);
-        
-    let splitAtLastDelim = function(str) {
-        let pos = str.indexOf("-");
-        if (pos == -1)
-            return {most: str, rest: str};
-        else 
-            return {most: str.slice(0, pos), rest:str.slice(pos+1)};
-    }
-
-    for(;!allDone(keys);){
-        let splits = keys.map(splitAtLastDelim);
-        layers.push(splits.map(e=>e.most));
-        keys = splits.map(e => e.rest);
-    }
-    layers.push(keys);
-
-    return layers;
-}
-
-Array.prototype.isAllSame = function(func){
-    let first = func(this[0]);
-    for (let i = 1; i < this.length; i++){
-        if (func(this[i]) !== first) return false;
-    }
-    return true;
-}
-
-$('#single-voucher').on("click", function(e){
-    socket.emit('voucher', "yayasdasdasdasdasd");
+$('#single-table-request').on("click", function(e){
+    socket.emit('single-table-request', "yayasdasdasdasdasd");
 })
 
-$('#choose-file').on('change', function () {
-    currFile = document.getElementById('choose-file').files[0];
-
-    if (currFile) {
-        console.log("fileLoaded: ", currFile.name);
-        currFileReader = new FileReader();
-        currFileReader.onload = function (evnt) {
-            socket.emit('upload', {
-                name: currFile.name,
-                segment: evnt.target.result
-            });
-        };
-        socket.emit('start', {
-            name: currFile.name,
-            size: currFile.size
-        });
-    }
-
-    // 
+$('#choose-backup-file').on('change', function () {
+    // console.log('here');
+    backupFile.start('choose-backup-file');
 });
 
 $('#choose-local-file').on('change', function () {
@@ -141,23 +57,9 @@ $('#choose-local-file').on('change', function () {
             } else if (currFile.name.includes('voucher')) {
 
                 currTables.voucher = data;                
-                currTables.balance = balance(data, currTables.code);
 
                 clearAllTables();
                 tabulate('凭证表', currTables.voucher);
-                tabulate('科目余额表', currTables.balance);
-                createOptions('科目余额表', "科目级别", [
-                    {label: "原始表单",  value: "-1"},
-                    {label: "一级科目",  value: "0"},
-                    {label: "二级科目",  value: "1"},
-                    {label: "三级科目",  value: "2"},
-                    {label: "四级科目",  value: "3"},
-                    {label: "五级科目",  value: "4"}
-                ], function(e){
-                    let level = parseInt(e.target.id);
-                    currTables.balance = balance(currTables.voucher, currTables.code, level);
-                    $('#科目余额表').bootstrapTable({data: currTables.balance});
-                })
             }
         };
     }
@@ -167,51 +69,6 @@ $('#clear-all-tables').on('click', function(){
     clearAllTables();
 })
 
-function balance(data, code, level){
-
-    let len = level ? 4 + level*2 : undefined;
-
-    let grouped = data.groupBy('科目编码', (e) => e.slice(0, len)),
-        balance = [];
-
-    for (let type in grouped){
-        
-        let entry = {
-            "科目类别" : code[type].type,
-            "科目编号" : type,
-            "科目名称" : code[type].name,
-            "期初余额" : {"借方":0, "贷方":0},
-            "本期发生" : {"借方":0, "贷方":0},
-            "期末余额" : {'借方':0, '贷方':0}
-        };
-
-        for (let item of grouped[type]){
-            if (item["摘要"].includes("结转余额")){
-                entry["期初余额"]['借方'] = item['借方金额'];
-                entry["期初余额"]['贷方'] = item['贷方金额'];
-                entry["期末余额"]['借方'] = item['借方金额'];
-                entry["期末余额"]['贷方'] = item['贷方金额'];
-            } else {
-                entry["本期发生"]['借方'] += item['借方金额'];
-                entry["本期发生"]['贷方'] += item['贷方金额'];
-            }
-        }
-
-        switch(entry['科目类别']){
-            case '资产':
-                entry["期末余额"]['借方'] = entry['本期发生']['借方'] - entry['本期发生']['贷方'];
-                break;
-            case '权益':
-            case '负债':
-                entry["期末余额"]['贷方'] = entry['本期发生']['贷方'] - entry['本期发生']['借方'];
-                break;
-        }
-
-        balance.push(entry);
-    }
-
-    return balance;
-}
 
 function clearAllTables(){
     var myNode = document.getElementById("table-area");
@@ -255,12 +112,14 @@ function tabulate(id, data) {
 
     // 1. Flatten out data table
     // console.log(Object.flatten(data[0]), tabulate flatten);
-    data = data.map(e => Object.flatten(e));
+    // data = data.map(e => Object.flatten(e));
     let flattenedKeys = Object.keys(data[0]);
 
-    // 2. reorganize columns;
-    let columns = Object.nestedKeys(data[0], '-');
+    // // 2. reorganize columns;
+    // let columns = Object.nestedKeys(data[0], '-');
 
+    let columns = [Object.keys(data[0])];
+    
     for (let i = 0; i < columns.length; i++)
     for (let j = 0; j < columns[i].length; j++){
         columns[i][j] = {
@@ -331,10 +190,6 @@ function tabulate(id, data) {
 
 }
 
-var sliceEnd = function(pos, size){
-    return pos + Math.min(10485760, size - pos)
-}
-
 var updateIndicator = function(message){
     document.getElementById('indicator').innerText = message;
 }
@@ -345,22 +200,14 @@ var updateIndicatorErr = function(message){
 
 socket.on('more', function (data) { 
     updateIndicator("已上传 " + data.percent.toFixed(1)+"% 注意请不要这个时候刷新页面");
-    var position = data.position * 10485760;
-    var fileSlice = null;
-
-    for (let method of ["slice", "webkitSlice", "mozSlice"]) if (currFile[method]){
-        fileSlice = currFile[method](position, sliceEnd(position, currFile.size));
-        break;
-    }
-    if (fileSlice)
-        currFileReader.readAsBinaryString(fileSlice); // trigger upload event
+    backupFile.readSlice(data.position);
 });
 
 socket.on('msg', function (data) {
     switch(data.type){
         case "UPLOAD_DONE":
-            currFileReader = currFile = undefined;
-            $('#choose-file').prop('disabled', true);
+            backupFile.dispose();
+            $('#choose-backup-file').prop('disabled', true);
             $('#choose-local-file').prop('disabled', true);
 
             updateIndicator("上传完成。后台正在复原您刚上传的SQL备份数据，可能要花几分钟。");
@@ -386,7 +233,7 @@ socket.on('msg', function (data) {
             console.log(data);
             updateIndicator("凭证及明细帐已生成。");
 
-            $('#choose-file').prop('disabled', false);
+            $('#choose-backup-file').prop('disabled', false);
             $('#choose-local-file').prop('disabled', false);
             tabulate('general-acc-voucher',data.voucher);
             break;
@@ -394,7 +241,7 @@ socket.on('msg', function (data) {
             console.log(data);
             updateIndicator("科目总账已生成。");
 
-            $('#choose-file').prop('disabled', false);
+            $('#choose-backup-file').prop('disabled', false);
             $('#choose-local-file').prop('disabled', false);
             tabulate('general-acc-sum',data.accsum);
 

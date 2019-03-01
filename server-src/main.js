@@ -1,66 +1,16 @@
 
-import express from 'express';
 import path from 'path';
-import cors from 'cors';
-import {promises as fs} from 'fs';
+import express from 'express';
 import sql from 'mssql';
+
+import FileRecv from './file-recv.js';
 
 const Files = {};
 
-class FileEntry {
-
-    constructor(size, path){
-        this.fileSize = size,
-        this.filePath = path,
-        this.data     = '',
-        this.currLen  = 0,
-        this.handler  = null
-    }
-
-    getPercent () {
-        return parseInt((this.currLen / this.fileSize) * 100);
-    };
-    getPosition () {
-        return this.currLen / 524288;
-    };
-
-    updateLen(data){
-        this.data    += data;
-        this.currLen += data.length;
-    }
-
-    isFinished(){
-        return this.fileSize === this.currLen;
-    }
-
-    write(){
-        // returns a promise
-        return this.handler.write(this.data, 0, "Binary");
-    }
-
-    open(){
-        // https://nodejs.org/api/fs.html#fs_fspromises_open_path_flags_mode
-        // returns a Promise that finally resolved a FileHandle object
-        return fs.open(this.filePath, 'a', 0o755);
-    }
-
-    close(){
-        return this.handler.close();
-    }
-
-    progress(){
-        return  {
-            'position': this.getPosition(),
-            'percent':  this.getPercent()
-        }
-    }
-}
-
-var config = {
+let config = {
     user: "marvin",
     password: "1q0o2w9i3e8u",
     server: "192.168.0.127",
-    // If you're on Windows Azure, you will need this:
     options: {encrypt: true},
     authentication: {
       type: "default",
@@ -69,9 +19,7 @@ var config = {
         password: "1q0o2w9i3e8u",
     }
   }
-};
-
-
+}
 // for this subtle part, checkout 
 // https://stackoverflow.com/questions/17696801/express-js-app-listen-vs-server-listen/17697134#17697134
 // https://stackoverflow.com/questions/24172909/socket-io-connection-reverts-to-polling-never-fires-the-connection-handler
@@ -123,7 +71,7 @@ io.sockets.on('connection', function (socket) {
     socket.on('start', function (data) { 
 
         var fileStub;
-        Files[data.name] = fileStub = new FileEntry(data.size, path.join('D:/temp', data.name));
+        Files[data.name] = fileStub = new FileRecv(data.size, path.join('D:/temp', data.name));
 
         fileStub.open().then(function(fd){
             console.log("[start] file " + data.name + " desc created, ready to receive more.");
@@ -134,7 +82,7 @@ io.sockets.on('connection', function (socket) {
         });
     });
 
-    socket.on('voucher', function(message){
+    socket.on('single-table-request', function(message){
 
         sql.connect(config)
         .then(function(pool){
@@ -184,7 +132,7 @@ io.sockets.on('connection', function (socket) {
                             socket.emit('err', {type: err});
                         }).finally(function(){
                             // DURING DEVELOPMENT: delete the file anyway. 
-                            return fs.unlink(fileStub.filePath);
+                            return fileStub.delete();
                         });
 
             }).then(function(){

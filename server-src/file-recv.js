@@ -1,4 +1,6 @@
-export default class FileEntry {
+import {promises as fs} from 'fs';
+
+export default class FileRecv {
 
     constructor(size, path){
         this.fileSize = size,
@@ -6,13 +8,15 @@ export default class FileEntry {
         this.data     = '',
         this.currLen  = 0,
         this.handler  = null
+
+        this.blockSize = 524288;
     }
 
     getPercent () {
         return parseInt((this.currLen / this.fileSize) * 100);
     };
     getPosition () {
-        return this.currLen / 524288;
+        return this.currLen / this.blockSize;
     };
 
     updateLen(data){
@@ -37,6 +41,10 @@ export default class FileEntry {
 
     close(){
         return this.handler.close();
+    }
+
+    delete(){
+        return fs.unlink(this.filePath);
     }
 
     progress(){
