@@ -4,7 +4,7 @@ export default class FileSend {
         this.file       = undefined;
         this.fileReader = new FileReader();
         this.blockSize  = 524288; 
-        this.startFunc = undefined;
+        this.startFunc = () => {};
     }
 
     /**
@@ -26,7 +26,7 @@ export default class FileSend {
      * read the file as text string.
      */
     readAsText(){
-        return this.fileReader.readAsText();
+        return this.fileReader.readAsText(this.file);
     }
 
     readSlice(initPosition){

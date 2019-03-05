@@ -3,9 +3,39 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.13.4/dist/bootstrap-table.min.css">
     <style>
-    td {
+
+    .ledger {
+        /* font-size: 90%; */
+        height: 100%;
+        margin: 10px 0;
+        position: relative;
+        overflow-x: auto;
+
+    }
+    table {
+        height: 100%;
+        width: 100%;
+        position: relative;
+        border-collapse: collapse;
+    }
+
+    tr {
+        position : relative;
+    }
+    
+    th, td {
+        border: 1px solid;
+        padding: 5px;
         white-space: nowrap;
         word-wrap: none;
+    }
+
+    th {
+        background-color: black;
+        color: rgb(255, 251, 247);
+        opacity: 1;
+        position: sticky;
+        top: -1px;
     }
 
     .h-divider{
@@ -43,7 +73,7 @@
     </style>
 </head>
 <body class="bg">
-    <div class="container" style="margin-top:10px;">
+    <div class="container" id="container" style="margin-top:10px;">
 
         <h1 class="col-md-6" style="letter-spacing: -0.07em;">Auditool</h1>
         <div class="label col-md-12" style=" margin-bottom:10px;" id="indicator">就绪</div>
@@ -75,8 +105,6 @@
         </div>
         
         <div id="table-area" class="col-md-12">
-            <table id="summary" style="word-wrap: none; font-size:70%;"></table>
-            <table id="voucher" data-show-columns="true" data-filter-control="true" style="word-wrap: none; font-size:70%;"></table>
         </div>
     </div>
 </body>

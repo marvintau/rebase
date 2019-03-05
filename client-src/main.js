@@ -2,12 +2,14 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 import FileSend from './file-send';
 
+import Ledger from './ledger.js';
 
 var socket         = io.connect(),
     currTables     = {};
 
 
-let backupFile = new FileSend();
+let backupFile = new FileSend(),
+    localFile  = new FileSend();
 
 backupFile.setStartFunc((instance) =>{
     socket.emit('start', {
@@ -23,6 +25,13 @@ backupFile.setOnload((event, instance) => {
     });
 });
 
+localFile.setOnload((event, instance) => {
+    
+    let data = JSON.parse(event.target.result);
+    let ledger = new Ledger(data);
+    ledger.render('table-area');
+})
+
 $('#single-table-request').on("click", function(e){
     socket.emit('single-table-request', "yayasdasdasdasdasd");
 })
@@ -33,36 +42,8 @@ $('#choose-backup-file').on('change', function () {
 });
 
 $('#choose-local-file').on('change', function () {
-    currFile = document.getElementById('choose-local-file').files[0];
-
-    if (currFile) {
-        currFileReader = new FileReader();
-        currFileReader.readAsText(currFile);
-        currFileReader.onload = function (evnt) {
-
-            let data = JSON.parse(evnt.target.result);
-
-            if (currTables.code === undefined){
-                if(!currFile.name.includes('code'))
-                    updateIndicatorErr('您得先上传会计科目表才行，不然后面没法计算');
-                else {
-                    let dict = {};
-                    for (let i = 0; i < data.length; i++){
-                        dict[data[i]['科目编码']] = {name: data[i]['科目名称'], type: data[i]['科目类型']};
-                        // let type = data[i]['科目编码'],
-
-                    }
-                    currTables.code = dict;
-                }
-            } else if (currFile.name.includes('voucher')) {
-
-                currTables.voucher = data;                
-
-                clearAllTables();
-                tabulate('凭证表', currTables.voucher);
-            }
-        };
-    }
+    localFile.start('choose-local-file');
+    localFile.readAsText();
 });
 
 $('#clear-all-tables').on('click', function(){
@@ -86,108 +67,6 @@ function createDownloadButton(id, data){
     })
 
     return linkElement;
-}
-
-function createOptions(assocTableID, groupName, options, onChange){
-    let radioGroup = document.createElement('div');
-    $(radioGroup).addClass('btn-group btn-group-toggle btn-area');
-    for (let option of options){
-        let label = document.createElement('label');
-        let input = document.createElement('input');
-        $(input).attr({type:'radio', name:groupName, id:option.value});
-        $(label).addClass('btn btn-primary').text(option.label).append(input);
-        $(radioGroup).append(label);
-    }
-    $(radioGroup).on('change', (e) => onChange(e));
-    console.log($('#'+assocTableID).closest('.bootstrap-table').get(0));
-    $('#'+assocTableID).closest('.bootstrap-table').first().prepend(radioGroup);
-}
-
-function tabulate(id, data) {
-
-    // If data is included in an object with multiple layers, which means key 
-    // (column name) could include several sub object (sub columns), the data
-    // should be flatten out to a single layer table (an array that includes
-    // non-nested object), and transform a record into column table.
-
-    // 1. Flatten out data table
-    // console.log(Object.flatten(data[0]), tabulate flatten);
-    // data = data.map(e => Object.flatten(e));
-    let flattenedKeys = Object.keys(data[0]);
-
-    // // 2. reorganize columns;
-    // let columns = Object.nestedKeys(data[0], '-');
-
-    let columns = [Object.keys(data[0])];
-    
-    for (let i = 0; i < columns.length; i++)
-    for (let j = 0; j < columns[i].length; j++){
-        columns[i][j] = {
-            field:columns[i][j],
-            title:columns[i][j],
-            colspan : 1,
-            rowspan : 1,
-            valign: "middle",
-            halign: "middle",
-            align: "right"
-        };
-
-        if(j > 0 && columns[i][j-1].title === columns[i][j].title) {
-            columns[i][j-1].colspan += 1;
-            columns[i][j].markedDelete = true;
-        }
-        if(i > 0 && columns[i-1][j].title === columns[i][j].title) {
-            columns[i-1][j].rowspan += 1;
-            columns[i][j].markedDelete = true;
-        }
-        if(i == columns.length-1){
-            columns[i][j].field = flattenedKeys[j];
-            columns[i][j].formatter = (n) => {
-                if (typeof n === "number"){
-                    var parts = n.toFixed(2).split(".");
-                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                    n = parts.join(".");
-                }
-                return n;
-            }
-        }
-    }
-
-    for (let i = 0; i < columns.length; i++)
-    for (let j = 0; j < columns[i].length; j++)
-        if(columns[i][j].markedDelete) {
-            columns[i].splice(j, 1);
-            j--;
-    }
-
-    console.log(columns);
-
-    let elem = document.createElement("table");
-    elem.setAttribute('id', id);
-    elem.setAttribute("data-show-columns", "true");
-    elem.setAttribute("data-filter-control", "true");
-    elem.setAttribute("style", "white-space: nowrap; word-wrap: none; font-size:70%;");
-    $('#table-area').append(elem);
-
-    data.forEach(function(elem){
-        for (let col in elem) switch(elem[col]){
-            case null  : elem[col] = "无"; break;
-            case false : elem[col] = "否"; break;
-            case true  : elem[col] = "是"; break;
-        }
-    })
-
-    $(elem).bootstrapTable({
-        filterControl: true,
-        showColumns: true,
-        pagination: true,
-        search: true,
-        locale: "zh-CN",
-        columns: columns,
-        data:data});
-    
-    $('#table-area').append(createDownloadButton(id, data));
-
 }
 
 var updateIndicator = function(message){
