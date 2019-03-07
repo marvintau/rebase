@@ -5,8 +5,14 @@ import FileSend from './file-send';
 import Ledger from './ledger.js';
 
 var socket         = io.connect(),
-    currTables     = {};
+    tables     = {};
 
+Array.prototype.groupBy = function(key) {
+  return this.reduce(function(rv, x) {
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+};
 
 let backupFile = new FileSend(),
     localFile  = new FileSend();
@@ -28,8 +34,30 @@ backupFile.setOnload((event, instance) => {
 localFile.setOnload((event, instance) => {
     
     let data = JSON.parse(event.target.result);
-    let ledger = new Ledger(data);
-    ledger.render('table-area');
+
+    Object.assign(tables, data);
+    console.log(tables);
+
+    if('SYS_RPT_ItmDEF' in tables){
+        tables['SYS_RPT_ItmDEF'] = tables['SYS_RPT_ItmDEF'].groupBy('TableName');
+        for (let tab in tables['SYS_RPT_ItmDEF']){
+            let dict = {},
+                arr = tables['SYS_RPT_ItmDEF'][tab];
+
+            for (let i = 0; i < arr.length; i++){
+                dict[arr[i].FieldName] = {def: arr[i].FieldDef, type: arr[i].FieldType}
+            }
+
+            tables['SYS_RPT_ItmDEF'][tab] = dict;
+        }
+    } else throw TypeError('RPT_ItmDEF table is mandatory.')
+
+    if('GL_accvouch' in tables){
+        tables['GL_accvouch'] = new Ledger(tables['GL_accvouch']);
+        tables['GL_accvouch'].setColumn(tables['SYS_RPT_ItmDEF']['GL_accvouch']);
+        tables['GL_accvouch'].normalize();
+        tables['GL_accvouch'].render('table-area', {editable:true, reduce: true, hideBoolean: true});
+    }
 })
 
 $('#single-table-request').on("click", function(e){
@@ -50,6 +78,11 @@ $('#clear-all-tables').on('click', function(){
     clearAllTables();
 })
 
+$('#dump-data').on('click', function(){
+    FileSaver.saveAs(new Blob([JSON.stringify(tables)], {type: "mime"}), "tables.json");
+})
+
+
 
 function clearAllTables(){
     var myNode = document.getElementById("table-area");
@@ -58,16 +91,6 @@ function clearAllTables(){
     }
 }
 
-function createDownloadButton(id, data){
-    
-    let linkElement = document.createElement('button');
-    linkElement.innerText = "导出JSON";
-    $(linkElement).on('click', function(){
-        FileSaver.saveAs(new Blob([JSON.stringify(data)], {type: "mime"}), id+".json");
-    })
-
-    return linkElement;
-}
 
 var updateIndicator = function(message){
     document.getElementById('indicator').innerText = message;
@@ -86,46 +109,15 @@ socket.on('msg', function (data) {
     switch(data.type){
         case "UPLOAD_DONE":
             backupFile.dispose();
-            $('#choose-backup-file').prop('disabled', true);
-            $('#choose-local-file').prop('disabled', true);
-
             updateIndicator("上传完成。后台正在复原您刚上传的SQL备份数据，可能要花几分钟。");
             break;
         case "RESTORE_DONE":
-            updateIndicator("数据恢复完成， 准备生成数据摘要。");
+            updateIndicator("数据恢复完成，准备显示数据。");
             break;
-        case "SUMMARY":
-            updateIndicator("数据摘要生成完毕， 准备获取会计科目。");
-            
-            tabulate('summary-table', data.summary, [
-                {field: "Tablename", title:"表格名称"},
-                {field: "lines", title: "表格行数（尺寸）"},
-                {field: "Tabledefine", title: "表格描述"}
-            ]);
-            
+        case "DATA":
+            updateIndicator(`接收到数据表 :[${data.tableName}]`);
+            Object.assign(tables, {[data.tableName]:data.data});
             break;
-        case "CODE":
-            updateIndicator("会计科目获取完毕， 准备生成凭证及明细账。");
-            tabulate('general-code',data.code);
-            break;
-        case "VOUCHER":
-            console.log(data);
-            updateIndicator("凭证及明细帐已生成。");
-
-            $('#choose-backup-file').prop('disabled', false);
-            $('#choose-local-file').prop('disabled', false);
-            tabulate('general-acc-voucher',data.voucher);
-            break;
-        case "ACCSUM":
-            console.log(data);
-            updateIndicator("科目总账已生成。");
-
-            $('#choose-backup-file').prop('disabled', false);
-            $('#choose-local-file').prop('disabled', false);
-            tabulate('general-acc-sum',data.accsum);
-
-            break;
-        
 
         default :
             updateIndicatorErr("服务器发来了不知道什么类型的消息，有可能是个bug : ["+ data.type + "]");

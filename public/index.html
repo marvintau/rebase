@@ -5,18 +5,22 @@
     <style>
 
     .ledger {
-        /* font-size: 90%; */
-        height: 100%;
-        margin: 10px 0;
+        font-size: 90%;
+        height: 500px;
+        margin: -1px;
         position: relative;
-        overflow-x: auto;
-
+        overflow: auto;
+        border: 1px solid gray;
     }
+    .ledger::-webkit-scrollbar { 
+        display: none; 
+    }
+
     table {
         height: 100%;
-        width: 100%;
         position: relative;
         border-collapse: collapse;
+        margin-bottom: 20px;
     }
 
     tr {
@@ -31,11 +35,12 @@
     }
 
     th {
+        border: 1px solid black;
         background-color: black;
         color: rgb(255, 251, 247);
-        opacity: 1;
+        opacity: 0.75;
         position: sticky;
-        top: -1px;
+        top: 0px;
     }
 
     .h-divider{
@@ -70,42 +75,54 @@
         background-color: rgb(255, 251, 247);
     }
 
+    .sidebar {
+        margin: 10px;
+        width: 300px;
+    }
+
+    .varchar{
+        background-color: rgb(251, 220, 192);
+    }
+
+    .smallint, .tinyint{
+        background-color: rgb(192, 202, 244);
+    }
+
+    .float, .money{
+        font-weight: bold;
+        background-color: rgb(255, 179, 179);
+    }
     </style>
 </head>
 <body class="bg">
-    <div class="container" id="container" style="margin-top:10px;">
 
-        <h1 class="col-md-6" style="letter-spacing: -0.07em;">Auditool</h1>
+    <div class="sidebar" style="position: fixed">
+        <h1 class="col-md-12" style="letter-spacing: -0.07em;">Auditool</h1>
+        <div class="desc col-md-12">在这里上传由ERP导出的SQL Server备份文件(.BAK文件)。上传文件会在后端服务器进行处理。</div>
+        <div id="backup-upload-area" class="input-group col-md-12">
+            <div class="custom-file">
+                <input type="file" class="custom-file-input" id="choose-backup-file" aria-describedby="inputGroupFileAddon01">
+                <label class="custom-file-label" for="choose-backup-file">选择.BAK文件</label>
+            </div>
+        </div>
+        <div class="h-divider col-md-12"></div>
+        <button id="dump-data" class="btn btn-primary col-md-12">Dump data!</button>
+        <div class="h-divider col-md-12"></div>
+        <div class="desc col-md-12">或者您也可以在这里上传一个之前已经导出到本地的.JSON文件。上传文件会在浏览器页面内进行处理。</div>
+        <div id="local-upload-area" class="input-group col-md-12">
+            <div class="custom-file">
+                <input type="file" class="custom-file-input" id="choose-local-file" aria-describedby="inputGroupFileAddon02">
+                <label class="custom-file-label" for="choose-local-file">选择.JSON文件</label>
+            </div>
+        </div>        
+
+        <div class="h-divider col-md-12"></div>
         <div class="label col-md-12" style=" margin-bottom:10px;" id="indicator">就绪</div>
-        <div class="row container">
-            <div class="desc col-md-4">在这里上传由ERP导出的SQL Server备份文件(.BAK文件)。上传文件会在后端服务器进行处理。</div>
-            <div class="v-divider"></div>
-            <div class="desc col-md-4">或者您也可以在这里上传一个之前已经导出到本地的.JSON文件。上传文件会在浏览器页面内进行处理。您上传的第一个文件应当是会计科目表</div>
-            <div class="v-divider"></div>
-            <button class="btn btn-primary" id="single-table-request">远程单独请求数据表</button>
-        </div>
-        <div class="row container">
-            <!-- SQL server .bak file uploading -->
-            <div id="backup-upload-area" class="input-group col-md-4">
-                <div class="custom-file">
-                    <input type="file" class="custom-file-input" id="choose-backup-file" aria-describedby="inputGroupFileAddon01">
-                    <label class="custom-file-label" for="choose-backup-file">选择.BAK文件</label>
-                </div>
-            </div>
-            <div class="v-divider"></div>
-            <!-- local exported table uploading -->
-            <div id="local-upload-area" class="input-group col-md-4">
-                <div class="custom-file">
-                    <input type="file" class="custom-file-input" id="choose-local-file" aria-describedby="inputGroupFileAddon02">
-                    <label class="custom-file-label" for="choose-local-file">选择.JSON文件</label>
-                </div>
-            </div>
-            <div class="v-divider"></div>
-            <button class="btn btn-danger" id="clear-all-tables">清空所有表</button>
-        </div>
-        
-        <div id="table-area" class="col-md-12">
-        </div>
+
+    </div>
+
+    <div class="container" id="container" style="margin-top:10px;">
+        <div id="table-area" class="col-md-12" ></div>
     </div>
 </body>
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>

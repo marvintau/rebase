@@ -88,6 +88,7 @@ io.sockets.on('connection', function (socket) {
         .then(function(pool){
             return fetchTable(pool);
         }).then(function(res){
+            console.log(Object.keys(res));
             socket.emit('msg', {type:"VOUCHER", voucher: res.recordset});
         }).catch(function(err){
             socket.emit('err', {type: err});
@@ -116,18 +117,16 @@ io.sockets.on('connection', function (socket) {
                             socket.emit('msg', {type:"RESTORE_DONE"});
                             return fetchTable(pool, "code");
                         }).then(function(res){
-                            // console.log(res);
-                            socket.emit('msg', {type:"CODE", code: res.recordset});
+                            socket.emit('msg', {type:"DATA", tableName:"SYS_code", data: res.recordset});
+                            return pool.query('select * from RPT_ItmDEF');
+                        }).then(function(res){
+                            socket.emit('msg', {type:"DATA", tableName:"SYS_RPT_ItmDEF", data: res.recordset});
                             return fetchTable(pool, "GL_accvouch");
                         }).then(function(res){
-                            console.log("voucher length: " + res.recordset.length);
-                            console.log("table size: " + JSON.stringify(res.recordset).length / 1048576);
-                            socket.emit('msg', {type:"VOUCHER", voucher: res.recordset});
+                            socket.emit('msg', {type:"DATA", tableName:"GL_accvouch", data:res.recordset});
                             return fetchTable(pool, "GL_accsum");
                         }).then(function(res){
-                            console.log("voucher length: " + res.recordset.length);
-                            console.log("table size: " + JSON.stringify(res.recordset).length / 1048576);
-                            socket.emit('msg', {type:"ACCSUM", accsum: res.recordset});
+                            socket.emit('msg', {type:"DATA", tableName:"GL_accsum", data:res.recordset});
                         }).catch(function(err){
                             socket.emit('err', {type: err});
                         }).finally(function(){
