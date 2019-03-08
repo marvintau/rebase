@@ -29,8 +29,6 @@ Array.prototype.last = function(){
      */
 
  function flat (data, prefix, delim){
-
-    delim = delim ? delim : "-";
     
     let result = {};
     for (let key in data) {
@@ -44,13 +42,10 @@ Array.prototype.last = function(){
     return result;
 }
 
-function layer(data, spec) {
+function layer(data) {
 
-    spec = spec ? spec : {};
-
-    let delim = spec.delim ? spec.delim : "-",
-        flatObj = flat(data, "", delim),
-        span  = spec.span ? spec.span : false;
+    let delim = "-",
+        flatObj = flat(data, "", delim);
 
     let keys    = Object.keys(flatObj),
         layers  = [],
@@ -68,83 +63,10 @@ function layer(data, spec) {
         keys = splits.map(e => e.rest);
     }
     layers.push(keys);
-    layers = layers.map(layer => layer.map(cell => ({title:cell, colspan:1, rowspan:1})));
-
 
     return layers;
 }
 
-function fillTable(head, body, spec){
-
-    let hideColumns = {};
-
-    console.log(spec);
-
-    if (spec.reduce){
-        if (body.length > 1)
-        for (let i = 0; i < body[0].length; i++){
-            if (body.map(e => e[i]).every((v, _, a) => (v.content == a[0].content))) {
-                hideColumns[i] = true;
-            }
-            if (head[0][i].hide){
-                hideColumns[i] = true;
-            }
-        }
-    }
-
-    if (spec.hideBoolean){
-        for (let i = 0; i < body[0].length; i++)
-        if(head[0][i].type == "bit") {
-            hideColumns[i] = true;
-        }
-    }
-
-    let table   = document.createElement('table'),
-        thead   = document.createElement('thead'),
-        tbody   = document.createElement('tbody');
-    
-    table.appendChild(thead);
-    table.appendChild(tbody);
-
-    let tr, th, td;
-    
-    console.log(body[0], 'fill');
-
-    for (let i = 0; i < head.length; i++){
-        tr = document.createElement('tr');
-        for (let j = 0; j < head[i].length; j++){
-            if(!hideColumns[j]){
-                th = document.createElement('th');
-                th.innerText = head[i][j].def;
-                th.setAttribute('id', head[i][j].title);
-                th.setAttribute('rowspan', head[i][j].rowspan);
-                th.setAttribute('colspan', head[i][j].colspan);
-                if (spec && spec.narrow)
-                    th.style = "white-space: normal; word-wrap: normal";
-                tr.appendChild(th);
-            }
-        }
-        thead.appendChild(tr);
-    }        
-
-    for (let i = 0; i < body.length; i++){
-        tr = document.createElement('tr');
-        tr.setAttribute('row', i);
-        for (let j = 0; j < body[i].length; j++){
-            if (!hideColumns[j]){
-                td = document.createElement('td');
-                td.innerText = body[i][j].content;
-                td.setAttribute('data-type', body[i][j].type);
-                td.setAttribute('class', body[i][j].type);
-                td.setAttribute('col', j);
-                tr.appendChild(td);
-            }
-        }
-        tbody.appendChild(tr);
-    }
-
-    return table;
-}
 export default class Ledger extends Table{
 
     /**
@@ -156,152 +78,73 @@ export default class Ledger extends Table{
      * 
      * @param {Array of Object} data an array of object
      */
-    constructor(data, spec, name){
- 
-        spec = spec ? spec : {};
-
-        // 2. Array of object: In this case, like most of the database,
-        //    the object represents the record, while the array the row.
-        //    The header are derived from the object keys.
+    constructor(data, name, parentDom){
 
         let head = [[]],
             body = [[]];
 
         if (data.every(e=> typeof e === "object")) {
             if(data.length > 0){
-                head = layer(data[0], spec),
+                head = layer(data[0]),
                 body = data.map(e => Object.values(flat(e)));
-                super(head, body, name);
+                super(head, body, name, parentDom);
             }
         }
         // 3. Object of arrays.
         else if(data.constructor === Object) {
-                head = layer(data, spec),
+                head = layer(data),
                 body = transpose(data);
-                super(head, body, name);
+                super(head, body, name, parentDom);
         } else {
             throw new TypeError('Ledger: unrecognized data. It must be Array of objects, or Object of arrays');
         }
 
-        console.log(this);
-    }
-
-    normalize(){
-        for (let i = 0; i < this.body.length; i++)
-        for (let j = 0; j < this.body[i].length; j++)
-            // console.log(this.body[i][j].type);
-            switch(this.body[i][j].type) {
-                case "int":
-                case "tinyint":
-                case "smallint":
-                case "float":
-                case "money":
-                if(this.body[i][j].content == null || this.body[i][j].content == "")
-                    {this.body[i][j].content = 0;}
-                    break;
-                case "nvarchar":
-                case "varchar":
-                if(this.body[i][j].content == null)
-                    {this.body[i][j].content = "";}
-                    break;
-                case "bit":
-                if(this.body[i][j].content == null)
-                    {this.body[i][j].content = false;}
-                    break;
-            }
-    }
-
-    assignDataColumn(ithColumn, object){
-        for (let i = 0; i < this.body.length; i++){
-            Object.assign(this.body[i][ithColumn], object);
-        }
-    }
-
-    setColumn(columnTypeDict){
-        
-        for (let i = 0; i < this.head.length; i++)
-        for (let j = 0; j < this.head[i].length; j++){
-            let title = this.head[i][j].title,
-                entry = columnTypeDict[title];
-            Object.assign(this.head[i][j], entry ? entry : {def: title, hide: true});
+        this.typeDict = {
+            "int"      : {default: 0},
+            "tinyint"  : {default: 0},
+            "smallint" : {default: 0},
+            "float"    : {default: 0},
+            "money"    : {default: 0},
+            "nvarchar" : {default: "无"},
+            "varchar"  : {default: "无"},
+            "bit"      : {default: false},
+            "undefined": {default: 0},
+            "datetime" : {default: "1970-01-01T00:00:00Z"}
         }
 
-        let lastHead = this.head.last();
-        for (let i = 0; i < this.body.last().length; i++){
-            this.assignDataColumn(i, {type: lastHead[i].type});
-        }
-
-        this.normalize();
     }
 
-    removeBodyColumn(start, length){
-        if (length === undefined) length = 1;
-        let bodyCol = this.body.map(e => e.splice(start, length)).flat();
-        let headCol = this.head.map(e => e.splice(start, length)).flat();
-        return {[headCol.map(e=>e.title).join('-')] : bodyCol[0]}
+    /**
+     * 
+     * assign column datatype.
+     * the data type will be according to the last row of head (or the most detailed
+     * data). Both the 
+     * 
+     * @param {Object} columnTypeDict the object (dictionary) from another big table
+     */
+    assignColumnDatatype(columnTypeDict){
+
+        this.head.lastRow().forEach((e, i) => {
+            let typeEntry = columnTypeDict[e.data];
+            typeEntry = typeEntry ? typeEntry : {type: "undefined", def: e.data, hide: true};
+            Object.assign(e.attr, typeEntry);
+            this.body.attrCol(i, typeEntry);
+            this.head.attrCol(i, typeEntry);
+        });
     }
 
-    getBodyColumn(col, start, end){
-        return this.body.map(e => e[col]).slice(start, end);
+    /**
+     * normalize columns:
+     * mainly eliminates the NULLs by replacing to equivalent data according to the
+     * column datatype.
+     */
+    normalizeColumns(){
+
+        this.body.forEach((cell, _row, col) =>{
+            let type = this.body.colAttrs[col].type,
+                colRep = this.typeDict[type].default;
+            cell.data = cell.data == null ? colRep : cell.data;
+        })
     }
 
-    render(parentID, spec){
-
-        spec = spec ? spec : {};
-        
-        let start = spec.start ? spec.start: 0,
-            len   = spec.len ? spec.len : 35,
-            end   = spec.end ? end : len;
-        
-        // console.log(this.getBodyColumn(0, start, end));
-
-
-
-        let outer   = document.createElement('div');
-        outer.setAttribute('class', 'ledger');
-        outer.appendChild(fillTable(this.head, this.body.slice(start, end), spec));
-        // outer.appendChild(fillTable([Object.keys(this.summary).map(e=>({title:e, rowspan:1, colspan:1}))], [Object.values(this.summary)], {narrow: true}));
-
-        document.getElementById(parentID).appendChild(outer);
-
-        if (spec.editable){
-            $('td').on('dblclick', (e) => {
-                let type = $(e.target).attr("data-type");
-
-                switch(type){
-                    case "int":
-                    case "float":
-                    case "smallint":
-                    case "tinyint":
-                    case "varchar":
-                    case "money":
-                        let text = e.target.innerText;
-                        $(e.target).empty();
-                        $(e.target).append(`<input value='${text}'></input>`);
-                        e.target.firstChild.focus();
-                        break;
-                }
-            })
-
-            $('td').focusout((e) => {
-                let elem = e.target.parentElement;
-                let content = elem.firstChild.value;
-
-                let col = $(elem).attr('col'), 
-                    row = $(elem.parentElement).attr('row');
-                
-                let cell = this.body[row][col];
-                if (cell.type.includes('int') || cell.type == 'money'){
-                    if (!isNaN(content)){
-                        this.body[row][col].content = parseFloat(content);
-                        elem.innerText = content;
-                    }else
-                        elem.innerHTML = `<span style="color:red;">${content}</span>`;
-                } else {
-                    elem.innerText = content;
-                    this.body[row][col].content = content;
-                }
-            })
-        }
-    }
 }

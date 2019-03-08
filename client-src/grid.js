@@ -11,7 +11,7 @@
 
 export default class Grid {
 
-    constructor(table){
+    constructor(data){
 
         let primTypeDict = {
             string  : 1,
@@ -19,53 +19,76 @@ export default class Grid {
             boolean : 3
         };
 
-        if (Array.isArray(table) && table.every(row => Array.isArray(row))){
-            if (table.some((v, i, a) => v.length != a[0].length))
+        if (Array.isArray(data) && data.every(row => Array.isArray(row))){
+            if (data.some((v, i, a) => v.length != a[0].length))
                 throw new Error("Grid: the initiating array doesn't have same dimension.");    
 
-            if (table.some((v) => v.some((e) => !(typeof e in primTypeDict))))
+            if (data.some((v) => v.some((e) => {
+                let res = (e !== null) && !(typeof e in primTypeDict);
+                if(res) console.log(e); return res;
+            })))
                 throw new Error("Grid: some of the element is not primitive.");    
 
-            this.size = {rows: table.length, cols:table[0].length}
-            this.rows = table.map(rows => rows.map(cell => ({data: cell, attr:{}})));
-            this.cols = Array(this.size.cols).fill(0).map((e) => Array(this.size.rows));
+            this.size = {rows: data.length, cols:data[0].length}
+            this.rows = data.map(rows => rows.map(cell => ({data: cell, attr:{}})));
 
-            this.colAttrs = Array(this.size.cols).map(e=>{});
-            this.rowAttrs = Array(this.size.rows).map(e=>{});
-
-            for (let i = 0; i < this.size.rows; i++)
-            for (let j = 0; j < this.size.cols; j++)
-                this.cols[j][i] = this.rows[i][j];
+            this.colAttrs = Array(this.size.cols).fill(0).map((e)=>({style : ""}));
+            this.rowAttrs = Array(this.size.rows).fill(0).map((e)=>({style : ""}));
 
         } else {
             throw new Error('Grid: the initiating data must be an array of array.');
         }
     }
 
+    restoreData(){
+        return this.rows.map(row => row.map(cell => cell.data));
+    }
+
     forEach(func){
         for (let i = 0; i < this.size.rows; i++)
         for (let j = 0; j < this.size.cols; j++)
-            func(this[i][j], i, j);
+            func(this.rows[i][j], i, j);
+    }
+
+    forEachRow(func){
+        this.rows.forEach(func);
     }
 
     sliceRow(rowStart, rowEnd){
-        return this.rows.slice(rowStart, rowEnd);
+        let data = this.rows.slice(rowStart, rowEnd).map(row => row.map(cell => cell.data)),
+            grid = new Grid(data);
+        grid.rowAttrs = this.rowAttrs.slice(rowStart, rowEnd);
+        grid.colAttrs = this.colAttrs;
+        return grid;
     }
 
     sliceCol(colStart, colEnd){
-        return this.rows.map(row => row.slice(colStart, colEnd));
+        let data = this.rows.map(row => row.slice(colStart, colEnd).map(cell => cell.data)),
+            grid = new Grid(data);
+        grid.rowAttrs = this.rowAttrs;
+        grid.colAttrs = this.colAttrs.slice(colStart, colEnd);
+        return grid;
     }
 
     transpose(){
-        [this.rows, this.cols] = [this.cols, this.rows];
+
+        let transed = Array(this.size.cols).fill(0).map((e) => Array(this.size.rows));
+        this.forEach((e, i, j) => { trans[j][i] = e; });
+        this.rows = transed;
     }
 
-    set(i, j, val){
-        this.rows[i][j].data = val;
+    cell(i, j, val){
+        if(val !== undefined){
+            this.rows[i][j].data = val;
+        }
+        return this.rows[i][j].data;
     }
 
     attr(i, j, attrs){
-        Object.assign(this.rows[i][j].attr, attrs);
+        if(attrs !== undefined){
+            Object.assign(this.rows[i][j].attr, attrs);
+        }
+        return this.rows[i][j].attr;
     }
 
     attrRow(row, attrs){
@@ -73,7 +96,11 @@ export default class Grid {
     }
 
     attrCol(col, attrs){
-        Object.assign(this.rowAttrs[col], attrs);
+        Object.assign(this.colAttrs[col], attrs);
+    }
+
+    attrAll(attrs){
+        this.forEach((elem) => { Object.assign(elem.attr, attrs); });
     }
 
     firstRow(){
@@ -83,14 +110,6 @@ export default class Grid {
     lastRow(){
         if (this.size.rows < 1) throw new Error('Grid.firstRow: rows less than 1')
         return this.rows[this.size.rows - 1];
-    }
-    firstCol(){
-        if (this.size.cols < 1) throw new Error('Grid.firstRow: cols less than 1')
-        return this.cols[0];
-    }
-    lastCol(){
-        if (this.size.cols < 1) throw new Error('Grid.firstRow: cols less than 1')
-        return this.cols[this.size.cols - 1];
     }
 
     JoinLeft(){}

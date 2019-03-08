@@ -10,58 +10,93 @@ import Grid from "./grid.js";
  * @param {HTMLDomElement} dom DOM element
  * @returns nothing
  */
-function genTR(grid, dom, ishead, onDblCkick, onLeave){
+function genTR(data, dom, spec){
+
+    spec = spec ? spec : {};
+    spec.name = spec.name ? spec.name : "table";
+    spec.colAttrs = spec.colAttrs ? spec.colAttrs : Array(data[0].length).fill(0).map(e=>({}));
 
     let tr, cell, cellDom;
+    try {
+        for (let i = 0; i < data.length; i++){
+            tr = document.createElement('tr');
+            for (let j = 0; j < data[i].length; j++){
 
-    for (let i = 0; i < grid.size.rows; i++){
-        tr = document.createElement('tr');
-        for (let j = 0; j < grid.size.cols; j++){
+                cell = data[i][j];
 
-            cell = grid.rows[i][j];
-            if(!cell.attrs.hide){
-                cellDom = document.createElement(ishead ? 'th' : 'td');
-                cellDom.setAttribute('id', `${this.name}-head-${i}-${j}`);
-                cellDom.setAttribute('class', `${this.name} ${cell.attrs.style}`);
-                cellDom.innerText = cell.data;
+                if(!spec.colAttrs[j].hide){
+                    
+                    cellDom = document.createElement(spec.ishead ? 'th' : 'td');
+                    cellDom.setAttribute('id', `${spec.name}-${spec.ishead?"head":"body"}-${i}-${j}`);
 
-                for (let k in grid.rowAttrs[i]) {th.setAttribute(k, cell.attrs[k])};
-                for (let k in grid.colAttrs[i]) {th.setAttribute(k, cell.attrs[k])};
-                for (let k in cell.attrs){ th.setAttribute(k, cell.attrs[k]); }
-                
-                tr.appendChild(cellDom);
+                    let typeClass = spec.ishead ? "" : spec.colAttrs[j].type,
+                        styleClass = spec.colAttrs[j].style ? spec.colAttrs[j].style : "";
+
+                    cellDom.setAttribute('class', `${spec.name} ${typeClass} ${styleClass}`);
+                    cellDom.innerText = spec.ishead? cell.attr.def : cell.data;
+
+                    // for (let k in spec.rowAttrs[i]) {cellDom.setAttribute(k, spec.rowAttrs[i][k])};
+                    for (let k in spec.colAttrs[j]) {cellDom.setAttribute(k, spec.colAttrs[j][k])};
+                    for (let k in cell.attrs){ cellDOM.setAttribute(k, cell.attrs[k]); }
+                    
+                    cellDom.setAttribute('row', i);
+                    cellDom.setAttribute('col', j);
+
+                    tr.appendChild(cellDom);
+                }
             }
+            dom.appendChild(tr);
         }
-        dom.appendChild(tr);
+    } catch (e) {
+        console.error(e,"genTR", data);
     }
-
 }
 
 
 export default class Table {
     
-    constructor (head, body, name){
-        this.head = head;
-        this.body = body;
+    constructor (head, body, name, parentDom){
+        this.head = new Grid(head);
+        this.body = new Grid(body);
         this.name = name ? name : "";
+
+        this.head.attrAll({rowspan: 1, colspan: 1});
+
+        let tableWrapper = document.createElement('div');
+        tableWrapper.setAttribute('id', `table-wrapper-${this.name}`);
+
+        let table = document.createElement('div');
+        table.setAttribute('id', `table-${this.name}`);
+        table.setAttribute('class', "table");
+        tableWrapper.appendChild(table);
+
+        let pagin = document.createElement('div');
+        pagin.setAttribute('id', `table-${this.name}-pagin`);
+        tableWrapper.appendChild(pagin);
+
+        parentDom.appendChild(tableWrapper);
     }
 
-    setDatatypeFromDict(){
+    pagination(){
 
-        for (let i = 0; i < this.head.size.rows; i++)
-        for (let j = 0; j < this.head.size.cols; j++){
-            let title = this.head[i][j].title,
-                entry = columnTypeDict[title];
-            Object.assign(this.head[i][j], entry ? entry : {def: title, hide: true});
-        }
+        $(`#table-${this.name}-pagin`).pagination({
+            dataSource: this.body.rows,
+            pageSize: 15,
+            showGoInput: true,
+            showGoButton: true,
+            showPageNumbers: false,
+            showNavigator: true,
+
+            callback: (data, pagination) => {
+                let table = this.renderTableDOM(data);
+                $(`#table-${this.name}`).empty();
+                $(`#table-${this.name}`).append(table);
+                this.bindEvents();
+            }
+        })
     }
 
-    toDOM(parentDom, spec){
-
-        spec = spec ? spec : {};
-
-        let start = spec.start ? spec.start : 0,
-            end   = spec.end   ? spec.end   : 30;
+    renderTableDOM(data, spec){
 
         let table   = document.createElement('table'),
             thead   = document.createElement('thead'),
@@ -69,14 +104,25 @@ export default class Table {
         
         table.appendChild(thead);
         table.appendChild(tbody);
-        parentDom.appendChild(table);
+        
 
-        genTR(this.head, thead, true);
-        genTR(this.body.sliceRow(start, end), tbody, false);
 
-        $('td').on('dblclick', (e) => {
-            let type = $(e.target).attr("data-type");
+        genTR(this.head.rows, thead, {
+            ishead : true,
+            colAttrs : this.head.colAttrs
+        });
+        genTR(data, tbody, {
+            ishead : false,
+            colAttrs : this.body.colAttrs
+        });
 
+        return table;
+    }
+
+    bindEvents() {
+
+        $('td').dblclick((e) => {
+            let type = $(e.target).attr("type");
             switch(type){
                 case "int":
                 case "float":
@@ -91,15 +137,16 @@ export default class Table {
                     break;
             }
         })
-
+    
         $('td').focusout((e) => {
             let elem = e.target.parentElement;
             let content = elem.firstChild.value;
-
-            let col = $(elem).attr('col'), 
-                row = $(elem.parentElement).attr('row');
+    
+            let col = parseInt($(elem).attr('col')), 
+                row = parseInt($(elem).attr('row'));
             
-            let cell = this.body[row][col];
+            console.log(this.body.rows[row]);
+            let cell = this.body.rows[row][col];
             if (cell.type.includes('int') || cell.type == 'money'){
                 if (!isNaN(content)){
                     this.body[row][col].content = parseFloat(content);
@@ -108,20 +155,10 @@ export default class Table {
                     elem.innerHTML = `<span style="color:red;">${content}</span>`;
             } else {
                 elem.innerText = content;
-                this.body[row][col].content = content;
+                this.body.set(row, col, content);
             }
         })
+    
     }
-
-    mergeHead(){
-
-        // if(j > 0 && this.head[i][j-1].data === this.head[i][j].data) {
-        //     this.head[i][j-1].colspan += 1;
-        //     this.head[i][j].markedDelete = true;
-        // }
-        // if(i > 0 && this.head[i-1][j].data === this.head[i][j].data) {
-        //     this.head[i-1][j].rowspan += 1;
-        //     this.head[i][j].markedDelete = true;
-        // }
-    }
+    
 }

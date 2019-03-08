@@ -53,10 +53,15 @@ localFile.setOnload((event, instance) => {
     } else throw TypeError('RPT_ItmDEF table is mandatory.')
 
     if('GL_accvouch' in tables){
-        tables['GL_accvouch'] = new Ledger(tables['GL_accvouch']);
-        tables['GL_accvouch'].setColumn(tables['SYS_RPT_ItmDEF']['GL_accvouch']);
-        tables['GL_accvouch'].normalize();
-        tables['GL_accvouch'].render('table-area', {editable:true, reduce: true, hideBoolean: true});
+
+        let tableArea = document.getElementById('table-area');
+
+        tables['GL_accvouch'] = new Ledger(tables['GL_accvouch'], 'vouchers', tableArea);
+        tables['GL_accvouch'].assignColumnDatatype(tables['SYS_RPT_ItmDEF']['GL_accvouch']);
+        tables['GL_accvouch'].normalizeColumns();
+        tables['GL_accvouch'].pagination();
+
+        // tables['GL_accvouch'].render('table-area', {editable:true, reduce: true, hideBoolean: true});
     }
 })
 
