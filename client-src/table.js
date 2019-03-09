@@ -145,11 +145,12 @@ export default class Table {
             let col = parseInt($(elem).attr('col')), 
                 row = parseInt($(elem).attr('row'));
             
-            console.log(this.body.rows[row]);
             let cell = this.body.rows[row][col];
-            if (cell.type.includes('int') || cell.type == 'money'){
+            console.log(cell);
+            if ($(elem).attr('type').includes('int') || $(elem).attr('type') == 'money'){
                 if (!isNaN(content)){
-                    this.body[row][col].content = parseFloat(content);
+                    console.log(content);
+                    this.body.rows[row][col].content = parseFloat(content);
                     elem.innerText = content;
                 }else
                     elem.innerHTML = `<span style="color:red;">${content}</span>`;
