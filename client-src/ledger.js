@@ -109,9 +109,8 @@ export default class Ledger extends Table{
             "varchar"  : {default: "无"},
             "bit"      : {default: false},
             "undefined": {default: 0},
-            "datetime" : {default: "1970-01-01T00:00:00Z"}
+            "datetime" : {default: 0}
         }
-
     }
 
     /**
@@ -143,8 +142,11 @@ export default class Ledger extends Table{
         this.body.forEach((cell, _row, col) =>{
             let type = this.body.colAttrs[col].type,
                 colRep = this.typeDict[type].default;
-            cell.data = cell.data == null ? colRep : cell.data;
+            cell.data = (cell.data == null || cell.data == "***") ? colRep : cell.data;
         })
+
+        this.body.colAttrs.forEach((e) => e.default = this.typeDict[e.type].default);
+
     }
 
 }

@@ -112,6 +112,15 @@ export default class Grid {
         return this.rows[this.size.rows - 1];
     }
 
+    deleteRow(index){
+        return this.rows.splice(index, 1);
+    }
+
+    insertRow(index, array){
+        array = (array !== undefined) ? array : Array(this.size.cols).fill(0);
+        return this.rows.splice(index, 0, array);
+    }
+
     JoinLeft(){}
 
     JoinRight(){}

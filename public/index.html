@@ -4,15 +4,39 @@
     <link rel="stylesheet" href="./pagination.css">
     <style>
 
-    .table {
+    .table-outer {
+        margin-bottom: 20px;
+        height: 600px;
+        /* width: 80%; */
         font-size: 90%;
         border: 1px solid black;
         position: relative;
-        overflow-y:visible;
-        overflow-x:auto;
+        overflow:auto;
     }
-    .table::-webkit-scrollbar { 
-        display: none; 
+
+
+    .btn-modify{
+        margin: 0 5px;
+    }
+
+    .btn-modify:focus{
+        outline-style:none;
+        box-shadow:none;
+        border-color:transparent;
+    }
+
+    .edit-bar{
+        background-color: rgb(255, 251, 247);
+        position: sticky;
+        left : 0;
+        z-index: 1;
+    }
+
+    .edit-bar * {
+        opacity: 0.1;
+    }
+    .edit-bar *:hover{
+        opacity: 1;
     }
 
     table {
@@ -26,13 +50,13 @@
     }
     
     th, td {
-        padding: 0 5px;
+        padding: 8px;
         border: 1px solid;
         white-space: nowrap;
         word-wrap: none;
     }
 
-    th {
+    .th-header {
         border: 1px solid black !important;
         background-color: black !important;
         padding: 5px;

@@ -1,5 +1,53 @@
 import Grid from "./grid.js";
 
+function genRec(rec, row, spec){
+
+    let cell, cellDom, attr,
+        tr = document.createElement('tr');
+
+    if(spec.editable){
+        if (!spec.ishead){
+            cellDom = document.createElement("td");
+            $(cellDom).append(`<button class="btn-sm btn-modify btn-outline-primary" edit-type="add"    row="${spec.prevRecords+row}">插入</button>`);
+            $(cellDom).append(`<button class="btn-sm btn-modify btn-outline-danger"  edit-type="remove" row="${spec.prevRecords+row}">删除</button>`);
+            $(cellDom).addClass('edit-bar');
+        } else {
+            cellDom = document.createElement("th");
+            $(cellDom).addClass('edit-bar').text("编辑");
+        }
+        tr.appendChild(cellDom);
+    }
+
+    for (let j = 0; j < rec.length; j++){
+
+        cell = rec[j];
+        attr = spec.colAttrs[j];
+
+        if((!attr.hide) && (!attr.hideNull) && (!attr.hideBoolean)){
+            
+            cellDom = document.createElement(spec.ishead ? 'th' : 'td');
+            cellDom.setAttribute('id', `${spec.name}-${spec.ishead?"head":"body"}-${row}-${j}`);
+
+            let typeClass = spec.ishead ? "" : spec.colAttrs[j].type,
+                styleClass = spec.colAttrs[j].style ? spec.colAttrs[j].style : "";
+
+            cellDom.setAttribute('class', `${spec.name} ${typeClass} ${styleClass} ${spec.ishead ? "th-header" : ""}`);
+            cellDom.innerText = spec.ishead? cell.attr.def : cell.data;
+
+            // for (let k in spec.rowAttrs[i]) {cellDom.setAttribute(k, spec.rowAttrs[i][k])};
+            for (let k in spec.colAttrs[j]) {cellDom.setAttribute(k, spec.colAttrs[j][k])};
+            for (let k in cell.attrs){ cellDOM.setAttribute(k, cell.attrs[k]); }
+            
+            cellDom.setAttribute('row', row);
+            cellDom.setAttribute('col', j);
+
+            tr.appendChild(cellDom);
+        }
+    }
+
+    return tr;
+}
+
 /**
  * genTR: generate TRs from grid, and append to dom object.
  * 
@@ -15,37 +63,9 @@ function genTR(data, dom, spec){
     spec = spec ? spec : {};
     spec.name = spec.name ? spec.name : "table";
     spec.colAttrs = spec.colAttrs ? spec.colAttrs : Array(data[0].length).fill(0).map(e=>({}));
-
-    let tr, cell, cellDom;
     try {
         for (let i = 0; i < data.length; i++){
-            tr = document.createElement('tr');
-            for (let j = 0; j < data[i].length; j++){
-
-                cell = data[i][j];
-
-                if(!spec.colAttrs[j].hide){
-                    
-                    cellDom = document.createElement(spec.ishead ? 'th' : 'td');
-                    cellDom.setAttribute('id', `${spec.name}-${spec.ishead?"head":"body"}-${i}-${j}`);
-
-                    let typeClass = spec.ishead ? "" : spec.colAttrs[j].type,
-                        styleClass = spec.colAttrs[j].style ? spec.colAttrs[j].style : "";
-
-                    cellDom.setAttribute('class', `${spec.name} ${typeClass} ${styleClass}`);
-                    cellDom.innerText = spec.ishead? cell.attr.def : cell.data;
-
-                    // for (let k in spec.rowAttrs[i]) {cellDom.setAttribute(k, spec.rowAttrs[i][k])};
-                    for (let k in spec.colAttrs[j]) {cellDom.setAttribute(k, spec.colAttrs[j][k])};
-                    for (let k in cell.attrs){ cellDOM.setAttribute(k, cell.attrs[k]); }
-                    
-                    cellDom.setAttribute('row', i);
-                    cellDom.setAttribute('col', j);
-
-                    tr.appendChild(cellDom);
-                }
-            }
-            dom.appendChild(tr);
+            dom.appendChild(genRec(data[i], i, spec));
         }
     } catch (e) {
         console.error(e,"genTR", data);
@@ -67,7 +87,7 @@ export default class Table {
 
         let table = document.createElement('div');
         table.setAttribute('id', `table-${this.name}`);
-        table.setAttribute('class', "table");
+        table.setAttribute('class', "table-outer");
         tableWrapper.appendChild(table);
 
         let pagin = document.createElement('div');
@@ -77,18 +97,21 @@ export default class Table {
         parentDom.appendChild(tableWrapper);
     }
 
-    pagination(){
+    pagination(spec){
 
         $(`#table-${this.name}-pagin`).pagination({
             dataSource: this.body.rows,
-            pageSize: 15,
+            pageSize: 50,
             showGoInput: true,
             showGoButton: true,
             showPageNumbers: false,
             showNavigator: true,
 
             callback: (data, pagination) => {
-                let table = this.renderTableDOM(data);
+
+                let prevRecords = pagination.pageSize * (pagination.pageNumber-1);
+
+                let table = this.renderTableDOM(data, prevRecords, spec);
                 $(`#table-${this.name}`).empty();
                 $(`#table-${this.name}`).append(table);
                 this.bindEvents();
@@ -96,7 +119,8 @@ export default class Table {
         })
     }
 
-    renderTableDOM(data, spec){
+
+    renderTableDOM(data, prevRecords, spec){
 
         let table   = document.createElement('table'),
             thead   = document.createElement('thead'),
@@ -105,15 +129,26 @@ export default class Table {
         table.appendChild(thead);
         table.appendChild(tbody);
         
+        if (spec.hideNull){
+            for (let i = 0; i < this.body.size.cols; i++){
+                this.body.colAttrs[i].hideNull = data.map(row => row[i].data).every((v)=> (v==="无" || !v));
+            }
+        }
 
+        if (spec.hideBoolean){
+            this.body.colAttrs.forEach(e => e.hideBoolean = e.type === 'bit');
+        }
 
         genTR(this.head.rows, thead, {
             ishead : true,
-            colAttrs : this.head.colAttrs
+            colAttrs : this.body.colAttrs,
+            editable: spec.editable
         });
         genTR(data, tbody, {
             ishead : false,
-            colAttrs : this.body.colAttrs
+            colAttrs : this.body.colAttrs,
+            editable: spec.editable,
+            prevRecords: prevRecords
         });
 
         return table;
@@ -121,7 +156,7 @@ export default class Table {
 
     bindEvents() {
 
-        $('td').dblclick((e) => {
+        $('td:not(.edit-bar)').dblclick((e) => {
             let type = $(e.target).attr("type");
             switch(type){
                 case "int":
@@ -138,7 +173,7 @@ export default class Table {
             }
         })
     
-        $('td').focusout((e) => {
+        $('td:not(.edit-bar)').focusout((e) => {
             let elem = e.target.parentElement;
             let content = elem.firstChild.value;
     
@@ -159,7 +194,45 @@ export default class Table {
                 this.body.set(row, col, content);
             }
         })
-    
+
+        $('button[edit-type="remove"]').click(function(e){
+
+            let row = parseInt($(e.target).attr('row'));
+            $(e.target).parent().parent().get(0).remove();
+
+            $('button[edit-type]').each((i, v) => {
+                let currRow = parseInt(v.getAttribute('row'));
+                if (currRow >= row) v.setAttribute('row', currRow-1);
+            });
+            this.body.deleteRow(row);
+
+        }.bind(this));
+
+        $('button[edit-type="add"]').click(function(e){
+
+            let row = parseInt($(e.target).attr('row')),
+                rowElem = $(e.target).parent().parent();
+            // console.log(row);
+            $('button[edit-type]').each((i, v) => {
+                let currRow = parseInt(v.getAttribute('row'));
+                if (currRow >= row) v.setAttribute('row', currRow+1);
+            });
+
+            let newRow = this.body.colAttrs.map(e => ({
+                data: e.default ? e.default : 0,
+                attr: e
+            }));
+            console.log(newRow);
+            rowElem.after(genRec(newRow, row, {
+                ishead : false,
+                colAttrs : this.body.colAttrs,
+                editable: true,
+            }));
+
+            this.body.insertRow(row+1, newRow);
+
+        }.bind(this));
+
     }
     
 }
