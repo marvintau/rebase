@@ -43,6 +43,39 @@ export default class Cell {
     render(){
         let cellDom = document.createElement('td');
         $(cellDom).attr(this.attr).addClass(`${this.attr.type}`).text(this.data);
+
+        $(cellDom).dblclick(function (e) {
+            switch (this.attr.type) {
+                case "int":
+                case "float":
+                case "smallint":
+                case "tinyint":
+                case "varchar":
+                case "money":
+                    $(cellDom).empty();
+                    $(cellDom).append(`<input value="${this.data}"></input>`);
+                    console.log(cellDom, "cellDom");
+                    cellDom.firstChild.focus();
+                    break;
+            }
+        }.bind(this))
+            .focusout(function (e) {
+            let elem = e.target.parentElement;
+            let content = elem.firstChild.value;
+    
+            if ($(elem).attr('type').includes('int') || $(elem).attr('type') == 'money') {
+                if (!isNaN(content)) {
+                    console.log(content);
+                    this.setData(parseFloat(content));
+                    elem.innerText = content;
+                } else
+                    elem.innerHTML = `<span style="color:red;">${content}</span>`;
+            } else {
+                elem.innerText = content;
+                this.setData(content);
+            }
+        }.bind(this));
+
         return cellDom;
     }
 

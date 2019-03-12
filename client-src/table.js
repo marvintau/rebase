@@ -138,45 +138,6 @@ export default class Table {
 
     bindEvents() {
 
-        $('td:not(.edit-bar)').dblclick((e) => {
-            let type = $(e.target).attr("type");
-            switch(type){
-                case "int":
-                case "float":
-                case "smallint":
-                case "tinyint":
-                case "varchar":
-                case "money":
-                    let text = e.target.innerText;
-                    $(e.target).empty();
-                    $(e.target).append(`<input value='${text}'></input>`);
-                    e.target.firstChild.focus();
-                    break;
-            }
-        })
-    
-        $('td:not(.edit-bar)').focusout((e) => {
-            let elem = e.target.parentElement;
-            let content = elem.firstChild.value;
-    
-            let col = parseInt($(elem).attr('col')), 
-                row = parseInt($(elem).attr('row'));
-            
-            let cell = this.body[row][col];
-            console.log(cell);
-            if ($(elem).attr('type').includes('int') || $(elem).attr('type') == 'money'){
-                if (!isNaN(content)){
-                    console.log(content);
-                    this.body[row][col].setData(parseFloat(content));
-                    elem.innerText = content;
-                }else
-                    elem.innerHTML = `<span style="color:red;">${content}</span>`;
-            } else {
-                elem.innerText = content;
-                this.body[row][col].setData(content);
-            }
-        })
-
         $('button[edit-type="remove"]').click(function(e){
 
             let row = parseInt($(e.target).attr('row'));
