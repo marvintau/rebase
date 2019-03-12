@@ -56,12 +56,10 @@ localFile.setOnload((event, instance) => {
 
         let tableArea = document.getElementById('table-area');
 
-        tables['GL_accvouch'] = new Ledger(tables['GL_accvouch'], 'vouchers', tableArea);
+        tables['GL_accvouch'] = new Ledger(tables['GL_accvouch'], 'vouchers');
         tables['GL_accvouch'].assignColumnDatatype(tables['SYS_RPT_ItmDEF']['GL_accvouch']);
-        tables['GL_accvouch'].normalizeColumns();
-        tables['GL_accvouch'].pagination({hideNull:true, hideBoolean: true, editable: true});
+        tables['GL_accvouch'].render(tableArea, {hideNull:true, hideBool: true});
 
-        // tables['GL_accvouch'].render('table-area', {editable:true, reduce: true, hideBoolean: true});
     }
 })
 

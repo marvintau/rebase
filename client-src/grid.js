@@ -13,24 +13,13 @@ export default class Grid {
 
     constructor(data){
 
-        let primTypeDict = {
-            string  : 1,
-            number  : 2,
-            boolean : 3
-        };
 
         if (Array.isArray(data) && data.every(row => Array.isArray(row))){
             if (data.some((v, i, a) => v.length != a[0].length))
                 throw new Error("Grid: the initiating array doesn't have same dimension.");    
 
-            if (data.some((v) => v.some((e) => {
-                let res = (e !== null) && !(typeof e in primTypeDict);
-                if(res) console.log(e); return res;
-            })))
-                throw new Error("Grid: some of the element is not primitive.");    
-
             this.size = {rows: data.length, cols:data[0].length}
-            this.rows = data.map(rows => rows.map(cell => ({data: cell, attr:{}})));
+            this.rows = data.map((rows, rowNum) => rows.map((cell, colNum) => ({data: cell, attr:{row:rowNum, col:colNum}})));
 
             this.colAttrs = Array(this.size.cols).fill(0).map((e)=>({style : ""}));
             this.rowAttrs = Array(this.size.rows).fill(0).map((e)=>({style : ""}));
@@ -52,6 +41,10 @@ export default class Grid {
 
     forEachRow(func){
         this.rows.forEach(func);
+    }
+
+    forEachCol(func) {
+        for (let i = 0; i < this.size.cols; i++) func(this.rows.map(row => row[i]));
     }
 
     sliceRow(rowStart, rowEnd){
@@ -113,7 +106,6 @@ export default class Grid {
     }
 
     deleteRow(index){
-        return this.rows.splice(index, 1);
     }
 
     insertRow(index, array){

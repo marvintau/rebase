@@ -1,49 +1,33 @@
 import Grid from "./grid.js";
+import Row from "./row.js";
 
-function genRec(rec, row, spec){
+function genHeadCell(cell) {
+    let cellDom = document.createElement('th');
+    $(cellDom).attr(cell.attr).addClass(`th-header`).text(cell.attr.def);
+    return cellDom;
+}
 
-    let cell, cellDom, attr,
+
+function genHeadRow(row, control) {
+    return row.filter((cell, i) => (!control[i].hide) && (!control[i].hideNull) && (!control[i].hideBool))
+    .map(cell => genHeadCell(cell));
+}
+
+function genBodyRow(rec, control){
+
+    let cellDom,
         tr = document.createElement('tr');
 
-    if(spec.editable){
-        if (!spec.ishead){
-            cellDom = document.createElement("td");
-            $(cellDom).append(`<button class="btn-sm btn-modify btn-outline-primary" edit-type="add"    row="${spec.prevRecords+row}">插入</button>`);
-            $(cellDom).append(`<button class="btn-sm btn-modify btn-outline-danger"  edit-type="remove" row="${spec.prevRecords+row}">删除</button>`);
-            $(cellDom).addClass('edit-bar');
-        } else {
-            cellDom = document.createElement("th");
-            $(cellDom).addClass('edit-bar').text("编辑");
-        }
-        tr.appendChild(cellDom);
-    }
+    cellDom = document.createElement("td");
+    $(cellDom).append(`<button class="btn-sm btn-modify btn-outline-primary" edit-type="add"    row="${rec.cols[0].attr.row}">插入</button>`);
+    $(cellDom).append(`<button class="btn-sm btn-modify btn-outline-danger"  edit-type="remove" row="${rec.cols[0].attr.row}">删除</button>`);
+    $(cellDom).addClass('edit-bar');
 
-    for (let j = 0; j < rec.length; j++){
+    tr.appendChild(cellDom);
 
-        cell = rec[j];
-        attr = spec.colAttrs[j];
+    let domArray = rec.render(control);
 
-        if((!attr.hide) && (!attr.hideNull) && (!attr.hideBoolean)){
-            
-            cellDom = document.createElement(spec.ishead ? 'th' : 'td');
-            cellDom.setAttribute('id', `${spec.name}-${spec.ishead?"head":"body"}-${row}-${j}`);
-
-            let typeClass = spec.ishead ? "" : spec.colAttrs[j].type,
-                styleClass = spec.colAttrs[j].style ? spec.colAttrs[j].style : "";
-
-            cellDom.setAttribute('class', `${spec.name} ${typeClass} ${styleClass} ${spec.ishead ? "th-header" : ""}`);
-            cellDom.innerText = spec.ishead? cell.attr.def : cell.data;
-
-            // for (let k in spec.rowAttrs[i]) {cellDom.setAttribute(k, spec.rowAttrs[i][k])};
-            for (let k in spec.colAttrs[j]) {cellDom.setAttribute(k, spec.colAttrs[j][k])};
-            for (let k in cell.attrs){ cellDOM.setAttribute(k, cell.attrs[k]); }
-            
-            cellDom.setAttribute('row', row);
-            cellDom.setAttribute('col', j);
-
-            tr.appendChild(cellDom);
-        }
-    }
+    $(tr).append(domArray.map(e => $(e)));
 
     return tr;
 }
@@ -58,14 +42,11 @@ function genRec(rec, row, spec){
  * @param {HTMLDomElement} dom DOM element
  * @returns nothing
  */
-function genTR(data, dom, spec){
+function genBody(data, bodyDom, control){
 
-    spec = spec ? spec : {};
-    spec.name = spec.name ? spec.name : "table";
-    spec.colAttrs = spec.colAttrs ? spec.colAttrs : Array(data[0].length).fill(0).map(e=>({}));
     try {
         for (let i = 0; i < data.length; i++){
-            dom.appendChild(genRec(data[i], i, spec));
+            bodyDom.appendChild(genBodyRow(data[i], control));
         }
     } catch (e) {
         console.error(e,"genTR", data);
@@ -73,45 +54,55 @@ function genTR(data, dom, spec){
 }
 
 
+function genHead(data, headDom, control) {
+    console.log(data);
+    let tr = document.createElement('tr');
+    $(tr).append(`<th class="table th-header">编辑</th>`)
+        .append(genHeadRow(data[0], control).map(e => $(e)));
+    $(headDom).append($(tr));
+}
+
 export default class Table {
     
-    constructor (head, body, name, parentDom){
-        this.head = new Grid(head);
-        this.body = new Grid(body);
+    constructor (head, body, name){
         this.name = name ? name : "";
 
-        this.head.attrAll({rowspan: 1, colspan: 1});
+        this.head = new Grid(head);
+        this.body = body.map((row) => new Row(name, row));
 
-        let tableWrapper = document.createElement('div');
-        tableWrapper.setAttribute('id', `table-wrapper-${this.name}`);
+        this.size = {rows: body.length, cols:body[0].length}
+        
+        this.head.attrAll({ rowspan: 1, colspan: 1 });
 
-        let table = document.createElement('div');
-        table.setAttribute('id', `table-${this.name}`);
-        table.setAttribute('class', "table-outer");
-        tableWrapper.appendChild(table);
-
-        let pagin = document.createElement('div');
-        pagin.setAttribute('id', `table-${this.name}-pagin`);
-        tableWrapper.appendChild(pagin);
-
-        parentDom.appendChild(tableWrapper);
+        this.body.forEach((row, rowNum) => {
+            row.setAttr({ row: rowNum});
+        })
     }
 
-    pagination(spec){
+    forEachCell(func) {
+        for (let row = 0; row < this.size.rows; row++)
+            for (let col = 0; col < this.size.cols; col++)
+                func(this.body[row].cols[col], row, col);
+    }
+
+    render(parentDom, spec){
+
+        $(parentDom).append(`<div id="table-wrapper-${this.name}">
+            <div id="table-${this.name}" class="table-outer"></div>
+            <div id="table-${this.name}-pagin"></div>
+        </div>`);
 
         $(`#table-${this.name}-pagin`).pagination({
-            dataSource: this.body.rows,
+            dataSource: this.body,
             pageSize: 50,
             showGoInput: true,
             showGoButton: true,
             showPageNumbers: false,
             showNavigator: true,
 
-            callback: (data, pagination) => {
+            callback: (data) => {
 
-                let prevRecords = pagination.pageSize * (pagination.pageNumber-1);
-
-                let table = this.renderTableDOM(data, prevRecords, spec);
+                let table = this.renderPage(data, spec);
                 $(`#table-${this.name}`).empty();
                 $(`#table-${this.name}`).append(table);
                 this.bindEvents();
@@ -120,7 +111,7 @@ export default class Table {
     }
 
 
-    renderTableDOM(data, prevRecords, spec){
+    renderPage(data, spec){
 
         let table   = document.createElement('table'),
             thead   = document.createElement('thead'),
@@ -130,26 +121,17 @@ export default class Table {
         table.appendChild(tbody);
         
         if (spec.hideNull){
-            for (let i = 0; i < this.body.size.cols; i++){
-                this.body.colAttrs[i].hideNull = data.map(row => row[i].data).every((v)=> (v==="无" || !v));
+            for (let i = 0; i < this.size.cols; i++){
+                this.colTypes[i].hideNull = data.map(row => row.cols[i].data).every((v)=> (v==="无" || !v));
             }
         }
 
-        if (spec.hideBoolean){
-            this.body.colAttrs.forEach(e => e.hideBoolean = e.type === 'bit');
+        if (spec.hideBool){
+            this.colTypes.forEach(e => e.hideBool = e.type === 'bit');
         }
 
-        genTR(this.head.rows, thead, {
-            ishead : true,
-            colAttrs : this.body.colAttrs,
-            editable: spec.editable
-        });
-        genTR(data, tbody, {
-            ishead : false,
-            colAttrs : this.body.colAttrs,
-            editable: spec.editable,
-            prevRecords: prevRecords
-        });
+        genHead(this.head.rows, thead, this.colTypes);
+        genBody(data, tbody, this.colTypes);
 
         return table;
     }
@@ -180,18 +162,18 @@ export default class Table {
             let col = parseInt($(elem).attr('col')), 
                 row = parseInt($(elem).attr('row'));
             
-            let cell = this.body.rows[row][col];
+            let cell = this.body[row][col];
             console.log(cell);
             if ($(elem).attr('type').includes('int') || $(elem).attr('type') == 'money'){
                 if (!isNaN(content)){
                     console.log(content);
-                    this.body.rows[row][col].content = parseFloat(content);
+                    this.body[row][col].setData(parseFloat(content));
                     elem.innerText = content;
                 }else
                     elem.innerHTML = `<span style="color:red;">${content}</span>`;
             } else {
                 elem.innerText = content;
-                this.body.set(row, col, content);
+                this.body[row][col].setData(content);
             }
         })
 
@@ -204,8 +186,9 @@ export default class Table {
                 let currRow = parseInt(v.getAttribute('row'));
                 if (currRow >= row) v.setAttribute('row', currRow-1);
             });
-            this.body.deleteRow(row);
-
+            
+            return this.body.splice(row, 1);
+            
         }.bind(this));
 
         $('button[edit-type="add"]').click(function(e){
@@ -218,19 +201,12 @@ export default class Table {
                 if (currRow >= row) v.setAttribute('row', currRow+1);
             });
 
-            let newRow = this.body.colAttrs.map(e => ({
-                data: e.default ? e.default : 0,
-                attr: e
-            }));
-            console.log(newRow);
-            rowElem.after(genRec(newRow, row, {
-                ishead : false,
-                colAttrs : this.body.colAttrs,
-                editable: true,
-            }));
-
-            this.body.insertRow(row+1, newRow);
-
+            let newRow = new Row(this.name, this.colTypes.map(e => (e.default ? e.default : 0)));
+            newRow.setAttr({ row: row });
+            newRow.setRowAttr(this.colTypes);
+            rowElem.after(genBodyRow(newRow, this.colTypes));
+            this.body.splice(row+1, 0, newRow);
+    
         }.bind(this));
 
     }
