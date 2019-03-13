@@ -2,7 +2,20 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 import FileSend from './file-send';
 
-import Ledger from './ledger.js';
+import Table from './table.js';
+
+const typeDefault = {
+    "int": { default: 0 },
+    "tinyint": { default: 0 },
+    "smallint": { default: 0 },
+    "float": { default: 0 },
+    "money": { default: 0 },
+    "nvarchar": { default: "无" },
+    "varchar": { default: "无" },
+    "bit": { default: false },
+    "undefined": { default: 0 },
+    "datetime": { default: 0 }
+};
 
 var socket         = io.connect(),
     tables     = {};
@@ -54,13 +67,25 @@ localFile.setOnload((event, instance) => {
 
     if('GL_accvouch' in tables){
 
-        let tableArea = document.getElementById('table-area');
+        let tableArea = document.getElementById('table-area'),
+            typeDict = tables['SYS_RPT_ItmDEF']['GL_accvouch'];
 
-        tables['GL_accvouch'] = new Ledger(tables['GL_accvouch'], 'vouchers');
-        tables['GL_accvouch'].assignColumnDatatype(tables['SYS_RPT_ItmDEF']['GL_accvouch']);
-        tables['GL_accvouch'].render(tableArea, {hideNull:true, hideBool: true});
+
+        tables['GL_accvouch'] = new Table(tables['GL_accvouch'], typeDefault, typeDict, 'vouchers');
+        tables['GL_accvouch'].render(tableArea, {hideNull:true, hideBool: true}, "凭证明细");
 
     }
+
+    if('GL_accsum' in tables){
+
+        let tableArea = document.getElementById('table-area'),
+            typeDict = tables['SYS_RPT_ItmDEF']['GL_accsum'];
+
+        tables['GL_accsum'] = new Table(tables['GL_accsum'], typeDefault, typeDict, 'journal');
+        tables['GL_accsum'].render(tableArea, {hideNull:true, hideBool: true}, "科目总账");
+
+    }
+
 })
 
 $('#single-table-request').on("click", function(e){

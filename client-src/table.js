@@ -1,4 +1,5 @@
-import Grid from "./grid.js";
+import { flat, layer } from "./locus.js";
+import Table from './table.js';
 import Row from "./row.js";
 
 function genHeadCell(cell) {
@@ -7,9 +8,9 @@ function genHeadCell(cell) {
     return cellDom;
 }
 
-
 function genHeadRow(row, control) {
-    return row.filter((cell, i) => (!control[i].hide) && (!control[i].hideNull) && (!control[i].hideBool))
+    console.log(row);
+    return row.cols.filter((cell, i) => (!control[i].hide) && (!control[i].hideNull) && (!control[i].hideBool))
     .map(cell => genHeadCell(cell));
 }
 
@@ -32,16 +33,6 @@ function genBodyRow(rec, control){
     return tr;
 }
 
-/**
- * genTR: generate TRs from grid, and append to dom object.
- * 
- * If the cell doesn't have an attribute of hiding, create
- * cell DOM object. the cell object could be either TD or TH.
- * 
- * @param {Grid} grid the grid object
- * @param {HTMLDomElement} dom DOM element
- * @returns nothing
- */
 function genBody(data, bodyDom, control){
 
     try {
@@ -55,27 +46,59 @@ function genBody(data, bodyDom, control){
 
 
 function genHead(data, headDom, control) {
-    console.log(data);
     let tr = document.createElement('tr');
-    $(tr).append(`<th class="table th-header">编辑</th>`)
-        .append(genHeadRow(data[0], control).map(e => $(e)));
+    if (data.length == 1) {
+        $(tr).append(`<th class="edit-bar th-header">编辑</th>`)
+            .append(genHeadRow(data[0], control).map(e => $(e)));
+    }
     $(headDom).append($(tr));
 }
 
 export default class Table {
     
-    constructor (head, body, name){
+    constructor (data, typeDefault, colsTypeDict, name){
         this.name = name ? name : "";
 
-        this.head = new Grid(head);
+        let head, body;
+
+        if (data.every(e => typeof e === "object")) {
+            if(data.length > 0){
+                head = layer(data[0]),
+                body = data.map(e => Object.values(flat(e)));
+            }
+        }
+        else if (data.constructor === Object) {
+                head = layer(data),
+                body = transpose(data);
+        } else {
+            throw new TypeError('Ledger: unrecognized data. It must be Array of objects, or Object of arrays');
+        }
+
+        this.head = head.map((row) => new Row(name, row));
         this.body = body.map((row) => new Row(name, row));
 
         this.size = {rows: body.length, cols:body[0].length}
-        
-        this.head.attrAll({ rowspan: 1, colspan: 1 });
 
         this.body.forEach((row, rowNum) => {
             row.setAttr({ row: rowNum});
+        })
+
+        this.colTypes = Array(this.size.cols).fill(0).map(e => ({ type: "undefined", def: "undefined", hide: true }));
+
+        let lastRow = this.head[this.head.length - 1].cols;
+        lastRow.forEach((e, i) => {
+            let typeEntry = colsTypeDict[e.data];
+            if (typeEntry) {
+                this.colTypes[i] = typeEntry;
+                this.colTypes[i].default = typeDefault[typeEntry.type].default;
+                Object.assign(e.attr, typeEntry);
+            }
+        });
+
+        this.forEachCell((cell, _row, col) =>{
+            let typeEntry = this.colTypes[col];
+            cell.attr.type = typeEntry.type;
+            cell.data = (cell.data == null || cell.data == "***") ? typeEntry.default : cell.data;
         })
     }
 
@@ -85,12 +108,15 @@ export default class Table {
                 func(this.body[row].cols[col], row, col);
     }
 
-    render(parentDom, spec){
+    render(parentDom, spec, title){
 
-        $(parentDom).append(`<div id="table-wrapper-${this.name}">
+        $(parentDom).append(`
+        <div id="table-wrapper-${this.name} class="table-wrapper">
+            <div id="table-${this.name}-title" class="table-title">${title}</div>
             <div id="table-${this.name}" class="table-outer"></div>
-            <div id="table-${this.name}-pagin"></div>
-        </div>`);
+            <div id="table-${this.name}-pagin" class="paginator"</div>
+        </div>
+        `);
 
         $(`#table-${this.name}-pagin`).pagination({
             dataSource: this.body,
@@ -130,7 +156,7 @@ export default class Table {
             this.colTypes.forEach(e => e.hideBool = e.type === 'bit');
         }
 
-        genHead(this.head.rows, thead, this.colTypes);
+        genHead(this.head, thead, this.colTypes);
         genBody(data, tbody, this.colTypes);
 
         return table;

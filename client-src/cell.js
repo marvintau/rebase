@@ -14,7 +14,6 @@ export default class Cell {
             number  : 2,
             boolean : 3
         };
-
         if ((data !== null) && !(typeof data in primTypeDict))
             throw TypeError('Cell: data is not primitive: ', data);
 
