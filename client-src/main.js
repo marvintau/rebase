@@ -2,7 +2,8 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 import FileSend from './file-send';
 
-import Table from './table.js';
+import Table from './Ledgable/table.js';
+import Balance from "./Ledgable/balance.js";
 
 const typeDefault = {
     "int": { default: 0 },
@@ -17,8 +18,39 @@ const typeDefault = {
     "datetime": { default: 0 }
 };
 
-var socket         = io.connect(),
-    tables     = {};
+let createTable = function (tableType, tableID, tableName, tableDisplayName) {
+    
+    if(tableID in tables){
+
+        let tableArea = document.getElementById('table-area'),
+            colTypeDict = tables['SYS_RPT_ItmDEF'][tableID];
+
+        tables[tableID] = new tableType(tables[tableID], colTypeDict, typeDefault, tableName);
+        tables[tableID].render({hideNull:true, hideBool: true}, tableDisplayName, tableArea);
+
+    }
+
+}
+
+let applyCategoryCode = function(tableID){
+    let vouchers = tables[tableID],
+        ccodes = tables['SYS_code'];
+    for (let i = 0; i < vouchers.length; i++){
+        let ccode = tables[tableID][i].ccode,
+            ccodeEntry = tables['SYS_code'][ccode];
+    
+        let name = "";
+        for (let l = ccode.length; l >= 4; l -=2 ){
+            name = ccodes[ccode.slice(0, l)].ccode_name + ":" + name;
+        }
+        name = name.slice(0, -1);
+
+        tables[tableID][i].ccode = `${ccode}-${ccodeEntry.cclass}-${name}`;
+    }
+}
+
+var socket = io.connect(),
+    tables = {};
 
 Array.prototype.groupBy = function(key) {
   return this.reduce(function(rv, x) {
@@ -49,7 +81,6 @@ localFile.setOnload((event, instance) => {
     let data = JSON.parse(event.target.result);
 
     Object.assign(tables, data);
-    console.log(tables);
 
     if('SYS_RPT_ItmDEF' in tables){
         tables['SYS_RPT_ItmDEF'] = tables['SYS_RPT_ItmDEF'].groupBy('TableName');
@@ -65,31 +96,29 @@ localFile.setOnload((event, instance) => {
         }
     } else throw TypeError('RPT_ItmDEF table is mandatory.')
 
-    if('GL_accvouch' in tables){
+    if('SYS_code' in tables){
+        let ccodes = tables['SYS_code'],
+            dict = {};
+        for (let i = 0; i <ccodes.length; i++){
+            let currCode = ccodes[i].ccode;
+            for (let k in ccodes[i]) {
+                if (ccodes[i][k] === null) delete ccodes[i][k];
+            }
+            dict[currCode] = ccodes[i];
+        }
+        tables['SYS_code'] = dict;
+    } else throw TypeError('ccode table is mandatory.')
 
-        let tableArea = document.getElementById('table-area'),
-            typeDict = tables['SYS_RPT_ItmDEF']['GL_accvouch'];
+    applyCategoryCode('GL_accvouch');
+    applyCategoryCode('GL_accsum');
 
+    // console.log(tables['GL_accvouch'][0].ccode);
 
-        tables['GL_accvouch'] = new Table(tables['GL_accvouch'], typeDefault, typeDict, 'vouchers');
-        tables['GL_accvouch'].render(tableArea, {hideNull:true, hideBool: true}, "凭证明细");
+    let balance = Object.entries(tables['GL_accsum'].groupBy("ccode")).sort();
 
-    }
+    createTable(Table, 'GL_accvouch', 'vouchers', "凭证明细 Vouchers");
+    createTable(Balance, 'GL_accsum', 'balance', '科目余额 Balances');
 
-    if('GL_accsum' in tables){
-
-        let tableArea = document.getElementById('table-area'),
-            typeDict = tables['SYS_RPT_ItmDEF']['GL_accsum'];
-
-        tables['GL_accsum'] = new Table(tables['GL_accsum'], typeDefault, typeDict, 'journal');
-        tables['GL_accsum'].render(tableArea, {hideNull:true, hideBool: true}, "科目总账");
-
-    }
-
-})
-
-$('#single-table-request').on("click", function(e){
-    socket.emit('single-table-request', "yayasdasdasdasdasd");
 })
 
 $('#choose-backup-file').on('change', function () {
@@ -102,23 +131,9 @@ $('#choose-local-file').on('change', function () {
     localFile.readAsText();
 });
 
-$('#clear-all-tables').on('click', function(){
-    clearAllTables();
-})
-
 $('#dump-data').on('click', function(){
     FileSaver.saveAs(new Blob([JSON.stringify(tables)], {type: "mime"}), "tables.json");
 })
-
-
-
-function clearAllTables(){
-    var myNode = document.getElementById("table-area");
-    while (myNode.firstChild) {
-        myNode.removeChild(myNode.firstChild);
-    }
-}
-
 
 var updateIndicator = function(message){
     document.getElementById('indicator').innerText = message;
@@ -151,13 +166,3 @@ socket.on('msg', function (data) {
             updateIndicatorErr("服务器发来了不知道什么类型的消息，有可能是个bug : ["+ data.type + "]");
     }
 });
-
-socket.on('err', function(data){
-    switch(data.type){
-        case "ETIMEOUT":
-            updateIndicatorErr("尴尬了，数据库那边没响应，您稍后再试一下。");
-            break;
-        default:
-            updateIndicatorErr("尴尬了，发生了一个未知的错误 : "+ JSON.stringify(data.type));
-    }
-})

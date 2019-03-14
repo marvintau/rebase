@@ -13,7 +13,7 @@ export default class Row {
     constructor (name, rowData){
 
         this.name = name;
-        this.cols = rowData.map((cell, i) => new Cell(name, cell, {col: i}));
+        this.cols = rowData.map();
     }
 
     /**

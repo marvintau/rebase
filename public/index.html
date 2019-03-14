@@ -4,6 +4,16 @@
     <link rel="stylesheet" href="./pagination.css">
     <style>
 
+    select {
+        padding: 5px;
+        width: 50px;
+        margin: 0 10px;
+    }
+
+    .select-wrapper{
+        margin: 10px 0;
+    }
+
     .table-outer {
         margin-bottom: 20px;
         height: 600px;
@@ -11,8 +21,26 @@
         font-size: 90%;
         border: 1px solid black;
         position: relative;
+        overflow:hidden;
+        background: transparent;
+    }
+    .table-outer:hover {
+        transition: all .5s;
         overflow:auto;
     }
+
+    ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+        background-color: transparent;
+
+    }
+    
+    ::-webkit-scrollbar-track-piece {
+        background-color: transparent;
+        border-radius: 6px;
+    }
+
 
     .table-title{
         font-size: 200%;

@@ -9,6 +9,8 @@ export default class Cell {
 
     constructor(name, data, attr){
 
+        attr = attr ? attr : {};
+
         let primTypeDict = {
             string  : 1,
             number  : 2,
