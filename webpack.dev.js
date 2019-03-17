@@ -58,19 +58,13 @@ const clientConfigure = {
 	module: {
 		rules: [
 			{
-				test: /\.js$/,
-				include: [path.resolve(__dirname, 'node_modules')],
+				test: /\.jsx?$/,
 				loader: 'babel-loader',
-
-				options: {
-					plugins: ['syntax-dynamic-import'],
-					presets: ['@babel/preset-env']
-				}
-				
+				// include: [path.resolve(__dirname, 'node_modules')],
+				exclude: /node_modules/
 			},
 			{
 				test: /\.css$/,
-
 				use: ["css-loader", "style-loader"]
 			}
 		]

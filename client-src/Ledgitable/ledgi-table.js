@@ -1,6 +1,5 @@
 import { flat, layer } from "./locus.js";
-import Table from './table.js';
-import Cell from "./cell.js";
+import Cell from "./body-cell.js/index.js";
 
 function genHeadCell(cell) {
     let cellDom = document.createElement('th');
@@ -55,7 +54,7 @@ function genHead(data, headDom, control) {
     $(headDom).append($(tr));
 }
 
-export default class Table {
+export default class LedgiTable {
     
     constructor (data, colsTypeDict, typeDefault, name){
         this.name = name ? name : "";
@@ -125,6 +124,9 @@ export default class Table {
      * Update the data only. Useful when refreshing data, but not changing columns.
      * 只更新表中数据，不更新表头及各列的数据类型，适合只有数据发生变动时的更新
      * 
+     * 如果没有传入data，则不重新初始化body，仅仅将body同步到bodyDisplay。这种情况适合对body
+     * 进行了增删改操作的时候。
+     * 
      * Note: this can be considered as a dirty operation, because it doesn't check
      *       col length or type conflict. So make sure the data is handled properly
      *       before calling this method.
@@ -134,24 +136,28 @@ export default class Table {
      * @param {Array} data initial table data
      */
     updateBody(data){
-        let body;
-        if (data.length > 0 && data.every(e => typeof e === "object")) {
-            body = data.map(e => Object.values(flat(e)));
-        } else if (data.constructor === Object) {
-            body = transpose(data);
-        } else {
-            throw new TypeError('Ledger: unrecognized data. It must be Array of objects, or Object of arrays');
+        
+        if (data !== undefined){
+
+            let body;
+            if (data.length > 0 && data.every(e => typeof e === "object")) {
+                body = data.map(e => Object.values(flat(e)));
+            } else if (data.constructor === Object) {
+                body = transpose(data);
+            } else {
+                throw new TypeError('Ledger: unrecognized data. It must be Array of objects, or Object of arrays');
+            }
+
+            this.body = body.map((row, rowNum) => row.map((cell, colNum) => new Cell(name, cell, {row: rowNum, col: colNum})));
+
+            this.size = {rows: body.length, cols:body[0].length}
+
+            this.forEachCell((cell, _row, col) =>{
+                let typeEntry = this.colTypes[col];
+                cell.attr.type = typeEntry.type;
+                cell.data = (cell.data == null) ? typeEntry.default : cell.data;
+            })
         }
-
-        this.body = body.map((row, rowNum) => row.map((cell, colNum) => new Cell(name, cell, {row: rowNum, col: colNum})));
-
-        this.size = {rows: body.length, cols:body[0].length}
-
-        this.forEachCell((cell, _row, col) =>{
-            let typeEntry = this.colTypes[col];
-            cell.attr.type = typeEntry.type;
-            cell.data = (cell.data == null) ? typeEntry.default : cell.data;
-        })
 
         this.bodyDisplay = this.body;
     }
@@ -174,22 +180,20 @@ export default class Table {
                 func(this.body[row][col], row, col);
     }
 
-    render(spec, title, parentDom){
+    refresh(){}
+
+    render(title, parentDom){
+
+        // title and parentDom needed only for the first rendering.
 
         if ($(`#table-wrapper-${this.name}`).length == 0){
             $(parentDom).append(`
             <div id="table-wrapper-${this.name}" class="table-wrapper">
+                <div id="table-${this.name}-title" class="table-title">${title}</div>
+                <div id="table-${this.name}" class="table-outer"></div>
+                <div id="table-${this.name}-pagin" class="paginator"</div>    
             </div>`)
         }
-        let $wrapper = $(`#table-wrapper-${this.name}`);
-
-        $wrapper.empty().append(`
-        <div id="table-${this.name}-title" class="table-title">${title}</div>
-        <div id="table-${this.name}" class="table-outer"></div>
-        <div id="table-${this.name}-pagin" class="paginator"</div>
-        `);
-        
-        console.log($(`#table-wrapper-${this.name}`), "render");
 
         $(`#table-${this.name}-pagin`).pagination({
             dataSource: this.bodyDisplay,
@@ -201,7 +205,7 @@ export default class Table {
 
             callback: (data) => {
 
-                let table = this.renderPage(data, spec);
+                let table = this.renderPage(data);
                 $(`#table-${this.name}`).empty();
                 $(`#table-${this.name}`).append(table);
                 this.bindEvents();
@@ -210,7 +214,7 @@ export default class Table {
     }
 
 
-    renderPage(data, spec){
+    renderPage(data){
 
         let table   = document.createElement('table'),
             thead   = document.createElement('thead'),
@@ -219,15 +223,11 @@ export default class Table {
         table.appendChild(thead);
         table.appendChild(tbody);
         
-        if (spec.hideNull){
-            for (let i = 0; i < this.size.cols; i++){
-                this.colTypes[i].hideNull = data.map(row => row[i].data).every((v)=> (v==="无" || !v));
-            }
+        for (let i = 0; i < this.size.cols; i++){
+            this.colTypes[i].hideNull = data.map(row => row[i].data).every((v)=> (v==="无" || !v));
         }
 
-        if (spec.hideBool){
-            this.colTypes.forEach(e => e.hideBool = e.type === 'bit');
-        }
+        this.colTypes.forEach(e => e.hideBool = e.type === 'bit');
 
         genHead(this.head, thead, this.colTypes);
         genBody(data, tbody, this.colTypes);
@@ -238,34 +238,25 @@ export default class Table {
     bindEvents() {
 
         $('button[edit-type="remove"]').click(function(e){
-
-            let row = parseInt($(e.target).attr('row'));
-            $(e.target).parent().parent().get(0).remove();
-
-            $('button[edit-type]').each((i, v) => {
-                let currRow = parseInt(v.getAttribute('row'));
-                if (currRow >= row) v.setAttribute('row', currRow-1);
-            });
             
-            return this.body.splice(row, 1);
+            this.body.splice(row, 1);
+            this.refresh();
+            this.render();
             
         }.bind(this));
 
         $('button[edit-type="add"]').click(function(e){
 
-            let row = parseInt($(e.target).attr('row')),
-                rowElem = $(e.target).parent().parent();
-            // console.log(row);
-            $('button[edit-type]').each((i, v) => {
-                let currRow = parseInt(v.getAttribute('row'));
-                if (currRow >= row) v.setAttribute('row', currRow+1);
-            });
+            let row = parseInt($(e.target).attr('row'));
 
-            let newRow = new Row(this.name, this.colTypes.map(e => (e.default ? e.default : 0)));
-            newRow.setAttr({ row: row });
-            newRow.setRowAttr(this.colTypes);
-            rowElem.after(genBodyRow(newRow, this.colTypes));
+            let newRow = this.colTypes.map((e, i) => 
+                new Cell(name, e.default ? e.default : 0,
+                Object.assign({col: i, row: row}, this.colTypes[i])
+            ));
+            
             this.body.splice(row+1, 0, newRow);
+            this.refresh();
+            this.render();
     
         }.bind(this));
 

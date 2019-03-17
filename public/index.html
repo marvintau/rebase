@@ -29,19 +29,6 @@
         overflow:auto;
     }
 
-    ::-webkit-scrollbar {
-        width: 5px;
-        height: 5px;
-        background-color: transparent;
-
-    }
-    
-    ::-webkit-scrollbar-track-piece {
-        background-color: transparent;
-        border-radius: 6px;
-    }
-
-
     .table-title{
         font-size: 200%;
         font-weight: bolder;
@@ -53,6 +40,12 @@
 
     .table-wrapper {
         margin-bottom: 40px;
+    }
+
+    #container{
+        min-width: 0;
+        margin: 10px;
+        width: 100%;
     }
 
     .btn-modify{
@@ -137,12 +130,15 @@
     }
 
     .bg{
+        display: flex !important;
         background-color: rgb(255, 251, 247);
     }
 
     .sidebar {
+        position: sticky;
+        top: 0;
         margin: 10px;
-        width: 300px;
+        min-height: 100vh;
     }
 
     .varchar{
@@ -161,8 +157,9 @@
     </style>
 </head>
 <body class="bg">
+    <div id="body"></div>
 
-    <div class="sidebar" style="position: fixed">
+    <div class="sidebar">
         <h1 class="col-md-12" style="letter-spacing: -0.07em;">Auditool</h1>
         <div class="desc col-md-12">在这里上传由ERP导出的SQL Server备份文件(.BAK文件)。上传文件会在后端服务器进行处理。</div>
         <div id="backup-upload-area" class="input-group col-md-12">
@@ -187,8 +184,8 @@
 
     </div>
 
-    <div class="container" id="container" style="margin-top:10px;">
-        <div id="table-area" class="col-md-12" ></div>
+    <div id="container" style="margin-top:10px;">
+        <div id="table-area" ></div>
     </div>
 </body>
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
