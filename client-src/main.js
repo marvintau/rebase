@@ -2,9 +2,6 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 import FileSend from './file-send';
 
-// import LedgiTable from './Ledgitable/ledgi-table.js';
-// import Balance from "./Ledgable/balance.js";
-
 import React, {Component} from "react";
 import {render} from "react-dom";
 
@@ -37,62 +34,40 @@ let randomType = () => {
     return randomChoice(['int', 'tinyint', 'smallint', 'float', 'money', 'undefined', 'datetime', 'nvarchar', 'varchar', 'bit']);
 }
 
-let cols = 10,
-    rows = 10;
+let toRecord = (vals, fields) => {
+    let res = {}
+    for(let i = 0; i < fields.length; i++){
+        res[fields[i]] = vals[i];
+    }
+    return res;
+}
 
+let cols = 20,
+    rows = 20;
+
+let head = Array(cols).fill(0).map(e => randomName());
 let tableData = {
     name: "testable",
-    columnTypes: Array(cols).fill(0).map(e=>randomType()),
-    head: Array(2).fill(0).map(e=> Array(cols).fill(0).map(e => ({data: randomName(), type:"nvarchar"}))),
-    body: Array(rows).fill(0).map(e=>Array(cols).fill(0).map(c => {
-        return {data: Math.random().toFixed(5), type: "int"}
-    }))
+    columnAttr: toRecord(Array(cols).fill(0).map(e=>({type: randomType(), default: 0})), head),
+    data: Array(rows).fill(0).map(e=>toRecord(Array(cols).fill(0).map(e=>Math.random()), head))
 }
-
-const typeDefault = {
-    "int"      : { default: 0 },
-    "tinyint"  : { default: 0 },
-    "smallint" : { default: 0 },
-    "float"    : { default: 0 },
-    "money"    : { default: 0 },
-    "undefined": { default: 0 },
-    "datetime" : { default: 0 },
-    "nvarchar" : { default: "无" },
-    "varchar"  : { default: "无" },
-    "bit"      : { default: false },
-};
-
-class Ledgeable {
-
-    /**
-     * Ledgiable ONLY accepts the data in the form of ARRAY OF PLAIN OBJECT.
-     * the PLAIN OBJECT is a subset of object, that:
-     * 
-     * 1) it could be either nested or flat
-     * 2) the value of key could be either object or primitive data type.
-     * 3) the primitive data type contains only **string**, **number** and **null**
-     * 
-     * Legdeable contains two types of data, that:
-     * 
-     * 1) the source data, which is comprehensive. The original data accepts
-     *    operations including insertion/deletion/modification.
-     * 2) the presented data, which is the final data applied with operations,
-     *    including sort, filter and pagination, from the source data.
-     * 
-     * @param {Array} data Array of plain objects
-     * @param {*} columnAttrs 
-     */
-    constructor(data, columnAttrs){
-
-    }
-}
+console.log(tableData);
 
 class BodyRow extends Component {
 
     render() {
-        const {row, cells, updateCell, columnTypes} = this.props;
-        const cellElems = cells.map((cell, i) => (<BodyCell {...cell} key={i} row={row} col={i} updateCell={updateCell} type={columnTypes[i]}/>));
-        return (<tr>{cellElems}</tr>);
+        const {row, cells, updateCell, columnAttr, insertRecord, removeRecord} = this.props;
+
+        let insertRec = (e) => { insertRecord(row);},
+            removeRec = (e) => { removeRecord(row);};
+
+        const editButton = (<td className="edit-bar">
+            <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec} >插入</button>
+            <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
+        </td>)
+
+        const cellElems = cells.map((cell, i) => (<BodyCell data={cell} key={i} row={row} col={i} updateCell={updateCell} type={columnAttr[i].attr.type}/>));
+        return (<tr>{editButton}{cellElems}</tr>);
     }
 }
 
@@ -102,7 +77,7 @@ class HeadCell extends Component {
 
         const {data, type} = this.props;
 
-        return (<th type={type} className={type}>{data}</th>);
+        return (<th type={type} className={"th-header "+type}>{data}</th>);
     }
 }
 
@@ -110,8 +85,12 @@ class HeadRow extends Component {
 
     render() {
         const {cols} = this.props;
+        console.log(cols);
         const colElems = cols.map((col, i) => (<HeadCell {...col} key={i}/>));
-        return (<tr>{colElems}</tr>);
+        return (<tr>
+            <HeadCell data="编辑" className="edit-bar"/>
+            {colElems
+        }</tr>);
     }
 }
 
@@ -127,39 +106,65 @@ class TableBody extends Component {
 
 class TableHead extends Component {
     render(){
-        const {name, rows, updateCell} = this.props;
-        const rowElems = rows.map((row, i) => (<HeadRow cols={row} key={i} />));
-        return (<thead>{rowElems}</thead>);
+        const {name, row, updateCell} = this.props;
+        return (<thead><HeadRow cols={row} /></thead>);
     }
 }
 
-class LedgiTable extends Component {
+class LedgerTable extends Component {
 
     constructor(props, context){
         super(props, context);
-        this.state = {body: props.body};
-
+        this.state = {
+            head : Object.keys(props.data[0]).map(key => ({data: key, attr:props.columnAttr[key]})),
+            body : props.data.map(record => Object.values(record))
+        }
         this.updateCell = this.updateCell.bind(this);
+        this.insertRecord = this.insertRecord.bind(this);
+        this.removeRecord = this.removeRecord.bind(this);
+    }
+
+    insertRecord(row){
+        let body = this.state.body;
+        // console.log(this.state.head, "insert");
+        body.splice(row+1, 0, this.state.head.map(e=>e.attr.default));
+        this.setState({body: body});
+    }
+
+    removeRecord(row){
+        let body = this.state.body;
+        body.splice(row, 1);
+        this.setState({body: body});
     }
 
     updateCell(row, col, data){
         let body = this.state.body;
         body[row][col].data = data;
-        this.setState({data: body});
+        this.setState({body: body});
     }
 
     render() {
-        const {name, head, columnTypes} = this.props;
-        return(<table>
-            <TableHead name={name} rows={head} />
-            <TableBody name={name} rows={this.state.body} columnTypes={columnTypes} updateCell={this.updateCell}/>
-        </table>);
+        const {name} = this.props;
+
+        let tableID = `table-${name}`;
+
+        return(
+        <div id={tableID} className="table-outer">
+        <table>
+            <TableHead name={name} row={this.state.head} />
+            <TableBody
+                name={name}
+                rows={this.state.body}
+                columnAttr={this.state.head}
+                updateCell={this.updateCell}
+                insertRecord={this.insertRecord}
+                removeRecord={this.removeRecord}
+                />
+        </table></div>);
     }
 
 }
-
-console.log(tableData);
-render(<LedgiTable {...tableData} />, document.getElementById("container"));
+render(<LedgerTable {...tableData} />, document.getElementById("container"));
 
 
 // let createTable = function (tableType, tableID, tableName, tableDisplayName) {
