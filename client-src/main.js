@@ -48,7 +48,7 @@ let cols = 20,
 let head = Array(cols).fill(0).map(e => randomName());
 let tableData = {
     name: "testable",
-    columnAttr: toRecord(Array(cols).fill(0).map(e=>({type: randomType(), default: 0})), head),
+    columnAttr: toRecord(Array(cols).fill(0).map(e=>({type: randomType(), default: 0, sorted: "NONE", filter:""})), head),
     data: Array(rows).fill(0).map(e=>toRecord(Array(cols).fill(0).map(e=>Math.random()), head))
 }
 console.log(tableData);
@@ -61,36 +61,89 @@ class BodyRow extends Component {
         let insertRec = (e) => { insertRecord(row);},
             removeRec = (e) => { removeRecord(row);};
 
+        const number =(<td>{row}</td>);
         const editButton = (<td className="edit-bar">
             <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec} >插入</button>
             <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
         </td>)
 
-        const cellElems = cells.map((cell, i) => (<BodyCell data={cell} key={i} row={row} col={i} updateCell={updateCell} type={columnAttr[i].attr.type}/>));
-        return (<tr>{editButton}{cellElems}</tr>);
+        const cellElems = cells.map((cell, i) => (<BodyCell data={cell} key={i} row={row} col={i} updateCell={updateCell} attr={columnAttr[i].attr}/>));
+        return (<tr>{number}{editButton}{cellElems}</tr>);
     }
 }
 
 class HeadCell extends Component {
     
+    constructor(props, context){
+        super(props, context);
+        this.state = {filtering: false};
+        
+        this.setFilter = this.setFilter.bind(this);
+    }
+
+    setFilter(){
+
+        this.setState({filtering: !this.state.filtering});
+    }
+
     render() {
 
-        const {data, type} = this.props;
+        let nextSort = {
+            "NONE"       : "▲升序排列",
+            "ASCENDING"  : "▼降序排列",
+            "DESCENDING" : "▲升序排列"
+        }
 
-        return (<th type={type} className={"th-header "+type}>{data}</th>);
+        const {data, attr, col, columnEditing, sortColumn, filterColumn, toggleFold} = this.props;
+
+        let filterElems = [(<button className="btn-sm btn-modify btn-primary" onClick={(e) =>this.setFilter()} key="0">筛选</button>)];
+        if(this.state.filtering){
+            filterElems.push(<div  key="1">
+                <input autoFocus
+                    type="text"
+                    className="input"
+                    placeholder="按回车键确认"
+                    defaultValue={attr.filter}
+                    onKeyDown={(e) => {
+                        if(e.key=="Enter"){
+                            filterColumn(col, e.target.value);
+                            this.setState({filtering: false});
+                        }
+                    }}
+                ></input>
+            </div>)
+        }
+
+        if(attr.fold){
+            return (<th type={attr.type} className={"th-header fold "+attr.type} onDoubleClick={(e)=>{toggleFold(col);}}></th>);
+        }
+        if(!attr.editing)
+            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(col);}}>{data}</th>);
+        else{
+            return (<th type={attr.type} className={"th-header "+attr.type}>
+            {data}
+            <div>
+                <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(col)}> {nextSort[attr.sorted]} </button>
+                <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(col)}>折叠</button>
+                {filterElems}
+            </div>
+            </th>);
+        }
     }
 }
 
 class HeadRow extends Component {
 
     render() {
-        const {cols} = this.props;
-        console.log(cols);
-        const colElems = cols.map((col, i) => (<HeadCell {...col} key={i}/>));
+        const {cols, ...rest} = this.props;
+
+        const colElems = cols.map((col, i) => (
+            <HeadCell {...col} key={i} col={i} {...rest}/>
+        ));
         return (<tr>
-            <HeadCell data="编辑" className="edit-bar"/>
-            {colElems
-        }</tr>);
+            <HeadCell data="ID" className="edit-bar" attr={({})}/>
+            <HeadCell data="编辑" className="edit-bar" attr={({})}/>
+            {colElems}</tr>);
     }
 }
 
@@ -106,8 +159,27 @@ class TableBody extends Component {
 
 class TableHead extends Component {
     render(){
-        const {name, row, updateCell} = this.props;
-        return (<thead><HeadRow cols={row} /></thead>);
+        const {row, ...rest} = this.props;
+        return (<thead><HeadRow cols={row} {...rest}/></thead>);
+    }
+}
+
+class Paginator extends Component {
+
+
+    render(){
+
+        let {currPage, totalPage, prevPage, nextPage} = this.props;
+
+        currPage = currPage ? currPage : 1;
+        totalPage = totalPage ? totalPage : 1;
+
+        return (<div><div className="btn-group">
+          <button className="btn btn-outline-info" onClick={prevPage}>&laquo;</button>
+          <button className="btn btn-outline-info" onClick={nextPage}>&raquo;</button>
+      </div>
+      <span className="page-indicator">{currPage} / {totalPage}</span>
+      </div>)
     }
 }
 
@@ -119,48 +191,133 @@ class LedgerTable extends Component {
             head : Object.keys(props.data[0]).map(key => ({data: key, attr:props.columnAttr[key]})),
             body : props.data.map(record => Object.values(record))
         }
+        this.state.presentBody = this.state.body;
+
         this.updateCell = this.updateCell.bind(this);
         this.insertRecord = this.insertRecord.bind(this);
         this.removeRecord = this.removeRecord.bind(this);
+
+        this.columnEditing = this.columnEditing.bind(this);
+        this.sortColumn = this.sortColumn.bind(this);
+        this.filterColumn = this.filterColumn.bind(this);
+        this.toggleFold = this.toggleFold.bind(this);
+    }
+
+    toggleFold(col){
+        let head = this.state.head,
+            fold = head[col].attr.fold;
+        head[col].attr.fold = !fold;
+
+        this.setState({head: head});
+    }
+
+    columnEditing(col){
+        let head = this.state.head;
+        head.forEach(col => col.attr.editing = false);
+        head[col].attr.editing = true;
+        this.setState({head: head});
     }
 
     insertRecord(row){
         let body = this.state.body;
-        // console.log(this.state.head, "insert");
         body.splice(row+1, 0, this.state.head.map(e=>e.attr.default));
-        this.setState({body: body});
+        this.setState({
+            body: body,
+            presentBody : body
+        });
     }
 
     removeRecord(row){
         let body = this.state.body;
         body.splice(row, 1);
-        this.setState({body: body});
+        this.setState({
+            body: body
+        });
     }
 
     updateCell(row, col, data){
         let body = this.state.body;
         body[row][col].data = data;
-        this.setState({body: body});
+        this.setState({
+            body: body,
+            presentBody: body
+        });
+    }
+
+    sortColumn(col){
+
+        let head = this.state.head,
+            body = this.state.body;
+
+        let currSort = head[col].attr.sorted,
+            order = currSort == "ASCENDING" ? 1 : -1;
+
+        let nextSort = {
+            "NONE": "ASCENDING",
+            "ASCENDING" : "DESCENDING",
+            "DESCENDING" : "ASCENDING"
+        }[currSort];
+
+        head[col].attr.sorted = nextSort;
+
+        body.sort((a, b) => {
+            return (a[col] < b[col]) ? -1 * order : 1 * order;
+        })
+        this.setState({
+            body: body,
+            presentBody : body
+        });
+        this.setState({head: head});
+    }
+
+    filterColumn(col, filter){
+        let func;
+        if (filter === ""){
+            func = (e) => true;
+        } else if (filter[0].match(/(\<|\>)/) && filter.slice(1).match(/ *-?\d*\.?\d*/)){
+            func = (e) => eval(e+filter)
+        } else {
+            func = (e) => e === filter;
+        }
+
+        let body = this.state.body,
+            head = this.state.head,
+            presentBody = body.filter(rec => func(rec[col]));
+        head[col].attr.filter = filter;
+        this.setState({
+            head: head,
+            body: body,
+            presentBody : presentBody
+        });
     }
 
     render() {
         const {name} = this.props;
-
         let tableID = `table-${name}`;
 
         return(
-        <div id={tableID} className="table-outer">
-        <table>
-            <TableHead name={name} row={this.state.head} />
-            <TableBody
-                name={name}
-                rows={this.state.body}
-                columnAttr={this.state.head}
-                updateCell={this.updateCell}
-                insertRecord={this.insertRecord}
-                removeRecord={this.removeRecord}
+        <div>
+            <div id={tableID} className="table-outer">
+            <table>
+                <TableHead
+                    name={name}
+                    row={this.state.head}
+                    columnEditing={this.columnEditing}
+                    sortColumn={this.sortColumn}
+                    filterColumn = {this.filterColumn}
+                    toggleFold = {this.toggleFold}
                 />
-        </table></div>);
+                <TableBody
+                    name={name}
+                    rows={this.state.presentBody}
+                    columnAttr={this.state.head}
+                    updateCell={this.updateCell}
+                    insertRecord={this.insertRecord}
+                    removeRecord={this.removeRecord}
+                    />
+            </table></div>
+            <Paginator />
+        </div>);
     }
 
 }

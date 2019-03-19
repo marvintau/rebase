@@ -1,6 +1,5 @@
 import {Component} from 'react';
 import PropTypes from 'prop-types';
-import { prototype } from 'stream';
 
 export default class BodyCell extends Component {
     
@@ -17,7 +16,7 @@ export default class BodyCell extends Component {
 
     render() {
 
-        const {data, type, col, row, updateCell} = this.props;
+        const {data, attr, col, row, updateCell} = this.props;
         
         let props = {
             autoFocus : true,
@@ -33,13 +32,16 @@ export default class BodyCell extends Component {
             }}
         };
 
+        if(attr.fold){
+            return (<td className="fold" col={col} row={row} ></td>);
+        }
         if(!this.state.editing){
-            return (<td col={col} row={row} onDoubleClick={this.toggleEditing} type={type} className={type}>{data}</td>);
+            return (<td col={col} row={row} onDoubleClick={this.toggleEditing} type={attr.type} className={attr.type}>{data}</td>);
         } else {
             switch(this.props.type){
                 default: 
                     return (<td col={col} row={row}>
-                    <input {...props} /></td>)
+                    <input className="cell-editing" {...props} /></td>)
             }
         }
         
@@ -48,8 +50,7 @@ export default class BodyCell extends Component {
 
 BodyCell.propTypes = {
     col : PropTypes.number.isRequired,
-    row : PropTypes.number.isRequired,
-    type: PropTypes.string.isRequired
+    row : PropTypes.number.isRequired
 };
 
 /**
