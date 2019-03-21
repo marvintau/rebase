@@ -2,18 +2,15 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 import FileSend from './file-send';
 
-import {List, Map, fromJS} from "immutable";
 import React, {Component} from "react";
 import {render} from "react-dom";
-
-import {createStore} from 'redux';
 
 import LedgerTable from "./Ledgitable/LedgerTable.js"
 
 window.React = React;
 
 var socket = io.connect(),
-    tables = Map();
+    tables = {};
 
 let backupFile = new FileSend(),
     localFile  = new FileSend();
@@ -32,60 +29,6 @@ backupFile.setStartFunc((instance) =>{
 //     });
 // });
 
-const INSERT = 'INSERT',
-      REMOVE = 'REMOVE',
-      SORT   = 'SORT',
-      FILTER = 'FILTER';
-    
-function insertRecord(row, record) {
-    return {type:'insert', row, record};
-}
-
-function removeRecord(row){
-    return {type:'remove', row};
-}
-
-function sort(col){
-    return {type:'sort', col};
-}
-
-function filter(col, pattern){
-    return {type:'filter', col, oper, val};
-}
-
-let theTable = List([0, 0, 0, 0]).map((e, i)=>List([i, i, i, i]));
-/**
- * Ledger
- * ======
- * a simple reducer that holds the table data structure
- * No initial state, left to createStore
- * 
- * @param {List<List<Map>>} table (Immutable) List of List .
- * @param {PlainObject} action 
- */
-function Ledger(table, action){
-    switch(action.type){
-        case "insert":
-            return table.insert(action.row, action.record);
-        case 'remove':
-            return table.remove(action.row);
-        case 'sort':
-            return table.sort((prev, next)=>{
-                if (prev[action.col] > next[action.col]) return 1;
-                if (prev[action.col] < next[action.col]) return -1;
-                if (prev[action.col] === next[action.col]) return 0;
-            })
-        case 'filter':
-            let filterFunc = (e) => eval(e[action.col]+action.oper+action.val);
-            return table.filter(filterFunc);
-        default:
-            return table;
-    }
-}
-
-const store = createStore(Ledger, theTable);
-const unsubscribe = store.subscribe(() => console.log(store.getState().toJS()))
-store.dispatch(insertRecord(3, List(['a', 'b', 'c', 'd'])));
 
 function applyCategoryCode(tableID){
     let vouchers = tables[tableID],
@@ -125,43 +68,96 @@ function transformData(tablename){
 
 }
 
+Array.prototype.groupBy = function(prop) {  
+    return this.reduce((grouped, item) => {
+        let key = item[prop];
+        grouped[key] = grouped[key] || [];
+        grouped[key].push(item);
+        return grouped;
+    }, {})
+};
+
+Array.prototype.preserveField = function(crit) {
+    return this.map(entry => {
+        let dict = {};
+        for (let key in entry) if (crit(key)) dict[key] = entry[key];
+        return dict;
+    })
+}
+
+Array.prototype.toDictWithField = function(field){
+
+    // Object.fromEntries are only supported by Chrome 73 above
+
+    let dict = {};
+    for (let i = 0; i < this.length; i++){
+        dict[this[i][field]] = this[i];
+    }
+    return dict;
+}
+
+function setTypeDict(data){
+
+    if('SYS_RPT_ItmDEF' in data){
+        console.time('typeDict')
+        let dict = data['SYS_RPT_ItmDEF'].groupBy('TableName');
+        for (let tableName in dict){
+            dict[tableName] = dict[tableName]
+                .map(entry=>({name:entry.FieldName, type:entry.FieldType, def:entry.FieldDef}))
+                .toDictWithField('name');
+        }
+        
+        tables['fieldTypeDict'] = dict;
+        console.timeEnd('typeDict')
+    } else throw TypeError('RPT_ItmDEF table is mandatory.')
+
+}
+
+function setCategoryDict(data){
+
+    if('SYS_code' in data){
+        console.time('ccodes')
+        let ccodes = data['SYS_code']
+            .map(e=>{
+                e.parent = e.ccode.length > 4 ? e.ccode.slice(0, -2) : e.ccode;
+                return e;
+            })
+            .toDictWithField('ccode');
+        console.timeEnd('ccodes');
+        tables['categoryCodeDict'] = ccodes;
+    } else throw TypeError('ccode table is mandatory.')
+
+}
+
+function setVouchers(data){
+
+    if('GL_accvouch' in data){
+
+        let vouchDict   = tables['fieldTypeDict']['GL_accvouch'],
+            vouchTable  = data['GL_accvouch'].preserveField((key) => (vouchDict[key] !== undefined)),
+            commonAttr  = {default: 0, sorted: "NONE", filter:"", fold:false},
+            vouchHeader = Object.entries(vouchTable[0]).map((key, _) =>
+                Object.assign({}, vouchDict[key], commonAttr)
+            );
+
+        tables['vouchers'] = {
+            body : vouchTable,
+            head: vouchHeader
+        }
+
+        console.log(vouchTable);
+
+    } else throw TypeError('voucher table (GL_accvouch) is mandatory');
+}
+
 localFile.setOnload((event, instance) => {
     
     let data = JSON.parse(event.target.result);
 
-    Object.assign(tables, data);
-
-    if('SYS_RPT_ItmDEF' in tables){
-
-        let dict = fromJS(tables['SYS_RPT_ItmDEF'])
-            .groupBy(x=>x.get('TableName'))
-            .map(tablewise => tablewise
-                .groupBy(x=>x.get('FieldName'))
-                .map(e=>Map({
-                    type: e.getIn([0, 'FieldType']),
-                    def:  e.getIn([0, 'FieldDef'])
-                }))
-            );
-        
-        tables.set('fieldTypeDict', dict);
-
-    } else throw TypeError('RPT_ItmDEF table is mandatory.')
-
-    if('SYS_code' in tables){
-        let ccodes = fromJS(tables['SYS_code'])
-            .groupBy(entry=>entry.get('ccode'))
-            .map(group=>{
-                let ccode = group.getIn([0, 'ccode']);
-                return Map({
-                    class: group.getIn([0, 'cclass']),
-                    def : group.getIn([0, 'ccode_name']),
-                    parent : ccode.length > 4 ? ccode.slice(0, -2) : ccode
-                })
-            })
-        console.log(ccodes.toJS(), "ccode");
-        // tables['SYS_code'] = dict;
-    } else throw TypeError('ccode table is mandatory.')
-
+    setTypeDict(data);
+    setCategoryDict(data);
+    setVouchers(data);
+    // console.log(tables.get('vouchers').toJS());
     // applyCategoryCode('GL_accvouch');
     // applyCategoryCode('GL_accsum');
 
@@ -169,9 +165,7 @@ localFile.setOnload((event, instance) => {
 
     // let voucherTable = transformData('GL_accvouch');
     
-    // render(<LedgerTable {...voucherTable} />, document.getElementById("container"));
-    // createTable(Table, 'GL_accvouch', 'vouchers', "凭证明细 Vouchers");
-    // createTable(Balance, 'GL_accsum', 'balance', '科目余额 Balances');
+    render(<LedgerTable {...tables['vouchers']} />, document.getElementById("container"));
 
 })
 

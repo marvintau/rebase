@@ -23,7 +23,6 @@ export default class HeadCell extends Component {
         }
 
         const {data, attr, col, columnEditing, sortColumn, filterColumn, toggleFold} = this.props;
-        console.log(attr);
         let filterElems = [(<button className="btn-sm btn-modify btn-primary" onClick={(e) =>this.setFilter()} key="0">筛选</button>)];
         if(this.state.filtering){
             filterElems.push(<div  key="1">

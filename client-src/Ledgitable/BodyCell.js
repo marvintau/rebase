@@ -49,7 +49,7 @@ export default class BodyCell extends Component {
 }
 
 BodyCell.propTypes = {
-    col : PropTypes.number.isRequired,
+    col : PropTypes.string.isRequired,
     row : PropTypes.number.isRequired
 };
 

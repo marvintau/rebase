@@ -26,7 +26,7 @@ class Paginator extends Component {
 class BodyRow extends Component {
 
     render() {
-        const {cells, row, updateCell, columnAttr, insertRecord, removeRecord} = this.props;
+        const {cols, row, updateCell, columnAttr, insertRecord, removeRecord} = this.props;
 
         let insertRec = (e) => { insertRecord(row);},
             removeRec = (e) => { removeRecord(row);};
@@ -36,15 +36,18 @@ class BodyRow extends Component {
             <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>
             <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
         </td>)
-        const cellElems = cells.map((data, col) => (<BodyCell
-            key={col}
-            col={col}
+
+        const colElems = [];
+        cols.forEach((colVal, colKey) => {
+            colElems.push(<BodyCell
+            key={colKey}
             row={row}
-            data={data}
-            attr={columnAttr[col].attr}
+            col={colKey}
+            data={colVal}
+            attr={columnAttr.get(colKey).toJS()}
             updateCell={updateCell}
-        />));
-        return (<tr>{number}{editButton}{cellElems}</tr>);
+        />)});
+        return (<tr>{number}{editButton}{colElems}</tr>);
     }
 }
 
@@ -52,10 +55,12 @@ class HeadRow extends Component {
 
     render() {
         const {cols, ...rest} = this.props;
-        console.log(cols);
-        const colElems = cols.map((col, i) => (
-            <HeadCell {...col} key={i} col={i} {...rest}/>
-        ));
+        console.log(cols, "headRow");
+        const colElems = [];
+        cols.forEach((colAttr, colKey) => {
+            colElems.push(<HeadCell data={colKey} attr={colAttr.toJS()} key={colKey} {...rest}/>);
+            return true;
+        })
         return (<tr>
             <HeadCell data="ID" className="edit-bar" attr={({})}/>
             <HeadCell data="编辑" className="edit-bar" attr={({})}/>
@@ -66,17 +71,19 @@ class HeadRow extends Component {
 class TableBody extends Component {
     render(){
         const {rows, startingRow, ...rest} = this.props;
-        const rowElems = rows.map((cells, i) => (
-            <BodyRow cells={cells} key={i} row={startingRow+i} {...rest}/>
-        ));
+        const rowElems = [];
+        rows.forEach((cols, rowNum) => {
+            rowElems.push(<BodyRow cols={cols} key={rowNum} row={startingRow+rowNum} {...rest}/>);
+            return true;
+        });
         return (<tbody>{rowElems}</tbody>);
     }
 }
 
 class TableHead extends Component {
     render(){
-        const {row, ...rest} = this.props;
-        return (<thead><HeadRow cols={row} {...rest}/></thead>);
+        const {cols, ...rest} = this.props;
+        return (<thead><HeadRow cols={cols} {...rest}/></thead>);
     }
 }
 
@@ -85,23 +92,14 @@ export default class LedgerTable extends Component {
     constructor(props, context){
         super(props, context);
 
-        let colAttr = props.columnAttr;
-
-        let head = fromJS(Object.keys(props.data[0]).map(key => {
-            let attr = colAttr[key] ? colAttr[key] : {};
-            return {data: key, attr:attr}
-        }));
-        let body = fromJS(props.data.map(record => Object.values(record)));
-
         this.state = {
             recordPerPage: 30,
             currPage: 1,
-            head : head,
-            body : body
+            head : props.head,
+            body : props.body
         }
         this.state.presentBody = this.state.body;
-
-        this.state.totalPage = this.state.body.length / this.state.recordPerPage + 1;
+        this.state.totalPage = this.state.body.size / this.state.recordPerPage + 1;
 
         this.updateCell = this.updateCell.bind(this);
         this.insertRecord = this.insertRecord.bind(this);
@@ -257,7 +255,7 @@ export default class LedgerTable extends Component {
             <table>
                 <TableHead
                     name={name}
-                    row={this.state.head}
+                    cols={this.state.head}
                     columnEditing={this.columnEditing}
                     sortColumn={this.sortColumn}
                     filterColumn = {this.filterColumn}
@@ -273,12 +271,12 @@ export default class LedgerTable extends Component {
                     removeRecord={this.removeRecord}
                     />
             </table></div>
-            <Paginator
+            {/* <Paginator
                 prevPage={this.prevPage}
                 nextPage={this.nextPage}
                 currPage={currPage}
-                totalPage={Math.ceil(this.state.presentBody.length/this.state.recordPerPage)}
-            />
+                totalPage={Math.ceil(this.state.presentBody.size/this.state.recordPerPage)}
+            /> */}
         </div>);
     }
 
