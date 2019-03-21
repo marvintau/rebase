@@ -2,76 +2,18 @@ import io from 'socket.io-client';
 import FileSaver from 'file-saver';
 import FileSend from './file-send';
 
+import {List, Map, fromJS} from "immutable";
 import React, {Component} from "react";
 import {render} from "react-dom";
+
+import {createStore} from 'redux';
 
 import LedgerTable from "./Ledgitable/LedgerTable.js"
 
 window.React = React;
 
-// let randomChoice = (array) => {
-//     let rand = Math.floor(Math.random()*array.length);
-//     return array[rand];
-// }
-
-// let randomName = () => {
-//     let starting = ['c', 'ch', 'cl', 'cr', 'dr', 'fr', 'gr', 'sh', 'qu', 'wh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'r', 'g', 'h', 'k', 's', 'v', 'w'],
-//         consonants = ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'r', 'g', 'h', 'k', 's', 'v', 'w', "dg", "ph", 'gh'],
-//         vowels = ['a', 'e', 'i', 'o', 'u', 'ai', 'ei', 'ou'],
-//         ending = ['er', 'ct', 'ck', 'st', "m", "n", "ght", 'll', 'ynn'];
-
-//     let name = randomChoice(starting) + randomChoice(vowels),
-//         len = Math.floor(Math.random()*3);
-//     for (let i = 0; i < len; i++){
-//         name += randomChoice(consonants) + randomChoice(vowels);
-//     }
-    
-//     name += randomChoice(ending);
-//     return name;
-// }
-
-// let randomType = () => {
-//     return randomChoice(['int', 'tinyint', 'smallint', 'float', 'money', 'undefined', 'datetime', 'nvarchar', 'varchar', 'bit']);
-// }
-
-// let toRecord = (vals, fields) => {
-//     let res = {}
-//     for(let i = 0; i < fields.length; i++){
-//         res[fields[i]] = vals[i];
-//     }
-//     return res;
-// }
-
-// let cols = 5,
-//     rows = 120;
-
-
-let applyCategoryCode = function(tableID){
-    let vouchers = tables[tableID],
-        ccodes = tables['SYS_code'];
-    for (let i = 0; i < vouchers.length; i++){
-        let ccode = tables[tableID][i].ccode,
-            ccodeEntry = tables['SYS_code'][ccode];
-    
-        let name = "";
-        for (let l = ccode.length; l >= 4; l -=2 ){
-            name = ccodes[ccode.slice(0, l)].ccode_name + ":" + name;
-        }
-        name = name.slice(0, -1);
-
-        tables[tableID][i].ccode = `${ccode}-${ccodeEntry.cclass}-${name}`;
-    }
-}
-
 var socket = io.connect(),
-    tables = {};
-
-Array.prototype.groupBy = function(key) {
-  return this.reduce(function(rv, x) {
-    (rv[x[key]] = rv[x[key]] || []).push(x);
-    return rv;
-  }, {});
-};
+    tables = Map();
 
 let backupFile = new FileSend(),
     localFile  = new FileSend();
@@ -90,7 +32,79 @@ backupFile.setStartFunc((instance) =>{
 //     });
 // });
 
-let transformData = function(tablename){
+const INSERT = 'INSERT',
+      REMOVE = 'REMOVE',
+      SORT   = 'SORT',
+      FILTER = 'FILTER';
+    
+function insertRecord(row, record) {
+    return {type:'insert', row, record};
+}
+
+function removeRecord(row){
+    return {type:'remove', row};
+}
+
+function sort(col){
+    return {type:'sort', col};
+}
+
+function filter(col, pattern){
+    return {type:'filter', col, oper, val};
+}
+
+let theTable = List([0, 0, 0, 0]).map((e, i)=>List([i, i, i, i]));
+/**
+ * Ledger
+ * ======
+ * a simple reducer that holds the table data structure
+ * No initial state, left to createStore
+ * 
+ * @param {List<List<Map>>} table (Immutable) List of List .
+ * @param {PlainObject} action 
+ */
+function Ledger(table, action){
+    switch(action.type){
+        case "insert":
+            return table.insert(action.row, action.record);
+        case 'remove':
+            return table.remove(action.row);
+        case 'sort':
+            return table.sort((prev, next)=>{
+                if (prev[action.col] > next[action.col]) return 1;
+                if (prev[action.col] < next[action.col]) return -1;
+                if (prev[action.col] === next[action.col]) return 0;
+            })
+        case 'filter':
+            let filterFunc = (e) => eval(e[action.col]+action.oper+action.val);
+            return table.filter(filterFunc);
+        default:
+            return table;
+    }
+}
+
+const store = createStore(Ledger, theTable);
+const unsubscribe = store.subscribe(() => console.log(store.getState().toJS()))
+store.dispatch(insertRecord(3, List(['a', 'b', 'c', 'd'])));
+
+function applyCategoryCode(tableID){
+    let vouchers = tables[tableID],
+        ccodes = tables['SYS_code'];
+    for (let i = 0; i < vouchers.length; i++){
+        let ccode = tables[tableID][i].ccode,
+            ccodeEntry = tables['SYS_code'][ccode];
+    
+        let name = "";
+        for (let l = ccode.length; l >= 4; l -=2 ){
+            name = ccodes[ccode.slice(0, l)].ccode_name + ":" + name;
+        }
+        name = name.slice(0, -1);
+
+        tables[tableID][i].ccode = `${ccode}-${ccodeEntry.cclass}-${name}`;
+    }
+}
+
+function transformData(tablename){
     let table = tables[tablename],
         tableTypeDict = tables['SYS_RPT_ItmDEF'][tablename],
         commonAttr = {default: 0, sorted: "NONE", filter:"", fold:false};
@@ -104,7 +118,7 @@ let transformData = function(tablename){
     tableTypeDict._commonAttr = commonAttr;
     
     return {
-        name: "凭证明细vouchers",
+        name: tablename,
         columnAttr: tableTypeDict,
         data: table
     }
@@ -118,40 +132,44 @@ localFile.setOnload((event, instance) => {
     Object.assign(tables, data);
 
     if('SYS_RPT_ItmDEF' in tables){
-        tables['SYS_RPT_ItmDEF'] = tables['SYS_RPT_ItmDEF'].groupBy('TableName');
-        for (let tab in tables['SYS_RPT_ItmDEF']){
-            let dict = {},
-                arr = tables['SYS_RPT_ItmDEF'][tab];
 
-            for (let i = 0; i < arr.length; i++){
-                dict[arr[i].FieldName] = {def: arr[i].FieldDef, type: arr[i].FieldType}
-            }
+        let dict = fromJS(tables['SYS_RPT_ItmDEF'])
+            .groupBy(x=>x.get('TableName'))
+            .map(tablewise => tablewise
+                .groupBy(x=>x.get('FieldName'))
+                .map(e=>Map({
+                    type: e.getIn([0, 'FieldType']),
+                    def:  e.getIn([0, 'FieldDef'])
+                }))
+            );
+        
+        tables.set('fieldTypeDict', dict);
 
-            tables['SYS_RPT_ItmDEF'][tab] = dict;
-        }
     } else throw TypeError('RPT_ItmDEF table is mandatory.')
 
     if('SYS_code' in tables){
-        let ccodes = tables['SYS_code'],
-            dict = {};
-        for (let i = 0; i <ccodes.length; i++){
-            let currCode = ccodes[i].ccode;
-            for (let k in ccodes[i]) {
-                if (ccodes[i][k] === null) delete ccodes[i][k];
-            }
-            dict[currCode] = ccodes[i];
-        }
-        tables['SYS_code'] = dict;
+        let ccodes = fromJS(tables['SYS_code'])
+            .groupBy(entry=>entry.get('ccode'))
+            .map(group=>{
+                let ccode = group.getIn([0, 'ccode']);
+                return Map({
+                    class: group.getIn([0, 'cclass']),
+                    def : group.getIn([0, 'ccode_name']),
+                    parent : ccode.length > 4 ? ccode.slice(0, -2) : ccode
+                })
+            })
+        console.log(ccodes.toJS(), "ccode");
+        // tables['SYS_code'] = dict;
     } else throw TypeError('ccode table is mandatory.')
 
-    applyCategoryCode('GL_accvouch');
-    applyCategoryCode('GL_accsum');
+    // applyCategoryCode('GL_accvouch');
+    // applyCategoryCode('GL_accsum');
 
-    let balance = Object.entries(tables['GL_accsum'].groupBy("ccode")).sort();
+    // let balance = Object.entries(tables['GL_accsum'].groupBy("ccode")).sort();
 
-    let voucherTable = transformData('GL_accvouch');
+    // let voucherTable = transformData('GL_accvouch');
     
-    render(<LedgerTable {...voucherTable} />, document.getElementById("container"));
+    // render(<LedgerTable {...voucherTable} />, document.getElementById("container"));
     // createTable(Table, 'GL_accvouch', 'vouchers', "凭证明细 Vouchers");
     // createTable(Balance, 'GL_accsum', 'balance', '科目余额 Balances');
 

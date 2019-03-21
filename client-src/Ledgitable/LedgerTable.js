@@ -1,3 +1,5 @@
+import {List, Map, fromJS} from 'immutable';
+
 import {Component} from 'react';
 
 import BodyCell from "./BodyCell.js";
@@ -85,19 +87,19 @@ export default class LedgerTable extends Component {
 
         let colAttr = props.columnAttr;
 
+        let head = fromJS(Object.keys(props.data[0]).map(key => {
+            let attr = colAttr[key] ? colAttr[key] : {};
+            return {data: key, attr:attr}
+        }));
+        let body = fromJS(props.data.map(record => Object.values(record)));
+
         this.state = {
             recordPerPage: 30,
-            head : Object.keys(props.data[0]).map(key => {
-                let attr = colAttr[key] ? colAttr[key] : {};
-                return {data: key, attr:attr}
-            }),
-            body : props.data.map(record => Object.values(record)),
             currPage: 1,
+            head : head,
+            body : body
         }
         this.state.presentBody = this.state.body;
-
-        console.log(this.state.head);
-        console.log(this.state.presentBody, "LedgerTable");
 
         this.state.totalPage = this.state.body.length / this.state.recordPerPage + 1;
 
