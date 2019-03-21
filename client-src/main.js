@@ -136,16 +136,18 @@ function setVouchers(data){
         let vouchDict   = tables['fieldTypeDict']['GL_accvouch'],
             vouchTable  = data['GL_accvouch'].preserveField((key) => (vouchDict[key] !== undefined)),
             commonAttr  = {default: 0, sorted: "NONE", filter:"", fold:false},
-            vouchHeader = Object.entries(vouchTable[0]).map((key, _) =>
-                Object.assign({}, vouchDict[key], commonAttr)
-            );
+            vouchHeader = Object.assign({}, vouchTable[0]);
+        
+        for (let key in vouchHeader){
+            vouchHeader[key] = Object.assign(vouchDict[key], commonAttr);
+        }
 
         tables['vouchers'] = {
             body : vouchTable,
             head: vouchHeader
         }
 
-        console.log(vouchTable);
+        console.log(vouchHeader);
 
     } else throw TypeError('voucher table (GL_accvouch) is mandatory');
 }
@@ -157,7 +159,6 @@ localFile.setOnload((event, instance) => {
     setTypeDict(data);
     setCategoryDict(data);
     setVouchers(data);
-    // console.log(tables.get('vouchers').toJS());
     // applyCategoryCode('GL_accvouch');
     // applyCategoryCode('GL_accsum');
 

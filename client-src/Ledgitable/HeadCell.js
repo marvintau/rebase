@@ -44,15 +44,15 @@ export default class HeadCell extends Component {
         let title = attr.def ? attr.def : data;
 
         if(attr.fold){
-            return (<th type={attr.type} className={"th-header fold "+attr.type} onDoubleClick={(e)=>{toggleFold(col);}}></th>);
+            return (<th type={attr.type} className={"th-header fold "+attr.type} onDoubleClick={(e)=>{toggleFold(data);}}></th>);
         } else if (!attr.editing) {
-            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(col);}}>{title}</th>);
+            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>{title}</th>);
         } else {
-            return (<th type={attr.type} className={"th-header "+attr.type} onClick={(e)=>{columnEditing(col);}}>
+            return (<th type={attr.type} className={"th-header "+attr.type} onClick={(e)=>{columnEditing(data);}}>
             {title}
             <div>
-                <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(col)}> {nextSort[attr.sorted]} </button>
-                <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(col)}>折叠</button>
+                <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button>
+                <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(data)}>折叠</button>
                 {filterElems}
             </div>
             </th>);
