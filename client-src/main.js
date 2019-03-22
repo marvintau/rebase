@@ -29,45 +29,6 @@ backupFile.setStartFunc((instance) =>{
 //     });
 // });
 
-
-function applyCategoryCode(tableID){
-    let vouchers = tables[tableID],
-        ccodes = tables['SYS_code'];
-    for (let i = 0; i < vouchers.length; i++){
-        let ccode = tables[tableID][i].ccode,
-            ccodeEntry = tables['SYS_code'][ccode];
-    
-        let name = "";
-        for (let l = ccode.length; l >= 4; l -=2 ){
-            name = ccodes[ccode.slice(0, l)].ccode_name + ":" + name;
-        }
-        name = name.slice(0, -1);
-
-        tables[tableID][i].ccode = `${ccode}-${ccodeEntry.cclass}-${name}`;
-    }
-}
-
-function transformData(tablename){
-    let table = tables[tablename],
-        tableTypeDict = tables['SYS_RPT_ItmDEF'][tablename],
-        commonAttr = {default: 0, sorted: "NONE", filter:"", fold:false};
-
-    for (let key in tableTypeDict){
-        Object.assign(tableTypeDict[key], commonAttr);
-        if (tableTypeDict[key].type === "bit")
-            tableTypeDict[key].fold = true;
-    }
-
-    tableTypeDict._commonAttr = commonAttr;
-    
-    return {
-        name: tablename,
-        columnAttr: tableTypeDict,
-        data: table
-    }
-
-}
-
 Array.prototype.groupBy = function(prop) {  
     return this.reduce((grouped, item) => {
         let key = item[prop];
@@ -96,9 +57,59 @@ Array.prototype.toDictWithField = function(field){
     return dict;
 }
 
+Array.prototype.transpose = function(){
+    let dict = {};
+    for (let key in this[0]){
+        dict[key] = this.map(row => row[key]);
+    }
+    return dict;
+}
+
+Array.prototype.gatherAt = function(colKey, colParent, parentFunc, currRow) {
+    
+    let gather = [],
+        remaining = [];
+    
+    currRow = currRow ? currRow : 0;
+    
+    while(this.length > 0) {
+        let last = this.pop();
+        if (last[colKey].parent == colParent)
+            gather.push(last);
+        else
+            remaining.push(last);
+    }
+    gather.reverse();
+    remaining.reverse().splice(currRow, 0, Object.sum(gather.transpose(), colKey, parentFunc));
+
+    return remaining;
+}
+
+Array.prototype.gatherAll = function(colKey){
+
+    let grouped = this.groupBy(row => row[colKey].parent),
+        gathered = [];
+
+    for (let colParent in grouped){
+        Object.sum(grouped[colParent].transpose(), colKey, )
+    }
+}
+
 Object.map = function(obj, func){
     let dict = {};
     for (let key in obj) dict[key] = func(key, obj[key]);
+    return dict;
+}
+
+Object.sum = function(obj, colKey, parFunc){
+
+    let dict = {};
+
+    for (let key in obj){
+        let value = (key === colKey) ? obj[key].parent : "...";
+        dict[key] = {children : obj[key], value, parent: parFunc(obj[key])};
+    }
+
     return dict;
 }
 

@@ -52,11 +52,11 @@ class BodyRow extends Component {
     }
 }
 
+
 class HeadRow extends Component {
 
     render() {
         const {cols, ...rest} = this.props;
-        console.log(cols, "headRow");
         const colElems = [];
         for (let colKey in cols){
             colElems.push(<HeadCell data={colKey} attr={cols[colKey]} key={colKey} {...rest}/>);
