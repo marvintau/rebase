@@ -96,6 +96,12 @@ Array.prototype.toDictWithField = function(field){
     return dict;
 }
 
+Object.map = function(obj, func){
+    let dict = {};
+    for (let key in obj) dict[key] = func(key, obj[key]);
+    return dict;
+}
+
 function setTypeDict(data){
 
     if('SYS_RPT_ItmDEF' in data){
@@ -134,7 +140,7 @@ function setVouchers(data){
     if('GL_accvouch' in data){
 
         let vouchDict   = tables['fieldTypeDict']['GL_accvouch'],
-            vouchTable  = data['GL_accvouch'].preserveField((key) => (vouchDict[key] !== undefined)),
+            vouchTable  = data['GL_accvouch'].preserveField((key) => (key[0] != "b" && key.slice(0,2)!= "cD" && vouchDict[key] !== undefined)),
             commonAttr  = {default: 0, sorted: "NONE", filter:"", fold:false},
             vouchHeader = Object.assign({}, vouchTable[0]);
         

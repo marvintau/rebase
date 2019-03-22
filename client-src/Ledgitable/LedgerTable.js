@@ -145,7 +145,7 @@ export default class LedgerTable extends Component {
     insertRecord(row){
         let body = this.state.body,
             head = this.state.head;
-        body.splice(row+1, 0, head.map(e=>e.default));
+        body.splice(row+1, 0, Object.map(head, e=>e.default));
         for(let key in head) head[key].filter = "";
         this.setState({
             head: head,
