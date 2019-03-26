@@ -43,7 +43,9 @@ Array.prototype.dictionarize = function(field){
 
     let dict = {};
     for (let i = 0; i < this.length; i++){
-        dict[this[i][field]] = this[i];
+        let key = this[i][field];
+        delete this[i][field];
+        dict[key] = this[i];
     }
     return dict;
 }
@@ -98,6 +100,8 @@ Object.defineProperty(Object.prototype, 'filter', {
     value: function(func){
         let newObject = {},
             keys = Object.keys(this);
+
+        func = func ? func : () => true; 
 
         for (let i = 0; i < keys.length; i++)
             if (func(keys[i], this[keys[i]])) 
@@ -306,13 +310,14 @@ function setTypeDict(data){
         console.time('typeDict')
         let dict = data['SYS_RPT_ItmDEF']
             .groupBy('TableName')
-            .map((table)=>table
-                .map((entry)=>({name:entry.FieldName, type:entry.FieldType, def:entry.FieldDef})
+            .map((_tableName, table)=>table
+                .map((entry)=>({name:entry.FieldName, type:entry.FieldType, def:entry.FieldDef}))
                 .dictionarize('name')
-            ));
+            );
         
         tables['fieldTypeDict'] = dict;
         console.timeEnd('typeDict')
+        console.log(dict);
     } else throw TypeError('RPT_ItmDEF table is mandatory.')
 
 }
@@ -338,13 +343,9 @@ function setVouchers(data){
     if('GL_accvouch' in data){
 
         let vouchDict   = tables['fieldTypeDict']['GL_accvouch'],
-            vouchTable  = data['GL_accvouch'].preserveField((key) => (key[0] != "b" && key.slice(0,2)!= "cD" && vouchDict[key] !== undefined)),
+            vouchTable  = data['GL_accvouch'].columnFilter((key,_val) => (key[0] != "b" && key.slice(0,2)!= "cD" && vouchDict[key] !== undefined)),
             commonAttr  = {default: 0, sorted: "NONE", filter:"", fold:false},
-            vouchHeader = Object.assign({}, vouchTable[0]);
-        
-        for (let key in vouchHeader){
-            vouchHeader[key] = Object.assign(vouchDict[key], commonAttr);
-        }
+            vouchHeader = vouchTable[0].map((k, _v) => Object.assign({}, commonAttr, vouchDict[k]));
 
         tables['vouchers'] = {
             body : vouchTable,
@@ -356,13 +357,34 @@ function setVouchers(data){
     } else throw TypeError('voucher table (GL_accvouch) is mandatory');
 }
 
+function setJournal(data){
+
+    if('GL_accsum' in data){
+        let journalDict = tables['fieldTypeDict']['GL_accsum'],
+            journalTable = data['GL_accsum'].columnFilter(),
+            commonAttr = {default: 0, sorted: "NONE", filter: "", fold: false},
+            journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
+
+
+        tables['journal'] = {
+            body : journalTable,
+            head : journalHeader
+        }
+
+        console.log(journalHeader);
+    
+    } else throw TypeError('journal table (GL_accsum) is mandatory');
+    
+}
+
 localFile.setOnload((event, instance) => {
     
     let data = JSON.parse(event.target.result);
 
     setTypeDict(data);
     setCategoryDict(data);
-    setVouchers(data);
+    // setVouchers(data);
+    setJournal(data);
     // applyCategoryCode('GL_accvouch');
     // applyCategoryCode('GL_accsum');
 
@@ -370,7 +392,7 @@ localFile.setOnload((event, instance) => {
 
     // let voucherTable = transformData('GL_accvouch');
     
-    render(<LedgerTable {...tables['vouchers']} />, document.getElementById("container"));
+    render(<LedgerTable {...tables['journal']} />, document.getElementById("container"));
 
 })
 

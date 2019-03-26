@@ -41,7 +41,9 @@ export default class BodyCell extends Component {
             switch(this.props.type){
                 default: 
                     return (<td col={col} row={row}>
-                    <input className="cell-editing" {...props} /></td>)
+                        <input className="cell-editing" {...props} />
+                        <button className="btn">哈哈哈</button>
+                    </td>)
             }
         }
         
