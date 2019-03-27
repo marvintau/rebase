@@ -38,7 +38,7 @@ class BodyRow extends Component {
         </td>)
 
         const colElems = [];
-        for (let colKey in cols){
+        for (let colKey in cols) {
             colElems.push(<BodyCell
                 key={colKey}
                 row={row}
@@ -109,6 +109,8 @@ export default class LedgerTable extends Component {
         this.sortColumn = this.sortColumn.bind(this);
         this.filterColumn = this.filterColumn.bind(this);
         this.toggleFold = this.toggleFold.bind(this);
+
+        this.aggregateColumn = this.aggregateColumn.bind(this);
 
         this.prevPage = this.prevPage.bind(this);
         this.nextPage = this.nextPage.bind(this);
@@ -228,6 +230,20 @@ export default class LedgerTable extends Component {
         })
     }
 
+    aggregateColumn(col){
+        let head = this.state.head,
+            body = this.state.body;
+        
+        body = body.gatherAll(col, head);
+
+        console.log(body.map(e=>e.ccode), "aggregated");
+
+        this.setState({
+            body,
+            presentBody: body
+        });
+    }
+
     filterColumn(col, filter){
 
         let head = this.state.head;
@@ -242,6 +258,9 @@ export default class LedgerTable extends Component {
     }
 
     render() {
+
+        console.log(this.state.presentBody, "render");
+
         const {name} = this.props;
         let tableID = `table-${name}`;
 
@@ -261,6 +280,7 @@ export default class LedgerTable extends Component {
                     sortColumn={this.sortColumn}
                     filterColumn = {this.filterColumn}
                     toggleFold = {this.toggleFold}
+                    aggregateColumn = {this.aggregateColumn}
                 />
                 <TableBody
                     name={name}

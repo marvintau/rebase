@@ -22,7 +22,7 @@ export default class HeadCell extends Component {
             "DESCENDING" : "▲升序排列"
         }
 
-        const {data, attr, col, columnEditing, sortColumn, filterColumn, toggleFold} = this.props;
+        const {data, attr, col, columnEditing, sortColumn, filterColumn, toggleFold, aggregateColumn} = this.props;
         let filterElems = [(<button className="btn-sm btn-modify btn-primary" onClick={(e) =>this.setFilter()} key="0">筛选</button>)];
         if(this.state.filtering){
             filterElems.push(<div  key="1">
@@ -53,7 +53,7 @@ export default class HeadCell extends Component {
             <div>
                 <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button>
                 <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(data)}>折叠</button>
-                <button className="btn-sm btn-modify btn-info" onClick={(e) => sortColumn(data)}> 聚合 </button>
+                <button className="btn-sm btn-modify btn-info" onClick={(e) => aggregateColumn(data)}> 聚合 </button>
                 {filterElems}
             </div>
             </th>);

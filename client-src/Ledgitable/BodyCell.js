@@ -16,8 +16,10 @@ export default class BodyCell extends Component {
 
     render() {
 
-        const {data, attr, col, row, updateCell} = this.props;
-        
+        const {data, attr, col, row, updateCell, aggregate} = this.props;
+
+        let displayedData = (data === null) ? data : data.data ? data.data : data;
+
         let props = {
             autoFocus : true,
             type : "text",
@@ -36,13 +38,13 @@ export default class BodyCell extends Component {
             return (<td className="fold" col={col} row={row} ></td>);
         }
         if(!this.state.editing){
-            return (<td col={col} row={row} onDoubleClick={this.toggleEditing} type={attr.type} className={attr.type}>{data}</td>);
+            return (<td col={col} row={row} onDoubleClick={this.toggleEditing} type={attr.type} className={attr.type}>{displayedData}</td>);
         } else {
             switch(this.props.type){
                 default: 
                     return (<td col={col} row={row}>
                         <input className="cell-editing" {...props} />
-                        <button className="btn-sm btn-info agg">聚合</button>
+                        <button className="btn-sm btn-info agg" onClick={(e)=>aggregate(e.target.value)}>聚合</button>
                     </td>)
             }
         }

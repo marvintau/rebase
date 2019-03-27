@@ -7,6 +7,9 @@ import {render} from "react-dom";
 
 import LedgerTable from "./Ledgitable/LedgerTable.js"
 
+import "./ExtendObject.js"
+import "./ExtendArray.js"
+
 window.React = React;
 
 var socket = io.connect(),
@@ -30,269 +33,6 @@ backupFile.setStartFunc((instance) =>{
 // });
 
 
-/**
- * Array.prototype.dictionarize
- * ============================
- * This method suppose all its elements are object with same shape, which means
- * same keys with same order. And the function will extract one key/property of
- * each object as key, and finally forms an object.
- * 
- * Note: mistake not with Array.prototype.gather.
- */
-Array.prototype.dictionarize = function(field){
-
-    let dict = {};
-    for (let i = 0; i < this.length; i++){
-        let key = this[i][field];
-        delete this[i][field];
-        dict[key] = this[i];
-    }
-    return dict;
-}
-
-/**
- * Object.prototype.map
- * ====================
- * Apply function over each value of the property, with both key and value as
- * parameter. Returns a new Object.
- */
-Object.defineProperty(Object.prototype, "map", {
-    value: function(func){
-        let newObject = {},
-            keys = Object.keys(this);
-        for (let i = 0; i < keys.length; i++)
-            newObject[keys[i]] = func(keys[i], this[keys[i]]);        
-        return newObject;
-    }
-})
-let testObject = {a: 1, b: 2, c: 3},
-    testObjectMapFunc = (_, e) => e * 10;
-console.log(testObject.map(testObjectMapFunc));
-
-/**
- * Object.prototype.forEach
- * ========================
- * The in-place version of Object.prototype.map, slightly different to Array's
- * forEach. The function passed into should always return a value, which will
- * be assigned to corresponding property.
- */
-Object.defineProperty(Object.prototype, "forEach", {
-    value: function(func){
-        let keys = Object.keys(this);
-        for (let i = 0; i < keys.length; i++)
-            this[keys[i]] = func(keys[i], this[keys[i]]);
-        return this;
-    }
-})
-
-let testObject2 = {a: 1, b: 2, c: 3},
-    testObjectForeach = (_, e) => e * 10;
-testObject2.forEach(testObjectForeach)
-console.log(testObject2);
-
-/**
- * Object.prototype.filter
- * =======================
- * Returns a new Object with desired properties from original Object. Order will
- * be preserved.
- */
-Object.defineProperty(Object.prototype, 'filter', {
-    value: function(func){
-        let newObject = {},
-            keys = Object.keys(this);
-
-        func = func ? func : () => true; 
-
-        for (let i = 0; i < keys.length; i++)
-            if (func(keys[i], this[keys[i]])) 
-                newObject[keys[i]] = this[keys[i]];
-
-        return newObject;
-    },
-    writable : true
-})
-let testObject3 = {a: 1, b: 2, c: 3, d: 10};
-console.log(testObject3.filter((k, v) => v < 5));
-
-
-Object.defineProperty(Object.prototype, 'merge', {
-    value: function(that, inPlace){
-        return inPlace ? Object.assign(this, that) : Object.assign({}, this, that);
-    }
-})
-
-/**
- * Object.prototype.zip
- * ====================
- * This method requires current object (this) and the other (that)
- * contains same keys, and ALL values of the keys are Object too.
- * This method would merge the values of the same keys from two 
- * objects, and yield a new object.
- * 
- */
-Object.defineProperty(Object.prototype, 'zip', {
-    value: function(that, inPlace){
-        let thisKeys = Object.keys(this),
-            thisValues = Object.values(this),
-            thatKeys = Object.keys(that),
-            thatValues = Object.values(that);
-        if (thisKeys !== thatKeys)
-            throw TypeError('zip requires two objects have same keys')
-        else if (thisValues.some(e=>e.constructor !== Object))
-            throw TypeError('all values of the current Object should be Object')
-        else if (thatValues.some(e=>e.constructor !== Object))
-            throw TypeError('all values of the other Object should be Object')
-
-        let object = {};
-        for (let i = 0; i < thisKeys.length; i++){
-            object[thisKeys[i]] = this[thisKeys[i]].merge(that[thisKeys[i]], inPlace);
-        }
-        return object;
-    }
-})
-
-/**
- * Object.prototype.summary
- * ========================
- * Summary takes two arguments, the colAttr and labels.
- * For each column, this function finds corresponding sum function in colAttr, and
- * apply to children, and write the result as the label. So this function is a total
- * in-place operation, though it returns the Object reference.
- * 
- * If labels is given, and contains any key that appear in the object, then the value
- * will be directly used as the label of the column.
- * 
- * Note: If the current Object is nested-gathered, which means the object is gathered
- *       from an array that already contains gathered object, the handling should left
- *       to the columnwise sum function.
- */
-Object.defineProperty(Object.prototype, 'summary', {
-    value: function(colAttr, labels) {
-
-        if(!this.gid)
-            throw TypeError('summary should be applied to objects created from Array.prototype.transform only');
-
-        labels = labels ? labels : {};
-
-        this.forEach((key, elem) => {
-            if(key == "gid")
-                return elem;
-            if (labels[key] !== undefined)
-                return Object.assign(elem, {data: labels[key]});
-            else if(colAttr[key] && colAttr[key].sum)
-                return Object.assign(elem, {data: colAttr[key].sum(elem.children)});
-            else
-                return Object.assign(elem, {data: "..."});
-        })
-
-        console.log(this);
-
-        return this;
-    }
-})
-
-/**
- * Object.prototype.transpose
- * ==========================
- * transpose (actually un-transpose or unzip) an object created from
- * Array.prototype.transpose.
- * @returns {Array} the array before applying transform.
- */
-Object.defineProperty(Object.prototype, 'expand', {
-    value : function(e){
-        let arr = [],
-            len = this.gid.length;
-        delete this.gid;
-
-        for (let i = 0; i < len; i++){
-            arr.push(this.map((k, v)=>v.children[i]));
-        }
-        return arr;
-    },
-    writable: true // Array have function with same name.
-})
-
-/**
- * Array.prototype.same
- * ====================
- * return true if all element are identical after applying operator.
- */
-Array.prototype.same = function(op){
-    op = op ? op : (e) => e;
-    return this.every((v, i, a) => op(v) === op(a[0]));
-}
-
-Array.prototype.groupBy = function(prop) {  
-    return this.reduce((grouped, item) => {
-        let key = item[prop];
-        grouped[key] = grouped[key] || [];
-        grouped[key].push(item);
-        return grouped;
-    }, {})
-};
-
-Array.prototype.columnFilter = function(crit) {
-    return this.map(entry=>entry.filter(crit));
-}
-
-Array.prototype.gather = function(){
-    let dict = {};
-
-    for (let key in this[0]){
-        dict[key] = {children: this.map(row => row[key])};
-    }
-
-    dict.gid = this.map((_, i) => i);
-    return dict;
-}
-
-Array.prototype.split = function(crit){
-    let selected = [], rest = [];
-    while(this.length > 0){
-        let last = this.pop();
-        if(crit(last)) selected.push(last);
-        else rest.push(last);
-    }
-    selected.reverse();
-    rest.reverse();
-
-    return {selected, rest};
-}
-
-console.log(Array(10).fill(0).map((e, i) => i).split((e) => e>5));
-
-Array.prototype.gatherBy = function(col, label, colAttr, currRow) {
-    
-    currRow = currRow ? currRow : 0;
-
-    let {selected, rest} = this.split(e=>colAttr[col].label(e[col])===label);
-
-    rest.reverse()
-        .splice(currRow, 0, selected.gather().summary(colAttr, {[col]: label}));
-
-    return rest;
-}
-
-let array = Array(10).fill(0).map((e, i) => ({a:i, b:Math.floor(i/3)}));
-console.log(array.gatherBy("b", 0, {"b":{label:(e)=>e.label ? e.label : e}}), "gatherBy");
-
-
-Array.prototype.expandAt = function(currRow){
-    
-    let gathered = this[currRow];
-
-    this.splice(currRow, 1, gathered.expand());
-}
-
-Array.prototype.gatherAll = function(col, colAttr){
-    return this.groupBy(row => row[colKey])
-        .map((k, group) => group.gather().summary(colAttr, {[col]: gather}));
-}
-
-Array.prototype.expandAll = function(){
-    this.map(row => row.expand()).flat();
-}
-
 
 /**
  * setTypeDict
@@ -309,15 +49,17 @@ function setTypeDict(data){
     if('SYS_RPT_ItmDEF' in data){
         console.time('typeDict')
         let dict = data['SYS_RPT_ItmDEF']
-            .groupBy('TableName')
+            .groupBy(e => e['TableName'])
             .map((_tableName, table)=>table
                 .map((entry)=>({name:entry.FieldName, type:entry.FieldType, def:entry.FieldDef}))
                 .dictionarize('name')
             );
-        
+
         tables['fieldTypeDict'] = dict;
+
         console.timeEnd('typeDict')
         console.log(dict);
+
     } else throw TypeError('RPT_ItmDEF table is mandatory.')
 
 }
@@ -338,6 +80,45 @@ function setCategoryDict(data){
 
 }
 
+function setLabelFunc(colAttr){
+    
+    let typeDict = {
+        // money: {
+        //     label: (col) => {
+        //         let sum = col.children
+        //             .map(n => parseFloat(n))
+        //             .filter(e=>!isNaN(e))
+        //             .reduce((acc, n) => acc+n, 0);
+        //         return "Total: " + sum;
+        //     }
+        // }
+    }
+
+    let columnSpecDict = {
+        ccode : {
+            label: (col) => {
+                return col.length > 4 ? col.slice(0, -2) + '-Gathered' : col;
+            },
+            sort:  (a, b) => {
+                let ra = a.ccode.data ? a.ccode.data : a.ccode, 
+                    rb = b.ccode.data ? b.ccode.data : b.ccode;
+                
+                return ra > rb ? 1 : ra < rb ? -1 : 0;
+            }    
+        }
+    }
+
+    for (let k in colAttr){
+        if (k in columnSpecDict){
+            Object.assign(colAttr[k], columnSpecDict[k]);
+        } else if (colAttr[k].type in typeDict){
+            Object.assign(colAttr[k].label, typeDict[k]);
+        }
+    };
+
+    return colAttr;
+}
+
 function setVouchers(data){
 
     if('GL_accvouch' in data){
@@ -347,12 +128,11 @@ function setVouchers(data){
             commonAttr  = {default: 0, sorted: "NONE", filter:"", fold:false},
             vouchHeader = vouchTable[0].map((k, _v) => Object.assign({}, commonAttr, vouchDict[k]));
 
+
         tables['vouchers'] = {
             body : vouchTable,
             head: vouchHeader
         }
-
-        console.log(vouchHeader);
 
     } else throw TypeError('voucher table (GL_accvouch) is mandatory');
 }
@@ -365,13 +145,12 @@ function setJournal(data){
             commonAttr = {default: 0, sorted: "NONE", filter: "", fold: false},
             journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
 
+        journalHeader = setLabelFunc(journalHeader);
 
         tables['journal'] = {
             body : journalTable,
             head : journalHeader
         }
-
-        console.log(journalHeader);
     
     } else throw TypeError('journal table (GL_accsum) is mandatory');
     
