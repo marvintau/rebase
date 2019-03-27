@@ -42,7 +42,7 @@ export default class BodyCell extends Component {
                 default: 
                     return (<td col={col} row={row}>
                         <input className="cell-editing" {...props} />
-                        <button className="btn">哈哈哈</button>
+                        <button className="btn-sm btn-info agg">聚合</button>
                     </td>)
             }
         }

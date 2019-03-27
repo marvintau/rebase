@@ -48,11 +48,12 @@ export default class HeadCell extends Component {
         } else if (!attr.editing) {
             return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>{title}</th>);
         } else {
-            return (<th type={attr.type} className={"th-header "+attr.type} onClick={(e)=>{columnEditing(data);}}>
+            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>
             {title}
             <div>
                 <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button>
                 <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(data)}>折叠</button>
+                <button className="btn-sm btn-modify btn-info" onClick={(e) => sortColumn(data)}> 聚合 </button>
                 {filterElems}
             </div>
             </th>);

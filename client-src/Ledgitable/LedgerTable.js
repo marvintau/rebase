@@ -137,7 +137,7 @@ export default class LedgerTable extends Component {
     columnEditing(col){
         let head = this.state.head;
         console.log(head, col);
-        for(let key in head) head[key].editing = false;
+        for(let key in head) if (key != col) head[key].editing = false;
         head[col].editing = !head[col].editing;
         this.setState({head: head});
     }
