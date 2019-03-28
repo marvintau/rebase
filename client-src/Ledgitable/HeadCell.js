@@ -10,7 +10,6 @@ export default class HeadCell extends Component {
     }
 
     setFilter(){
-
         this.setState({filtering: !this.state.filtering});
     }
 
@@ -22,10 +21,13 @@ export default class HeadCell extends Component {
             "DESCENDING" : "▲升序排列"
         }
 
-        const {data, attr, col, columnEditing, sortColumn, filterColumn, toggleFold, aggregateColumn} = this.props;
-        let filterElems = [(<button className="btn-sm btn-modify btn-primary" onClick={(e) =>this.setFilter()} key="0">筛选</button>)];
+        const {data, attr, columnEditing, sortColumn, filterColumn, toggleFold, aggregateColumn} = this.props;
+        let condElems = [];
+        if(attr.filter === ''){
+            condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>aggregateColumn(data)} key="0">聚合</button>);
+        }
         if(this.state.filtering){
-            filterElems.push(<div  key="1">
+            condElems.push(<div  key="1">
                 <input autoFocus
                     type="text"
                     className="input"
@@ -33,7 +35,8 @@ export default class HeadCell extends Component {
                     defaultValue={attr.filter}
                     onKeyDown={(e) => {
                         if(e.key=="Enter"){
-                            filterColumn(col, e.target.value);
+                            console.log(data);
+                            filterColumn(data, e.target.value);
                             this.setState({filtering: false});
                         }
                     }}
@@ -43,7 +46,7 @@ export default class HeadCell extends Component {
 
         let title = attr.def ? attr.def : data;
 
-        if(attr.fold){
+        if(attr.folded){
             return (<th type={attr.type} className={"th-header fold "+attr.type} onDoubleClick={(e)=>{toggleFold(data);}}></th>);
         } else if (!attr.editing) {
             return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>{title}</th>);
@@ -52,9 +55,9 @@ export default class HeadCell extends Component {
             {title}
             <div>
                 <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button>
+                <button className="btn-sm btn-modify btn-primary" onClick={(e) =>this.setFilter()} key="0">筛选</button>
                 <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(data)}>折叠</button>
-                <button className="btn-sm btn-modify btn-info" onClick={(e) => aggregateColumn(data)}> 聚合 </button>
-                {filterElems}
+                {condElems}
             </div>
             </th>);
         }

@@ -83,15 +83,15 @@ function setCategoryDict(data){
 function setLabelFunc(colAttr){
     
     let typeDict = {
-        // money: {
-        //     label: (col) => {
-        //         let sum = col.children
-        //             .map(n => parseFloat(n))
-        //             .filter(e=>!isNaN(e))
-        //             .reduce((acc, n) => acc+n, 0);
-        //         return "Total: " + sum;
-        //     }
-        // }
+        money: {
+            sum: (colChildren) => {
+                let sum = colChildren
+                    .map(n => parseFloat(n))
+                    .filter(e=>!isNaN(e))
+                    .reduce((acc, n) => acc+n, 0);
+                return "Total: " + sum;
+            }
+        }
     }
 
     let columnSpecDict = {
@@ -112,10 +112,30 @@ function setLabelFunc(colAttr){
         if (k in columnSpecDict){
             Object.assign(colAttr[k], columnSpecDict[k]);
         } else if (colAttr[k].type in typeDict){
-            Object.assign(colAttr[k].label, typeDict[k]);
+            Object.assign(colAttr[k], typeDict[colAttr[k].type]);
         }
     };
 
+    return colAttr;
+}
+
+function setDefault(colAttr){
+    let typeDefault = {
+        money: 0,
+        int: 0,
+        smallint: 0,
+        tinyint: 0,
+        float: 0,
+        bit: 0,
+        varchar: "无",
+        nvarchar: '无'
+    }
+
+    for (let k in colAttr) {
+        if (colAttr[k].type in typeDefault){
+            colAttr[k].default = typeDefault[colAttr[k].type];
+        }
+    }
     return colAttr;
 }
 
@@ -125,9 +145,8 @@ function setVouchers(data){
 
         let vouchDict   = tables['fieldTypeDict']['GL_accvouch'],
             vouchTable  = data['GL_accvouch'].columnFilter((key,_val) => (key[0] != "b" && key.slice(0,2)!= "cD" && vouchDict[key] !== undefined)),
-            commonAttr  = {default: 0, sorted: "NONE", filter:"", fold:false},
+            commonAttr  = {sorted: "NONE", filter:"", folded:false},
             vouchHeader = vouchTable[0].map((k, _v) => Object.assign({}, commonAttr, vouchDict[k]));
-
 
         tables['vouchers'] = {
             body : vouchTable,
@@ -142,10 +161,21 @@ function setJournal(data){
     if('GL_accsum' in data){
         let journalDict = tables['fieldTypeDict']['GL_accsum'],
             journalTable = data['GL_accsum'].columnFilter(),
-            commonAttr = {default: 0, sorted: "NONE", filter: "", fold: false},
+            commonAttr = {sorted: "NONE", filter: "", folded: false, filtered: false, aggregated: false},
             journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
 
         journalHeader = setLabelFunc(journalHeader);
+        journalHeader = setDefault(journalHeader);
+        
+        let keys = journalHeader.keys();
+        for (let i = journalTable.length-1; i>=0; i--)
+            for (let k = keys.length-1; k>=0; k--)
+                try
+                {if (journalTable[i][keys[k]] === null || journalTable[i][keys[k]] === undefined) journalTable[i][keys[k]] = journalHeader[keys[k]].default;}
+                catch{
+                    console.error(k);
+                }
+
 
         tables['journal'] = {
             body : journalTable,

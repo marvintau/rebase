@@ -30,6 +30,13 @@ Object.defineProperty(Object.prototype, "forEach", {
     }
 })
 
+Object.defineProperty(Object.prototype, 'some', {
+    value: function(func){
+        let values = Object.values(this);
+        return values.some(func);
+    }
+})
+
 /**
  * Object.prototype.values
  * =======================
@@ -38,6 +45,12 @@ Object.defineProperty(Object.prototype, "forEach", {
 Object.defineProperty(Object.prototype, 'values', {
     value: function(){
         return Object.values(this);
+    }
+})
+
+Object.defineProperty(Object.prototype, 'keys', {
+    value: function(){
+        return Object.keys(this);
     }
 })
 
@@ -134,7 +147,9 @@ Object.defineProperty(Object.prototype, 'summary', {
             if (labels[key] !== undefined)
                 this[key].data = labels[key];
             else if(colAttr[key] && colAttr[key].sum)
-                this[key].data = colAttr[key].sum(elem.children);
+                this[key].data = colAttr[key].sum(this[key].children);
+            else if(this[key].children.same())
+                this[key].data = this[key].children[0];
             else
                 this[key].data = "...";
         }

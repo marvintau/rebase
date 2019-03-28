@@ -11,14 +11,16 @@ export default class BodyCell extends Component {
     }
 
     toggleEditing(){
-        this.setState({editing: !this.state.editing});
+        if(this.props.updateEnabled)
+            this.setState({editing: !this.state.editing});
     }
 
     render() {
 
-        const {data, attr, col, row, updateCell, aggregate} = this.props;
+        const {data, attr, col, row, updateCell, updateEnabled} = this.props;
 
-        let displayedData = (data === null) ? data : data.data ? data.data : data;
+        let displayedData = (data === null || data === undefined) ? '空' : 
+                            (data.data !== null && data.data !== undefined ) ? data.data : data;
 
         let props = {
             autoFocus : true,
@@ -34,7 +36,7 @@ export default class BodyCell extends Component {
             }}
         };
 
-        if(attr.fold){
+        if(attr.folded){
             return (<td className="fold" col={col} row={row} ></td>);
         }
         if(!this.state.editing){
@@ -44,7 +46,6 @@ export default class BodyCell extends Component {
                 default: 
                     return (<td col={col} row={row}>
                         <input className="cell-editing" {...props} />
-                        <button className="btn-sm btn-info agg" onClick={(e)=>aggregate(e.target.value)}>聚合</button>
                     </td>)
             }
         }

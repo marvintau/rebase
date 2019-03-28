@@ -32,11 +32,17 @@ class BodyRow extends Component {
             removeRec = (e) => { removeRecord(row);};
 
         const number =(<td>{row + 1}</td>);
-        const editButton = (<td className="edit-bar">
-            <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>
-            <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
-        </td>)
 
+        const editButton = [];
+        if(!columnAttr.some((e)=>e.folded || e.filtered || e.aggregated)){
+            editButton.push(<td className="edit-bar" key="edit">
+                <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>
+                <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
+            </td>)
+        }
+
+        const updateEnabled = !columnAttr.some((e)=> e.aggregated);
+        
         const colElems = [];
         for (let colKey in cols) {
             colElems.push(<BodyCell
@@ -46,6 +52,7 @@ class BodyRow extends Component {
                 data={cols[colKey]}
                 attr={columnAttr[colKey]}
                 updateCell={updateCell}
+                updateEnabled={updateEnabled}
             />)
         };
         return (<tr>{number}{editButton}{colElems}</tr>);
@@ -58,12 +65,14 @@ class HeadRow extends Component {
     render() {
         const {cols, ...rest} = this.props;
         const colElems = [];
+        if(!cols.some((e)=>e.folded || e.filtered || e.aggregated)){
+            colElems.push(<HeadCell data="编辑" className="edit-bar" key="edit" attr={({})}/>)
+        }
         for (let colKey in cols){
             colElems.push(<HeadCell data={colKey} attr={cols[colKey]} key={colKey} {...rest}/>);
         }
         return (<tr>
             <HeadCell data="ID" className="edit-bar" attr={({})}/>
-            <HeadCell data="编辑" className="edit-bar" attr={({})}/>
             {colElems}</tr>);
     }
 }
@@ -129,9 +138,9 @@ export default class LedgerTable extends Component {
     }
 
     toggleFold(col){
-        let head = this.state.head,
-            fold = head[col].fold;
-        head[col].fold = !fold;
+        let head   = this.state.head,
+            folded = head[col].folded;
+        head[col].folded = !folded;
 
         this.setState({head: head});
     }
@@ -215,12 +224,12 @@ export default class LedgerTable extends Component {
             } else if (filter[0].match(/(\<|\>)/) && filter.slice(1).match(/ *-?\d*\.?\d*/)){
                 func = (e) => {return eval(e+filter)}
             } else {
-                func = (e) => e === filter;
+                func = (e) => e === filter || e.includes(filter);
             }
             return func;    
         }
 
-        for (let col = 0; col < head.length; col++){
+        for (let col in head){
             presentBody = presentBody.filter((rec) => makeFilterFunc(head[col].filter)(rec[col]));
         }
 
@@ -235,10 +244,9 @@ export default class LedgerTable extends Component {
             body = this.state.body;
         
         body = body.gatherAll(col, head);
-
-        console.log(body.map(e=>e.ccode), "aggregated");
-
+        head[col].aggregated = true;
         this.setState({
+            head,
             body,
             presentBody: body
         });
@@ -258,8 +266,6 @@ export default class LedgerTable extends Component {
     }
 
     render() {
-
-        console.log(this.state.presentBody, "render");
 
         const {name} = this.props;
         let tableID = `table-${name}`;
