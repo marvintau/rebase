@@ -302,7 +302,7 @@ export default class LedgerTable extends Component {
                 prevPage={this.prevPage}
                 nextPage={this.nextPage}
                 currPage={currPage}
-                totalPage={Math.ceil(this.state.presentBody.size/this.state.recordPerPage)}
+                totalPage={Math.ceil(this.state.presentBody.length/this.state.recordPerPage)}
             />
         </div>);
     }

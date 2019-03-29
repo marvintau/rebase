@@ -111,8 +111,6 @@ Array.prototype.gatherAll = function(col, colAttr){
     let grouped = this.groupBy(row => labelFunc(row[col]))
         .map((key, group) => (group.length > 1) ? group.gather().summary(colAttr, {[col]: key}) : group);
 
-    console.log(grouped, "gatherAll");
-
     return grouped.values().sort(sortFunc)
 
 }

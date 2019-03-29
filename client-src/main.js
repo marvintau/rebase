@@ -76,6 +76,7 @@ function setCategoryDict(data){
             .dictionarize('ccode');
         console.timeEnd('ccodes');
         tables['categoryCodeDict'] = ccodes;
+        console.log(tables['categoryCodeDict']);
     } else throw TypeError('ccode table is mandatory.')
 
 }
@@ -139,6 +140,23 @@ function setDefault(colAttr){
     return colAttr;
 }
 
+function applyCategoryCode(table){
+    let ccodes = tables['categoryCodeDict'];
+    
+    let maxLen = Math.max(...table.map(e=>e.ccode.length));
+
+    for (let i = table.length-1; i >=0; i--){
+        try {
+            let ccode = table[i].ccode;
+            table[i].ccode = `${ccode}${" ".repeat(maxLen-ccode.length)}-${ccodes[ccode].cclass}:${ccodes[ccode].ccode_name}`;
+        } catch {
+            console.log(table[i]);
+        }
+    }
+
+    return table;
+}
+
 function setVouchers(data){
 
     if('GL_accvouch' in data){
@@ -166,6 +184,7 @@ function setJournal(data){
 
         journalHeader = setLabelFunc(journalHeader);
         journalHeader = setDefault(journalHeader);
+        journalTable = applyCategoryCode(journalTable);
         
         let keys = journalHeader.keys();
         for (let i = journalTable.length-1; i>=0; i--)
