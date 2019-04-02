@@ -18,7 +18,7 @@ export default class BodyCell extends Component {
     render() {
 
         const {data, attr, col, row, updateCell, updateEnabled} = this.props;
-
+        console.log(this.props);
         let displayedData = (data === null || data === undefined) ? '空' : 
                             (data.data !== null && data.data !== undefined ) ? data.data : data;
 

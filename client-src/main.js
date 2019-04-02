@@ -45,6 +45,61 @@ class Accountable {
         this.pagers  = [];
     }
 
+    permuteColumns(colNameOrder){
+        this.head = this.head.rewrite(colNameOrder);
+        this.body = this.body.map(record => record.rewrite(colNameOrder));
+        this.presBody = this.body;
+    }
+
+    marshall(){
+        for (let i = this.body.length-1; i>=0; i--)
+        for (let colName in this.body[i]){
+            let cell = this.body[i][colName];
+            if (cell === null || cell === undefined){
+                this.body[i][colName] = this.head[colName].default;
+            }
+        }
+    }
+
+    /**
+     * addPager
+     * ========
+     * Add a new way of paging, and controlled by a paginator.
+     * 
+     * The default paging method is to split the records into pages according
+     * to the record number. And this will not affect the structure body. However
+     * you may define your own way of paging, which will separate the body into
+     * several groups, and switch different groups with paginator. Thus it's more
+     * like a "group switcher".
+     * 
+     * There could be multiple custom pager, which means you may separate the body
+     * into a hierarchical groups.
+     * 
+     * After separating the body into groups with a pager, the sort, filter, and
+     * default paging method will be affect the innermost group.
+     * 
+     * Moreover, addPager should not be used as a dynamic/interactive operation.
+     * Pagers should be prepared before rendering.
+     * @param {string} pagerName
+     * @param {Function} pagerFunc pager function
+     * @param {Function} displayFunc display paging
+     * 
+     */
+    addPager(name, pagerFunc, displayFunc){
+        this.pagers.push({
+            name, pagerFunc, displayFunc
+        })
+    }
+
+    /**
+     * applyPagers
+     * ===========
+     * apply all pager function at one (and should be only one) time.
+     */
+    applyPagers(){
+        // for (let i = 0; i > )
+    }
+
     addSort(colName){
 
         let isDesc = true;
@@ -63,16 +118,49 @@ class Accountable {
 
         this.sortKeyOrder.splice(this.sortKeyOrder.indexOf(colName), 1);
         this.head[colName].sorting = undefined;
-
+        this.updateKeyOrder();
         this.sort();
     }
 
+    updateKeyOrder(){
+        for (let i = 0; i < this.sortKeyOrder.length; i++){
+            let colName = this.sortKeyOrder[i];
+            this.head[colName].sorting.keyIndex = i;
+        }
+    }
 
-    addFilter(){}
+    setFilter(colName, filter){
 
-    removeFilter(){}
+        let makeFilterFunc = (filterText) => {
+            let func;
+            if (filterText === ""){
+                func = (e) => true;
+            } else if (filterText[0].match(/(\<|\>)/) && filterText.slice(1).match(/ *-?\d*\.?\d*/)){
+                func = (e) => {return eval(e+filterText)}
+            } else {
+                func = (e) => e === filterText || e.includes(filterText);
+            }
+            return func;    
+        }
 
-    addPager(){}
+        this.head[colName].filter = {
+            text : filter,
+            func : makeFilterFunc(filter)
+        };
+
+        this.presBody = this.body;
+
+        for (let colName in this.head){
+            let filterFunc = this.head[colName].filter.func;
+            this.presBody = this.presBody.filter((rec) => filterFunc(rec[colName]));
+        }
+
+    }
+
+    applyAllFilters(){
+
+
+    }
 
     /**
      * sort
@@ -120,6 +208,15 @@ function setTypeDict(data){
 
         tables['fieldTypeDict'] = dict;
 
+        tables['fieldTypeDict']['GL_accsum'].ccode_name = {
+            type: "string",
+            def: "科目描述"
+        };
+        tables['fieldTypeDict']['GL_accsum'].cclass = {
+            type: "string",
+            def: "科目类别"
+        }
+
         console.timeEnd('typeDict')
         console.log(dict);
 
@@ -139,7 +236,6 @@ function setCategoryDict(data){
             .dictionarize('ccode');
         console.timeEnd('ccodes');
         tables['categoryCodeDict'] = ccodes;
-        console.log(tables['categoryCodeDict']);
     } else throw TypeError('ccode table is mandatory.')
 
 }
@@ -211,7 +307,9 @@ function applyCategoryCode(table){
     for (let i = table.length-1; i >=0; i--){
         try {
             let ccode = table[i].ccode;
-            table[i].ccode = `${ccode}${" ".repeat(maxLen-ccode.length)}-${ccodes[ccode].cclass}:${ccodes[ccode].ccode_name}`;
+            // table[i].ccode = `${ccode}${" ".repeat(maxLen-ccode.length)}-${ccodes[ccode].cclass}:${ccodes[ccode].ccode_name}`;
+            table[i].cclass = ccodes[ccode].cclass;
+            table[i].ccode_name = ccodes[ccode].ccode_name;
         } catch {
             console.log(table[i]);
         }
@@ -238,26 +336,22 @@ function setJournal(data){
 
     if('GL_accsum' in data){
         let journalDict = tables['fieldTypeDict']['GL_accsum'],
-            journalTable = data['GL_accsum'].columnFilter(),
-            commonAttr = {sorting: undefined, filter: "", folded: false, filtered: false, aggregated: false},
+            journalTable = data['GL_accsum'].columnFilter();
+        journalTable = applyCategoryCode(journalTable);
+
+        let commonAttr = {sorting: undefined, filter: {text:"", func:(e)=>true}, folded: false, filtered: false, aggregated: false},
             journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
 
         journalHeader = setLabelFunc(journalHeader);
         journalHeader = setDefault(journalHeader);
-        journalTable = applyCategoryCode(journalTable);
+
         
-        let keys = journalHeader.keys();
-        for (let i = journalTable.length-1; i>=0; i--)
-            for (let k = keys.length-1; k>=0; k--)
-                try
-                {if (journalTable[i][keys[k]] === null || journalTable[i][keys[k]] === undefined) journalTable[i][keys[k]] = journalHeader[keys[k]].default;}
-                catch{
-                    console.error(k);
-                }
-
-
         tables['journal'] = new Accountable(journalHeader, journalTable);
-                
+        tables['journal'].marshall();
+        tables['journal'].permuteColumns(['iperiod', 'cclass', 'ccode', 'ccode_name', 'mb', 'mc', 'md', 'me'])
+
+        console.log(tables['journal']);
+
     } else throw TypeError('journal table (GL_accsum) is mandatory');
     
 }

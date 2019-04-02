@@ -77,6 +77,26 @@ Object.defineProperty(Object.prototype, 'filter', {
 })
 
 /**
+ * Object.prototype.rewrite
+ * ========================
+ * rewrite an object with given key order. Non-existed keys will be omitted.
+ */
+Object.defineProperty(Object.prototype, 'rewrite', {
+    value: function(keys){
+        let newObject = {};
+
+        for (let i = 0; i < keys.length; i++){
+            // console.log(keys[i]);
+            if (this[keys[i]] !== undefined){
+                newObject[keys[i]] = this[keys[i]];
+            }
+        }
+
+        return newObject;
+    }
+})
+
+/**
  * Object.prototype.merge
  * ======================
  * return a new Object that merged from two objects.

@@ -143,7 +143,7 @@ export default class LedgerTable extends Component {
 
     columnEditing(col){
         let head = this.state.table.head;
-        console.log(head, col);
+
         for(let key in head) if (key != col) head[key].editing = false;
         head[col].editing = !head[col].editing;
         this.setState({head: head});
@@ -158,7 +158,6 @@ export default class LedgerTable extends Component {
             head: head,
             body: body
         });
-        this.applyFilterPaginate();
     }
 
     removeRecord(row){
@@ -170,7 +169,6 @@ export default class LedgerTable extends Component {
             head: head,
             body: body
         });
-        this.applyFilterPaginate();
     }
 
     updateCell(row, col, data){
@@ -193,33 +191,6 @@ export default class LedgerTable extends Component {
         });
     }
 
-    applyFilterPaginate(){
-        let head = this.state.table.head,
-            body = this.state.table.body,
-            presentBody = body;
-
-        let makeFilterFunc = (filter) => {
-            let func;
-            if (filter === ""){
-                func = (e) => true;
-            } else if (filter[0].match(/(\<|\>)/) && filter.slice(1).match(/ *-?\d*\.?\d*/)){
-                func = (e) => {return eval(e+filter)}
-            } else {
-                func = (e) => e === filter || e.includes(filter);
-            }
-            return func;    
-        }
-
-        for (let col in head){
-            presentBody = presentBody.filter((rec) => makeFilterFunc(head[col].filter)(rec[col]));
-        }
-
-        this.setState({
-            presentBody: presentBody,
-            currPage : 1
-        })
-    }
-
     aggregateColumn(col){
         let head = this.state.table.head,
             body = this.state.table.body;
@@ -235,15 +206,10 @@ export default class LedgerTable extends Component {
 
     filterColumn(col, filter){
 
-        let head = this.state.table.head;
+        let table = this.state.table;
+        table.setFilter(col, filter);
         
-        head[col].filter = filter;
-
-        this.setState({
-            head: head,
-        });
-
-        this.applyFilterPaginate();
+        this.setState({ table , currPage: 1});
     }
 
     render() {
