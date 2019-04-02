@@ -1,5 +1,24 @@
 import {Component} from "react";
 
+class SortButton extends Component {
+    render(){
+        let {sortMethod, sortState, colName} = this.props;
+
+        if (sortState === undefined){
+            return(<button
+                className="btn-sm btn-modify btn-warning"
+                onClick={(e) => sortMethod("addSort", colName)}
+                >添加排序</button>)
+        } else {
+            return(<button
+                className="btn-sm btn-modify btn-warning"
+                onClick={(e) => sortMethod("toggleSort", colName)}
+                > {`${sortState.isDesc ? "▲升序排列" : "▼降序排列"} ${sortState.keyIndex+1}`}
+                </button>)
+        }
+    }
+}
+
 export default class HeadCell extends Component {
     
     constructor(props, context){
@@ -15,13 +34,7 @@ export default class HeadCell extends Component {
 
     render() {
 
-        let nextSort = {
-            "NONE"       : "▲升序排列",
-            "ASCENDING"  : "▼降序排列",
-            "DESCENDING" : "▲升序排列"
-        }
-
-        const {data, attr, columnEditing, sortColumn, filterColumn, toggleFold, aggregateColumn} = this.props;
+        const {data, attr, columnEditing, sortMethod, filterColumn, toggleFold, aggregateColumn} = this.props;
         let condElems = [];
         if(attr.filter === ''){
             condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>aggregateColumn(data)} key="0">聚合</button>);
@@ -53,8 +66,9 @@ export default class HeadCell extends Component {
         } else {
             return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>
             {title}
-            <div>
-                <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button>
+            <div>   
+                {/* <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button> */}
+                <SortButton sortMethod={sortMethod} sortState={attr.sorting} colName={data}/>
                 <button className="btn-sm btn-modify btn-primary" onClick={(e) =>this.setFilter()} key="0">筛选</button>
                 <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(data)}>折叠</button>
                 {condElems}

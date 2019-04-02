@@ -6,6 +6,8 @@
  * each object as key, and finally forms an object.
  * 
  * Note: mistake not with Array.prototype.gather.
+ * @param {string} field
+ * 
  */
 Array.prototype.dictionarize = function(field){
 
@@ -71,8 +73,6 @@ Array.prototype.split = function(crit){
 
     return {selected, rest};
 }
-
-console.log(Array(10).fill(0).map((e, i) => i).split((e) => e>5));
 
 Array.prototype.gatherBy = function(col, label, colAttr, currRow) {
     

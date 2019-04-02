@@ -1,5 +1,3 @@
-import {List, Map, fromJS} from 'immutable';
-
 import {Component} from 'react';
 
 import BodyCell from "./BodyCell.js";
@@ -104,18 +102,16 @@ export default class LedgerTable extends Component {
         this.state = {
             recordPerPage: 30,
             currPage: 1,
-            head : props.head,
-            body : props.body
+            table : props.table,
         }
-        this.state.presentBody = this.state.body;
-        this.state.totalPage = this.state.body.size / this.state.recordPerPage + 1;
+        this.state.totalPage = this.state.table.body.size / this.state.recordPerPage + 1;
 
         this.updateCell = this.updateCell.bind(this);
         this.insertRecord = this.insertRecord.bind(this);
         this.removeRecord = this.removeRecord.bind(this);
 
         this.columnEditing = this.columnEditing.bind(this);
-        this.sortColumn = this.sortColumn.bind(this);
+        this.sortMethod = this.sortMethod.bind(this);
         this.filterColumn = this.filterColumn.bind(this);
         this.toggleFold = this.toggleFold.bind(this);
 
@@ -125,20 +121,20 @@ export default class LedgerTable extends Component {
         this.nextPage = this.nextPage.bind(this);
     }
 
-    prevPage(){
+    prevPage(pager){
         let currPage = this.state.currPage;
         this.setState({currPage: currPage == 1 ? 1:currPage-1});
     }
-    nextPage(){
+    nextPage(pager){
         let currPage = this.state.currPage,
-            recLength = this.state.body.length,
+            recLength = this.state.table.body.length,
             recordPerPage = this.state.recordPerPage,
             totalPage = recLength / recordPerPage + 1;
         this.setState({currPage: currPage == totalPage ? currPage : currPage+1});
     }
 
     toggleFold(col){
-        let head   = this.state.head,
+        let head   = this.state.table.head,
             folded = head[col].folded;
         head[col].folded = !folded;
 
@@ -146,7 +142,7 @@ export default class LedgerTable extends Component {
     }
 
     columnEditing(col){
-        let head = this.state.head;
+        let head = this.state.table.head;
         console.log(head, col);
         for(let key in head) if (key != col) head[key].editing = false;
         head[col].editing = !head[col].editing;
@@ -154,8 +150,8 @@ export default class LedgerTable extends Component {
     }
 
     insertRecord(row){
-        let body = this.state.body,
-            head = this.state.head;
+        let body = this.state.table.body,
+            head = this.state.table.head;
         body.splice(row+1, 0, Object.map(head, e=>e.default));
         for(let key in head) head[key].filter = "";
         this.setState({
@@ -166,8 +162,8 @@ export default class LedgerTable extends Component {
     }
 
     removeRecord(row){
-        let head = this.state.head,
-            body = this.state.body;
+        let head = this.state.table.head,
+            body = this.state.table.body;
         body.splice(row, 1);
         for(let key in head) head[key].filter = "";
         this.setState({
@@ -178,7 +174,7 @@ export default class LedgerTable extends Component {
     }
 
     updateCell(row, col, data){
-        let body = this.state.body;
+        let body = this.state.table.body;
         body[row][col].data = data;
         this.setState({
             body: body,
@@ -186,35 +182,20 @@ export default class LedgerTable extends Component {
         });
     }
 
-    sortColumn(col){
+    sortMethod(method, col){
 
-        let head = this.state.head,
-            body = this.state.body;
+        console.log(method);
+        let table = this.state.table;
+        table[method](col);
 
-        let currSort = head[col].sorted,
-            order = currSort == "ASCENDING" ? 1 : -1;
-
-        let nextSort = {
-            "NONE": "ASCENDING",
-            "ASCENDING" : "DESCENDING",
-            "DESCENDING" : "ASCENDING"
-        }[currSort];
-
-        head[col].sorted = nextSort;
-
-        body.sort((a, b) => {
-            return (a[col] < b[col]) ? -1 * order : 1 * order;
-        })
         this.setState({
-            body: body,
-            presentBody : body
+            table: table
         });
-        this.setState({head: head});
     }
 
     applyFilterPaginate(){
-        let head = this.state.head,
-            body = this.state.body,
+        let head = this.state.table.head,
+            body = this.state.table.body,
             presentBody = body;
 
         let makeFilterFunc = (filter) => {
@@ -240,8 +221,8 @@ export default class LedgerTable extends Component {
     }
 
     aggregateColumn(col){
-        let head = this.state.head,
-            body = this.state.body;
+        let head = this.state.table.head,
+            body = this.state.table.body;
         
         body = body.gatherAll(col, head);
         head[col].aggregated = true;
@@ -254,7 +235,7 @@ export default class LedgerTable extends Component {
 
     filterColumn(col, filter){
 
-        let head = this.state.head;
+        let head = this.state.table.head;
         
         head[col].filter = filter;
 
@@ -281,9 +262,9 @@ export default class LedgerTable extends Component {
             <table>
                 <TableHead
                     name={name}
-                    cols={this.state.head}
+                    cols={this.state.table.head}
                     columnEditing={this.columnEditing}
-                    sortColumn={this.sortColumn}
+                    sortMethod={this.sortMethod}
                     filterColumn = {this.filterColumn}
                     toggleFold = {this.toggleFold}
                     aggregateColumn = {this.aggregateColumn}
@@ -291,8 +272,8 @@ export default class LedgerTable extends Component {
                 <TableBody
                     name={name}
                     startingRow={startingRecord}
-                    rows={this.state.presentBody.slice(startingRecord, endingRecord)}
-                    columnAttr={this.state.head}
+                    rows={this.state.table.presBody.slice(startingRecord, endingRecord)}
+                    columnAttr={this.state.table.head}
                     updateCell={this.updateCell}
                     insertRecord={this.insertRecord}
                     removeRecord={this.removeRecord}
@@ -302,7 +283,7 @@ export default class LedgerTable extends Component {
                 prevPage={this.prevPage}
                 nextPage={this.nextPage}
                 currPage={currPage}
-                totalPage={Math.ceil(this.state.presentBody.length/this.state.recordPerPage)}
+                totalPage={Math.ceil(this.state.table.presBody.length/this.state.recordPerPage)}
             />
         </div>);
     }

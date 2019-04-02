@@ -33,6 +33,69 @@ backupFile.setStartFunc((instance) =>{
 // });
 
 
+class Accountable {
+    constructor(head, body){
+        
+        this.head     = head;
+        this.body     = body;
+        this.presBody = body;
+
+        this.sortKeyOrder  = [];
+        this.filters = [];
+        this.pagers  = [];
+    }
+
+    addSort(colName){
+
+        let isDesc = true;
+                   
+        this.sortKeyOrder.push(colName);
+        this.head[colName].sorting = {isDesc, keyIndex: this.sortKeyOrder.length - 1};
+        this.sort();
+    }
+    toggleSort(colName){
+
+        this.head[colName].sorting.isDesc = !this.head[colName].sorting.isDesc;
+        this.sort();
+    }
+
+    removeSort(colName){
+
+        this.sortKeyOrder.splice(this.sortKeyOrder.indexOf(colName), 1);
+        this.head[colName].sorting = undefined;
+
+        this.sort();
+    }
+
+
+    addFilter(){}
+
+    removeFilter(){}
+
+    addPager(){}
+
+    /**
+     * sort
+     * ============
+     * sort on both original data and displayed data. Deep-copying the whole
+     * table will be costy, and not necessary, thus we do a write-through.
+     */
+    sort(){
+
+        for (let i = 0; i < this.sortKeyOrder.length; i++){
+            let colName = this.sortKeyOrder[i];
+
+            if(this.head[colName].sorting === undefined) continue;
+
+            let isDesc = this.head[colName].sorting.isDesc ? 1 : -1;
+            this.body.sort((a, b) => ((a[colName] < b[colName]) ? -1 : 1) * isDesc);
+        }
+
+        this.presBody = this.body;
+    }
+
+
+}
 
 /**
  * setTypeDict
@@ -166,10 +229,7 @@ function setVouchers(data){
             commonAttr  = {sorted: "NONE", filter:"", folded:false},
             vouchHeader = vouchTable[0].map((k, _v) => Object.assign({}, commonAttr, vouchDict[k]));
 
-        tables['vouchers'] = {
-            body : vouchTable,
-            head: vouchHeader
-        }
+        tables['vouchers'] = new Accountable(vouchHeader, vouchTable);
 
     } else throw TypeError('voucher table (GL_accvouch) is mandatory');
 }
@@ -179,7 +239,7 @@ function setJournal(data){
     if('GL_accsum' in data){
         let journalDict = tables['fieldTypeDict']['GL_accsum'],
             journalTable = data['GL_accsum'].columnFilter(),
-            commonAttr = {sorted: "NONE", filter: "", folded: false, filtered: false, aggregated: false},
+            commonAttr = {sorting: undefined, filter: "", folded: false, filtered: false, aggregated: false},
             journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
 
         journalHeader = setLabelFunc(journalHeader);
@@ -196,11 +256,8 @@ function setJournal(data){
                 }
 
 
-        tables['journal'] = {
-            body : journalTable,
-            head : journalHeader
-        }
-    
+        tables['journal'] = new Accountable(journalHeader, journalTable);
+                
     } else throw TypeError('journal table (GL_accsum) is mandatory');
     
 }
@@ -220,7 +277,7 @@ localFile.setOnload((event, instance) => {
 
     // let voucherTable = transformData('GL_accvouch');
     
-    render(<LedgerTable {...tables['journal']} />, document.getElementById("container"));
+    render(<LedgerTable table={tables['journal']} />, document.getElementById("container"));
 
 })
 
