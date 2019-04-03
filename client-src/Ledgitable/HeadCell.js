@@ -95,9 +95,7 @@ export default class HeadCell extends Component {
 
         let title = attr.def ? attr.def : data;
 
-        if(attr.folded){
-            return (<th type={attr.type} className={"th-header fold "+attr.type} onDoubleClick={(e)=>{toggleFold(data);}}></th>);
-        } else if (!attr.editing) {
+        if (!attr.editing) {
             return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>{title}</th>);
         } else {
             return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>
@@ -109,7 +107,6 @@ export default class HeadCell extends Component {
                     className="btn-sm btn-modify btn-primary"
                     onClick={(e) =>this.setFilter()} key="0"
                 >{attr.filter.text==="" ? "添加筛选" : "更改筛选"}</button>
-                <button className="btn-sm btn-modify btn-danger" onClick={(e) => toggleFold(data)}>折叠</button>
                 {condElems}
             </div>
             </th>);

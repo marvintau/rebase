@@ -18,7 +18,6 @@ export default class BodyCell extends Component {
     render() {
 
         const {data, attr, col, row, updateCell, updateEnabled} = this.props;
-        console.log(this.props);
         let displayedData = (data === null || data === undefined) ? '空' : 
                             (data.data !== null && data.data !== undefined ) ? data.data : data;
 
@@ -36,9 +35,6 @@ export default class BodyCell extends Component {
             }}
         };
 
-        if(attr.folded){
-            return (<td className="fold" col={col} row={row} ></td>);
-        }
         if(!this.state.editing){
             return (<td col={col} row={row} onDoubleClick={this.toggleEditing} type={attr.type} className={attr.type}>{displayedData}</td>);
         } else {
@@ -46,6 +42,7 @@ export default class BodyCell extends Component {
                 default: 
                     return (<td col={col} row={row}>
                         <input className="cell-editing" {...props} />
+                        <button className="btn-sm btn-info btn-modify">按此单元格汇总至上一级</button>
                     </td>)
             }
         }
