@@ -108,39 +108,6 @@ Object.defineProperty(Object.prototype, 'merge', {
 })
 
 /**
- * Object.prototype.zip
- * ====================
- * This method requires current object (this) and the other (that)
- * contains same keys, and ALL values of the keys are Object too.
- * This method would merge the values of the same keys from two 
- * objects, and yield a new object.
- * 
- * Note: this function is seldomly used since it's hard to control
- *       the inner logic. It's more commonly to write a function
- *       to specify how to deal with two object by your own.
- */
-Object.defineProperty(Object.prototype, 'zip', {
-    value: function(that, inPlace){
-        let thisKeys = Object.keys(this),
-            thisValues = Object.values(this),
-            thatKeys = Object.keys(that),
-            thatValues = Object.values(that);
-        if (thisKeys !== thatKeys)
-            throw TypeError('zip requires two objects have same keys')
-        else if (thisValues.some(e=>e.constructor !== Object))
-            throw TypeError('all values of the current Object should be Object')
-        else if (thatValues.some(e=>e.constructor !== Object))
-            throw TypeError('all values of the other Object should be Object')
-
-        let object = {};
-        for (let i = 0; i < thisKeys.length; i++){
-            object[thisKeys[i]] = this[thisKeys[i]].merge(that[thisKeys[i]], inPlace);
-        }
-        return object;
-    }
-})
-
-/**
  * Object.prototype.summary
  * ========================
  * Summary takes two arguments, the colAttr and labels.
@@ -179,22 +146,21 @@ Object.defineProperty(Object.prototype, 'summary', {
 })
 
 /**
- * Object.prototype.transpose
+ * Object.prototype.unzip
  * ==========================
- * transpose (actually un-transpose or unzip) an object created from
- * Array.prototype.transpose.
+ * unzip an object created from Array.prototype.zip.
+ * When unzipping, the value calculated by the user-defined sum function
+ * will be omitted.
+ * 
  * @returns {Array} the array before applying transform.
  */
-Object.defineProperty(Object.prototype, 'expand', {
-    value : function(e){
-        let arr = [],
-            len = this.gid.length;
-        delete this.gid;
-
-        for (let i = 0; i < len; i++){
-            arr.push(this.map((k, v)=>v.children[i]));
-        }
-        return arr;
+Object.defineProperty(Object.prototype, 'unzip', {
+    value : function(){
+        return this.gid.map((e, i) => {
+            let record = this.map((k, v) => v.children[i]);
+            if (Array.isArray(e))
+                record.gid = e;
+        })
     },
-    writable: true // Array have function with same name.
+    writable: false // Array have function with same name.
 })

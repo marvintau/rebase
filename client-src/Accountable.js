@@ -11,6 +11,8 @@ export default class Accountable {
         this.sortKeyOrder  = [];
         this.filters = [];
         this.pagers  = [];
+
+        this.tableState = "NORMAL";
     }
 
     permuteColumns(colNameOrder){
@@ -83,7 +85,6 @@ export default class Accountable {
     }
 
     removeSort(colName){
-
         this.sortKeyOrder.splice(this.sortKeyOrder.indexOf(colName), 1);
         this.head[colName].sorting = undefined;
         this.updateKeyOrder();
@@ -95,6 +96,64 @@ export default class Accountable {
             let colName = this.sortKeyOrder[i];
             this.head[colName].sorting.keyIndex = i;
         }
+    }
+
+    /**
+     * initGather
+     * ==========
+     * supposed to run in the initiating stage.
+     * 
+     * @param {string} colName column name
+     * @param {Function} labelFunc
+     * THE LABELFUNC IS NOT A FUNCTION THAT RETURNS LABEL,
+     * BUT RETURNS THE LABEL FUNCTION! It takes the level
+     * as parameter, and returns the label function that
+     * corresponding to the level.
+     * 
+     * @param {Function} sumFunc
+     * the function that turns grouped records into single
+     * one. It takes two arguments, which are the label of
+     * the group, and the grouped records.
+     * 
+     * @param {Array} gatherLevels the levels of gathering, in array form.
+     */
+    initGather(colName, labelFunc, sumFunc, gatherLevels){
+
+        let defaultLevel = "无聚合";
+
+        this.head[colName].gather = {
+            labelFunc,
+            sumFunc,
+            levels: [defaultLevel, ...gatherLevels],
+            currLevel: 0
+        }        
+    }
+
+    setGather(colName, oper){
+
+        let currLevel = this.head[colName].gather.currLevel,
+            levels = this.head[colName].gather.levels;
+        
+        this.head[colName].gather.currLevel = levels[oper](currLevel);
+
+        let newLevel = this.head[colName].gather.currLevel
+
+        if(newLevel !== 0){
+
+            let labelFunc = this.head[colName].gather.labelFunc(newLevel);
+    
+            this.presBody = this.body
+                .groupBy((e)=>labelFunc(e))
+                .map((label, grouped) => sumFunc(label, grouped))
+                .values();
+            
+            this.tableState = "gather";
+        } else {
+            this.presBody = this.body;
+            this.tableState = "normal";
+        }
+
+        
     }
 
     setFilter(colName, filter){
@@ -128,11 +187,25 @@ export default class Accountable {
             this.presBody = this.presBody.filter((rec) => filterFunc(rec[colName]));
         }
 
+        if (this.head.values().some(col=>col.filter.text !== "")){
+            this.tableState = 'filter';
+        } else {
+            this.tableState = 'normal';
+        }
     }
 
-    applyAllFilters(){
+    expand(rowNumber){
+        
+        let expanded = this.body[rowNumber].unzip();
+        
+        Object.defineProperty(this.body[rowNumber], "children", {
+            value: expanded,
+            enumerable: false
+        });
+    }
 
-
+    collapse(rowNumber){
+        
     }
 
     /**

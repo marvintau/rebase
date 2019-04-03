@@ -1,3 +1,48 @@
+
+class Range {
+    constructor(a=0, b=0){
+        this.a = a;
+        this.b = b;
+    }
+
+    add(n){
+        if(n.constructor.name === 'Range'){
+            if(n.a < this.a){
+                this.a = n.a;
+            }
+            if(n.b > this.b){
+                this.b = n.b;
+            }
+        } if (n < this.a){
+            this.a = n;
+        } else if (n > this.b){
+            this.b = n;
+        }
+    }
+
+    fromArray(array){
+        for (let i = 0; i < array.length; i++){
+            this.add(array[i]);
+        }
+    }
+
+    toString(){
+        return this.a == this.b ? `${this.a}` : `${this.a}-${this.b}`;
+    }
+}
+
+Array.prototype.prev = function(cur){
+    return cur == 0 ? 0 : cur-1;
+}
+
+Array.prototype.next = function(cur){
+    return cur == this.length-1 ? cur : cur+1;
+}
+
+Array.prototype.last = function(){
+    return this[this.length - 1];
+}
+
 /**
  * Array.prototype.dictionarize
  * ============================
@@ -41,27 +86,45 @@ Array.prototype.groupBy = function(labelFunc) {
     return grouped;
 };
 
+Array.prototype.sortBy = function(colName){
+
+    let val = (e) => e.value ? e.value : e;
+    
+    this.sort((a, b) =>
+        val(a[colName]) < val(b[colName]) ? -1 :
+        val(a[colName]) > val(b[colName]) ? 1  : 0
+    )
+}
+
 Array.prototype.columnFilter = function(crit) {
     return this.map(entry=>entry.filter(crit));
 }
 
-Array.prototype.gather = function(){
-    let dict = {};
+Array.prototype.zip = function(colSums){
+    let record = {};
 
-    for (let key in this[0]){
-        dict[key] = {children: this.map(row => row[key])};
+    if(colSums === undefined){
+        colSums = this[0].map((k, v) => (values) => "...");
     }
 
-    Object.defineProperty(dict, "gid", {
-        value: this.map((_, i) => i),
+    for (let colName in this[0]){
+
+        let children = this.map(row => row[colName]),
+            value    = colSums[colName] ? colSums[colName](children): "...";
+
+        record[colName] = {value, children};
+    }
+
+    Object.defineProperty(record, "gid", {
+        value: this.map((e, i) => e.gid ? e.gid : i),
         writable: false,
         enumerable: false
     })
     
-    return dict;
+    return record;
 }
 
-Array.prototype.split = function(crit){
+Array.prototype.select = function(crit){
     let selected = [], rest = [];
     while(this.length > 0){
         let last = this.pop();
@@ -74,47 +137,67 @@ Array.prototype.split = function(crit){
     return {selected, rest};
 }
 
-Array.prototype.gatherBy = function(col, label, colAttr, currRow) {
+Array.prototype.sum = function(){
+    return this.reduce((s, x) => s+x, 0);
+}
+
+Array.prototype.range = function(){
+    return `${Math.min(...this)}-${Math.max(...this)}`;
+}
+
+function randomString(len){
+    return Math.random().toString(36).substr(2, len);
+}
+
+function generateCategories(len){
+    let res = [];
+
+    for (let i = 0; i < len; i++) {
+        let pos = Math.ceil(Math.random()*res.length + 5);
+        if (pos >= res.length)
+            res.push(randomString(4));
+        else
+            res.push(res[pos] + randomString(2));
+    }
+
+    res.sort();
+
+    return res.map((e) => ({ccode: e, mb: Math.random(), mc: Math.random(), md: Math.random()}));
     
-    currRow = currRow ? currRow : 0;
-
-    let labelFunc = colAttr[col].label ? 
-                    colAttr[col].label :
-                    (row) => row[col].data ? row[col].data : row[col];
-
-    let {selected, rest} = this.split(row=>labelFunc(row)===label);
-
-    rest.reverse()
-        .splice(currRow, 0, selected.gather().summary(colAttr, {[col]: label}));
-
-    return rest;
 }
 
-Array.prototype.expandAt = function(currRow){
+let cate = generateCategories(50);
+
+function val(e){
+    return e.value ? e.value : e;
+}
+
+while(cate.some((e) => val(e.ccode).length > 4)){
     
-    let gathered = this[currRow];
+    // 1. find the deepest category level
+    let deepest = Math.max(... cate.map(e => val(e.ccode).length));
+    console.log(deepest);
+    // 2. select the records WITH deepest category level OUT OF
+    //    original table
+    let {selected, rest} = cate
+        .select((e) => val(e.ccode).length === deepest);
+    console.log(selected);
 
-    this.splice(currRow, 1, gathered.expand());
+    // 3. generate the records of their parent level
+    let parentRecords = selected
+        .groupBy((e) => val(e.ccode).slice(0, deepest - 2))
+        .map((parentCate, groupedRecs) => {
+            // groupedRecs.sortBy("iperiod");
+            return groupedRecs.zip({
+                iperiod: (vs) => vs.range(),
+                ccode: (_vs) => parentCate,
+                mc: (vs) => vs.sum(),
+                md: (vs) => vs.sum()
+            })
+        }) 
+        .values();
+
+    cate = rest.concat(parentRecords);
 }
-
-Array.prototype.gatherAll = function(col, colAttr){
-
-    let labelFunc = colAttr[col].label ? 
-                    colAttr[col].label :
-                    (col) => col.data ? col.data : col;
-
-    let sortFunc = colAttr[col].sort ? 
-                   colAttr[col].sort :
-                   (a, b) => a > b ? 1 : a < b ? -1 : 0;
-
-
-    let grouped = this.groupBy(row => labelFunc(row[col]))
-        .map((key, group) => (group.length > 1) ? group.gather().summary(colAttr, {[col]: key}) : group);
-
-    return grouped.values().sort(sortFunc)
-
-}
-
-Array.prototype.expandAll = function(){
-    this.map(row => row.expand()).flat();
-}
+cate.sortBy('ccode');
+console.log(cate);
