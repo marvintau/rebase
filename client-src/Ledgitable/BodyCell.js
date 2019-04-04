@@ -36,21 +36,15 @@ export default class BodyCell extends Component {
         };
 
         if(!this.state.editing){
-            return (<td col={col} row={row} onDoubleClick={this.toggleEditing} type={attr.type} className={attr.type}>{displayedData}</td>);
+            return (<td col={col} onDoubleClick={this.toggleEditing} type={attr.type} className={attr.type}>{displayedData}</td>);
         } else {
             switch(this.props.type){
                 default: 
-                    return (<td col={col} row={row}>
+                    return (<td col={col}>
                         <input className="cell-editing" {...props} />
-                        <button className="btn-sm btn-info btn-modify">按此单元格汇总至上一级</button>
                     </td>)
             }
         }
         
     }
 }
-
-BodyCell.propTypes = {
-    col : PropTypes.string.isRequired,
-    row : PropTypes.number.isRequired
-};

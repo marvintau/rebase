@@ -196,31 +196,23 @@ function setJournal(data){
         
         tables['journal'] = new Accountable(journalHeader, journalTable);
         tables['journal'].marshall();
-        tables['journal'].permuteColumns(['iperiod', 'cclass', 'ccode', 'ccode_name', 'mb', 'mc', 'md', 'me'])
-
-
-        let ccodeLabelFunc = (level) => (ccode) => ccode.slice(0, (level+2)*2),
-            ccodeLevels = ['一级科目', '二级科目', '三级科目', '四级科目'],
-            ccodeSumFunc = function(label, rows){
-                let zipped = rows.zip();
-
-                let counted = rows.filter(row => row.ccode.length == label.length+2);
-
-                zipped.ccode = label;
-                zipped.cclass = zipped.cclass[0];
-                zipped.ccode_name = zipped.ccode_name[0];
-                zipped.mb = zipped.mb[0];
-                zipped.mc = zipped.mc.sum();
-                zipped.md = zipped.md.sum();
-                zipped.me = zipped.me.last();
-
-                return zipped;
-            };
-
-        tables['journal'].initGather('ccode', ccodeLabelFunc, ccodeSumFunc, ccodeLevels);
+        tables['journal'].permuteColumns(['iperiod', 'ccode', 'cclass', 'ccode_name', 'mb', 'mc', 'md', 'me'])
+        
+        tables['journal'].nest({
+            key: 'ccode',
+            distinctKey: 'iperiod',
+            summaryFunc: (recs) => {
+                let rec = Object.assign({}, recs[0]);
+                rec.ccode_name = '...';
+                rec.mb = recs.map(e=>e.mb).sum();
+                rec.mc = recs.map(e=>e.mc).sum();
+                rec.md = recs.map(e=>e.md).sum();
+                rec.me = recs.map(e=>e.me).sum();
+                return rec;
+            }
+        });
 
         console.log(tables['journal']);
-
     } else throw TypeError('journal table (GL_accsum) is mandatory');
     
 }

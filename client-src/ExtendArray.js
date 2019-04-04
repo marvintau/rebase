@@ -166,38 +166,49 @@ function generateCategories(len){
     
 }
 
-let cate = generateCategories(50);
+let cate = generateCategories(5000);
 
-function val(e){
-    return e.value ? e.value : e;
-}
 
-while(cate.some((e) => val(e.ccode).length > 4)){
+Array.prototype.nest = function(key, summaryFunc){
+
+    let pack = function(parentCate, groupedRecs){
+
+        let record = summaryFunc(groupedRecs);
+        record[key] = parentCate;
+        
+        Object.defineProperty(record, "children", {
+            value: groupedRecs,
+            enumerable: false,
+            writable: false
+        });
     
-    // 1. find the deepest category level
-    let deepest = Math.max(... cate.map(e => val(e.ccode).length));
-    console.log(deepest);
-    // 2. select the records WITH deepest category level OUT OF
-    //    original table
-    let {selected, rest} = cate
-        .select((e) => val(e.ccode).length === deepest);
-    console.log(selected);
+        return record;
+    
+    }
+    
+    while(this.some((e) => e[key].length > 4)){
+        
+        // 1. find the deepest category level
+        let deepest = Math.max(... this.map(e => e[key].length));
+        // console.log(deepest, "deepest");
 
-    // 3. generate the records of their parent level
-    let parentRecords = selected
-        .groupBy((e) => val(e.ccode).slice(0, deepest - 2))
-        .map((parentCate, groupedRecs) => {
-            // groupedRecs.sortBy("iperiod");
-            return groupedRecs.zip({
-                iperiod: (vs) => vs.range(),
-                ccode: (_vs) => parentCate,
-                mc: (vs) => vs.sum(),
-                md: (vs) => vs.sum()
-            })
-        }) 
-        .values();
+        // 2. select the records WITH deepest category level OUT OF
+        //    original table
+        let {selected, rest} = this
+            .select((e) => e[key].length === deepest);
+        // console.log(selected, 'selected');
 
-    cate = rest.concat(parentRecords);
+        // 3. generate the records of their parent level
+        let parentRecords = selected
+            .groupBy((e) => e[key].slice(0, deepest - 2))
+            .map(pack)
+            .values();
+
+        this.splice(this.length)
+        this.push(...rest)
+        this.push(...parentRecords);
+
+    }
+    
+    return this;
 }
-cate.sortBy('ccode');
-console.log(cate);

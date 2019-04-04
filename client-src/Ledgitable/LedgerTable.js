@@ -2,6 +2,7 @@ import {Component} from 'react';
 
 import BodyCell from "./BodyCell.js";
 import HeadCell from "./HeadCell.js";
+import { update } from 'immutable';
 
 class Paginator extends Component {
 
@@ -23,37 +24,65 @@ class Paginator extends Component {
 
 class BodyRow extends Component {
 
+    constructor(props, context){
+        super(props, context);
+        this.state = {
+            displayChildren : false
+        }
+    }
+
+    toggleDisplayChildren(){
+        this.setState({
+            displayChildren: !this.state.displayChildren
+        })
+    }
+
     render() {
-        const {cols, row, updateCell, columnAttr, insertRecord, removeRecord} = this.props;
+        const {row, updateCell, columnAttr, insertRecord, removeRecord} = this.props;
 
         let insertRec = (e) => { insertRecord(row);},
             removeRec = (e) => { removeRecord(row);};
 
-        const number =(<td>{row + 1}</td>);
-
-        const editButton = [];
+        let editButton;
         if(!columnAttr.some((e)=>e.folded || e.filtered || e.aggregated)){
-            editButton.push(<td className="edit-bar" key="edit">
-                <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>
-                <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
-            </td>)
+            if(row.children){
+                editButton = (<td className="edit-bar" key="edit">
+                    <button
+                    className="btn-sm btn-modify btn-outline-primary"
+                    onClick={(e) => {this.toggleDisplayChildren()}}
+                    >{ this.state.displayChildren ? "收拢" : "展开"}</button>
+                    <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>
+                </td>)
+            } else {
+                editButton = (<td className="edit-bar" key="edit">
+                    <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
+                </td>)
+            }
         }
 
         const updateEnabled = !columnAttr.some((e)=> e.aggregated);
         
         const colElems = [];
-        for (let colKey in cols) {
+        for (let colName in row) {
             colElems.push(<BodyCell
-                key={colKey}
-                row={row}
-                col={colKey}
-                data={cols[colKey]}
-                attr={columnAttr[colKey]}
+                key={colName}
+                // row={rowNumber}
+                col={colName}
+                data={row[colName]}
+                attr={columnAttr[colName]}
                 updateCell={updateCell}
                 updateEnabled={updateEnabled}
             />)
         };
-        return (<tr>{number}{editButton}{colElems}</tr>);
+
+        let childrenRows = [];
+        if(this.state.displayChildren){
+            childrenRows = row.children.map(child => {
+                return <BodyRow row={child} updateCell={updateCell} columnAttr={columnAttr} insertReccord={insertRecord} removeRecord={removeRecord} />
+            })
+        }
+
+        return ([[<tr>{editButton}{colElems}</tr>, childrenRows]]);
     }
 }
 
@@ -70,7 +99,6 @@ class HeadRow extends Component {
             colElems.push(<HeadCell data={colKey} attr={cols[colKey]} key={colKey} {...rest}/>);
         }
         return (<tr>
-            <HeadCell data="ID" className="edit-bar" attr={({})}/>
             {colElems}</tr>);
     }
 }
@@ -79,8 +107,8 @@ class TableBody extends Component {
     render(){
         const {rows, startingRow, ...rest} = this.props;
         const rowElems = [];
-        rows.forEach((cols, rowNum) => {
-            rowElems.push(<BodyRow cols={cols} key={rowNum} row={startingRow+rowNum} {...rest}/>);
+        rows.forEach((row, rowNum) => {
+            rowElems.push(<BodyRow row={row} key={rowNum} rowNumber={startingRow+rowNum} {...rest}/>);
             return true;
         });
         return (<tbody>{rowElems}</tbody>);

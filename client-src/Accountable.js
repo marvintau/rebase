@@ -205,7 +205,7 @@ export default class Accountable {
     }
 
     collapse(rowNumber){
-        
+
     }
 
     /**
@@ -228,5 +228,15 @@ export default class Accountable {
         this.presBody = this.body;
     }
 
+    nest(props){
 
+        let {key, distinctKey, summaryFunc} = props;
+        this.body = this.body
+            .groupBy(row => row[distinctKey])
+            .map((_l, rows) => rows.nest(key, summaryFunc))
+            .values()
+            .flat();
+        this.body.sortBy(key);
+        this.presBody = this.body;
+    }
 }
