@@ -230,10 +230,16 @@ export default class Accountable {
 
     nest(props){
 
-        let {key, distinctKey, summaryFunc} = props;
+        let {key, distinctKey, summaryFunc, labelFunc} = props;
         this.body = this.body
             .groupBy(row => row[distinctKey])
-            .map((_l, rows) => rows.nest(key, summaryFunc))
+            .map((_l, rows) => rows.nest(key, {
+                summaryFunc,
+                labelFunc,
+                termFunc: (e) => e[key].length > 4,
+                critAdd:  (n, l) => n[key].length === l[key].length,
+                critRep:  (n, l) => n[key].length  >  l[key].length
+            }))
             .values()
             .flat();
         this.body.sortBy(key);

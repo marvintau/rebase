@@ -2,7 +2,6 @@ import {Component} from 'react';
 
 import BodyCell from "./BodyCell.js";
 import HeadCell from "./HeadCell.js";
-import { update } from 'immutable';
 
 class Paginator extends Component {
 

@@ -124,13 +124,29 @@ Array.prototype.zip = function(colSums){
     return record;
 }
 
-Array.prototype.select = function(crit){
+Array.prototype.select = function(funcs){
+
+    let {critAdd, critRep} = funcs;
+
     let selected = [], rest = [];
+    
     while(this.length > 0){
-        let last = this.pop();
-        if(crit(last)) selected.push(last);
-        else rest.push(last);
+        let next = this.pop(),
+            last = selected.pop();
+        
+        if (last === undefined)
+            selected.push(next);
+        else if(critAdd(next, last))
+            selected.push(last, next);
+        else if(critRep(next, last))
+            rest.push(...selected.splice(0, selected.length, next));
+        else{
+            selected.push(last);
+            rest.push(next);
+        }
+
     }
+    
     selected.reverse();
     rest.reverse();
 
@@ -166,10 +182,12 @@ function generateCategories(len){
     
 }
 
-let cate = generateCategories(5000);
+let cate = generateCategories(500);
 
 
-Array.prototype.nest = function(key, summaryFunc){
+Array.prototype.nest = function(key, funcs){
+
+    let {summaryFunc, labelFunc, termFunc, critAdd, critRep} = funcs;
 
     let pack = function(parentCate, groupedRecs){
 
@@ -186,25 +204,23 @@ Array.prototype.nest = function(key, summaryFunc){
     
     }
     
-    while(this.some((e) => e[key].length > 4)){
+    while(this.some(termFunc)){
         
-        // 1. find the deepest category level
-        let deepest = Math.max(... this.map(e => e[key].length));
-        // console.log(deepest, "deepest");
-
-        // 2. select the records WITH deepest category level OUT OF
-        //    original table
+        // let deepest = ;
         let {selected, rest} = this
-            .select((e) => e[key].length === deepest);
-        // console.log(selected, 'selected');
+            .select({
+                critAdd,
+                critRep
+            });
 
-        // 3. generate the records of their parent level
+        // console.log(selected);
+
         let parentRecords = selected
-            .groupBy((e) => e[key].slice(0, deepest - 2))
+            .groupBy((e) => labelFunc(e[key]))
             .map(pack)
             .values();
 
-        this.splice(this.length)
+        this.splice(0)
         this.push(...rest)
         this.push(...parentRecords);
 
@@ -212,3 +228,8 @@ Array.prototype.nest = function(key, summaryFunc){
     
     return this;
 }
+
+console.log(cate.select({
+    critAdd: (n, l) => n.ccode.length === l.ccode.length,
+    critRep: (n, l) => n.ccode.length  >  l.ccode.length
+}));

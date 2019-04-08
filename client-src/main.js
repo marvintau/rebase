@@ -149,13 +149,10 @@ function setDefault(colAttr){
 
 function applyCategoryCode(table){
     let ccodes = tables['categoryCodeDict'];
-    
-    let maxLen = Math.max(...table.map(e=>e.ccode.length));
-
+        
     for (let i = table.length-1; i >=0; i--){
         try {
             let ccode = table[i].ccode;
-            // table[i].ccode = `${ccode}${" ".repeat(maxLen-ccode.length)}-${ccodes[ccode].cclass}:${ccodes[ccode].ccode_name}`;
             table[i].cclass = ccodes[ccode].cclass;
             table[i].ccode_name = ccodes[ccode].ccode_name;
         } catch {
@@ -201,6 +198,11 @@ function setJournal(data){
         tables['journal'].nest({
             key: 'ccode',
             distinctKey: 'iperiod',
+            labelFunc: (e) => e.slice(0, e.length - 2),
+            termFunc:  (e) => e[key].length > 4,
+            critAdd:   (n, l) => n[key].length === l[key].length,
+            critRep:   (n, l) => n[key].length  >  l[key].length,
+
             summaryFunc: (recs) => {
                 let rec = Object.assign({}, recs[0]);
                 rec.ccode_name = '...';
@@ -209,7 +211,7 @@ function setJournal(data){
                 rec.md = recs.map(e=>e.md).sum();
                 rec.me = recs.map(e=>e.me).sum();
                 return rec;
-            }
+            },
         });
 
         console.log(tables['journal']);
