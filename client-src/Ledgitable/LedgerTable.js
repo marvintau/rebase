@@ -59,7 +59,7 @@ class BodyRow extends Component {
             }
         }
 
-        const updateEnabled = !columnAttr.some((e)=> e.aggregated);
+        let editable = row.children === undefined;
         
         const colElems = [];
         for (let colName in row) {
@@ -70,12 +70,12 @@ class BodyRow extends Component {
                 data={row[colName]}
                 attr={columnAttr[colName]}
                 updateCell={updateCell}
-                updateEnabled={updateEnabled}
+                editable={editable}
             />)
         };
 
         let childrenRows = [];
-        if(this.state.displayChildren){
+        if(row.children && this.state.displayChildren){
             childrenRows = row.children.map(child => {
                 return <BodyRow row={child} updateCell={updateCell} columnAttr={columnAttr} insertReccord={insertRecord} removeRecord={removeRecord} />
             })
@@ -142,7 +142,7 @@ export default class LedgerTable extends Component {
         this.filterColumn = this.filterColumn.bind(this);
         this.toggleFold = this.toggleFold.bind(this);
 
-        this.aggregateColumn = this.aggregateColumn.bind(this);
+        this.gatherColumn = this.gatherColumn.bind(this);
 
         this.prevPage = this.prevPage.bind(this);
         this.nextPage = this.nextPage.bind(this);
@@ -218,17 +218,11 @@ export default class LedgerTable extends Component {
         });
     }
 
-    aggregateColumn(col){
-        let head = this.state.table.head,
-            body = this.state.table.body;
+    gatherColumn(col){
+        let table = this.state.table;
         
-        body = body.gatherAll(col, head);
-        head[col].aggregated = true;
-        this.setState({
-            head,
-            body,
-            presentBody: body
-        });
+        table.setGather(col);
+        this.setState({table});
     }
 
     filterColumn(col, filter){
@@ -260,7 +254,7 @@ export default class LedgerTable extends Component {
                     sortMethod={this.sortMethod}
                     filterColumn = {this.filterColumn}
                     toggleFold = {this.toggleFold}
-                    aggregateColumn = {this.aggregateColumn}
+                    gatherColumn = {this.gatherColumn}
                 />
                 <TableBody
                     name={name}

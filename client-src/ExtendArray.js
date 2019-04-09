@@ -76,15 +76,22 @@ Array.prototype.same = function(op){
 }
 
 Array.prototype.groupBy = function(labelFunc) {  
-    let grouped = this.reduce((grouped, item) => {
+    return this.reduce((grouped, item) => {
         let key = labelFunc(item);
         grouped[key] = grouped[key] || [];
         grouped[key].push(item);
         return grouped;
     }, {});
-
-    return grouped;
 };
+
+Array.prototype.flatten = function(childKey){
+    return this.reduce((flattened, item) => {
+        if(item[childKey] === undefined)
+            return flattened.concat(item);
+        else
+            return flattened.concat(item[childKey].flatten(childKey));
+    }, [])
+}
 
 Array.prototype.sortBy = function(colName){
 
@@ -124,35 +131,6 @@ Array.prototype.zip = function(colSums){
     return record;
 }
 
-Array.prototype.select = function(funcs){
-
-    let {critAdd, critRep} = funcs;
-
-    let selected = [], rest = [];
-    
-    while(this.length > 0){
-        let next = this.pop(),
-            last = selected.pop();
-        
-        if (last === undefined)
-            selected.push(next);
-        else if(critAdd(next, last))
-            selected.push(last, next);
-        else if(critRep(next, last))
-            rest.push(...selected.splice(0, selected.length, next));
-        else{
-            selected.push(last);
-            rest.push(next);
-        }
-
-    }
-    
-    selected.reverse();
-    rest.reverse();
-
-    return {selected, rest};
-}
-
 Array.prototype.sum = function(){
     return this.reduce((s, x) => s+x, 0);
 }
@@ -184,10 +162,44 @@ function generateCategories(len){
 
 let cate = generateCategories(500);
 
+Array.prototype.extrema = function(oper, func){
+
+    let extrema = [], rest = [];
+    
+    while(this.length > 0){
+        let next = this.pop(),
+            last = extrema.pop();
+        
+        if (last === undefined) {
+            extrema.push(next);
+        } else if (oper(next) === oper(last)) {
+            extrema.push(last, next);
+        } else if (oper(next)  >  oper(last)) {
+            rest.push(...extrema.splice(0, extrema.length, next));
+        } else {
+            extrema.push(last);
+            rest.push(next);
+        }
+    }
+    
+    if (func !== undefined){
+        extrema.reverse();
+        extrema = func(extrema);
+        extrema.reverse();
+    }
+    
+    while(extrema.length > 0){
+        this.push(extrema.pop());
+    }
+
+    while(rest.length > 0){
+        this.push(rest.pop());
+    }
+}
 
 Array.prototype.nest = function(key, funcs){
 
-    let {summaryFunc, labelFunc, termFunc, critAdd, critRep} = funcs;
+    let {summaryFunc, labelFunc, termFunc, oper} = funcs;
 
     let pack = function(parentCate, groupedRecs){
 
@@ -196,8 +208,8 @@ Array.prototype.nest = function(key, funcs){
         
         Object.defineProperty(record, "children", {
             value: groupedRecs,
-            enumerable: false,
-            writable: false
+            // enumerable: false,
+            // writable: false
         });
     
         return record;
@@ -206,30 +218,11 @@ Array.prototype.nest = function(key, funcs){
     
     while(this.some(termFunc)){
         
-        // let deepest = ;
-        let {selected, rest} = this
-            .select({
-                critAdd,
-                critRep
-            });
-
-        // console.log(selected);
-
-        let parentRecords = selected
-            .groupBy((e) => labelFunc(e[key]))
-            .map(pack)
-            .values();
-
-        this.splice(0)
-        this.push(...rest)
-        this.push(...parentRecords);
-
+        this.extrema(oper, (ex)=>{
+            return ex.groupBy((e) => labelFunc(e[key])).map(pack).values();
+        });
+            
     }
     
     return this;
 }
-
-console.log(cate.select({
-    critAdd: (n, l) => n.ccode.length === l.ccode.length,
-    critRep: (n, l) => n.ccode.length  >  l.ccode.length
-}));

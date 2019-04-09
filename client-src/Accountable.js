@@ -31,45 +31,6 @@ export default class Accountable {
         }
     }
 
-    /**
-     * addPager
-     * ========
-     * Add a new way of paging, and controlled by a paginator.
-     * 
-     * The default paging method is to split the records into pages according
-     * to the record number. And this will not affect the structure body. However
-     * you may define your own way of paging, which will separate the body into
-     * several groups, and switch different groups with paginator. Thus it's more
-     * like a "group switcher".
-     * 
-     * There could be multiple custom pager, which means you may separate the body
-     * into a hierarchical groups.
-     * 
-     * After separating the body into groups with a pager, the sort, filter, and
-     * default paging method will be affect the innermost group.
-     * 
-     * Moreover, addPager should not be used as a dynamic/interactive operation.
-     * Pagers should be prepared before rendering.
-     * @param {string} pagerName
-     * @param {Function} pagerFunc pager function
-     * @param {Function} displayFunc display paging
-     * 
-     */
-    addPager(name, pagerFunc, displayFunc){
-        this.pagers.push({
-            name, pagerFunc, displayFunc
-        })
-    }
-
-    /**
-     * applyPagers
-     * ===========
-     * apply all pager function at one (and should be only one) time.
-     */
-    applyPagers(){
-        // for (let i = 0; i > )
-    }
-
     addSort(colName){
 
         let isDesc = true;
@@ -96,64 +57,6 @@ export default class Accountable {
             let colName = this.sortKeyOrder[i];
             this.head[colName].sorting.keyIndex = i;
         }
-    }
-
-    /**
-     * initGather
-     * ==========
-     * supposed to run in the initiating stage.
-     * 
-     * @param {string} colName column name
-     * @param {Function} labelFunc
-     * THE LABELFUNC IS NOT A FUNCTION THAT RETURNS LABEL,
-     * BUT RETURNS THE LABEL FUNCTION! It takes the level
-     * as parameter, and returns the label function that
-     * corresponding to the level.
-     * 
-     * @param {Function} sumFunc
-     * the function that turns grouped records into single
-     * one. It takes two arguments, which are the label of
-     * the group, and the grouped records.
-     * 
-     * @param {Array} gatherLevels the levels of gathering, in array form.
-     */
-    initGather(colName, labelFunc, sumFunc, gatherLevels){
-
-        let defaultLevel = "无聚合";
-
-        this.head[colName].gather = {
-            labelFunc,
-            sumFunc,
-            levels: [defaultLevel, ...gatherLevels],
-            currLevel: 0
-        }        
-    }
-
-    setGather(colName, oper){
-
-        let currLevel = this.head[colName].gather.currLevel,
-            levels = this.head[colName].gather.levels;
-        
-        this.head[colName].gather.currLevel = levels[oper](currLevel);
-
-        let newLevel = this.head[colName].gather.currLevel
-
-        if(newLevel !== 0){
-
-            let labelFunc = this.head[colName].gather.labelFunc(newLevel);
-    
-            this.presBody = this.body
-                .groupBy((e)=>labelFunc(e))
-                .map((label, grouped) => sumFunc(label, grouped))
-                .values();
-            
-            this.tableState = "gather";
-        } else {
-            this.presBody = this.body;
-            this.tableState = "normal";
-        }
-
-        
     }
 
     setFilter(colName, filter){
@@ -188,24 +91,10 @@ export default class Accountable {
         }
 
         if (this.head.values().some(col=>col.filter.text !== "")){
-            this.tableState = 'filter';
+            this.tableState = 'FILTER';
         } else {
-            this.tableState = 'normal';
+            this.tableState = 'NORMAL';
         }
-    }
-
-    expand(rowNumber){
-        
-        let expanded = this.body[rowNumber].unzip();
-        
-        Object.defineProperty(this.body[rowNumber], "children", {
-            value: expanded,
-            enumerable: false
-        });
-    }
-
-    collapse(rowNumber){
-
     }
 
     /**
@@ -228,21 +117,36 @@ export default class Accountable {
         this.presBody = this.body;
     }
 
-    nest(props){
+    setGather(key){
+        console.log(this.head[key]);
+        if( 'gather' in this.head[key].operations ){
 
-        let {key, distinctKey, summaryFunc, labelFunc} = props;
-        this.body = this.body
-            .groupBy(row => row[distinctKey])
-            .map((_l, rows) => rows.nest(key, {
-                summaryFunc,
-                labelFunc,
-                termFunc: (e) => e[key].length > 4,
-                critAdd:  (n, l) => n[key].length === l[key].length,
-                critRep:  (n, l) => n[key].length  >  l[key].length
-            }))
-            .values()
-            .flat();
-        this.body.sortBy(key);
-        this.presBody = this.body;
+            if (!this.head[key].gathered){
+                this.tableState = "GATHER";
+                this.head[key].gathered = true;
+                let {summaryFunc, labelFunc, termFunc, oper} = this.head[key].operations['gather'];
+    
+                this.body = this.body.nest(key, {
+                    summaryFunc,
+                    labelFunc,
+                    termFunc,
+                    oper,
+                });
+                this.body.sortBy(key);
+                this.presBody = this.body;    
+            } else {
+                this.body = this.body.flatten();
+            }
+
+
+        }
+    }
+
+    setPage(key){
+        if('pager' in this.head[key].operations ){
+            this.tableState = 'PAGED';
+
+            // this.pagePath 
+        }
     }
 }

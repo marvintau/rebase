@@ -184,7 +184,7 @@ function setJournal(data){
             journalTable = data['GL_accsum'].columnFilter();
         journalTable = applyCategoryCode(journalTable);
 
-        let commonAttr = {sorting: undefined, filter: {text:"", func:(e)=>true}, folded: false, filtered: false, aggregated: false},
+        let commonAttr = {sorting: undefined, filter: {text:"", func:(e)=>true}, folded: false, filtered: false, gathered: false},
             journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
 
         journalHeader = setLabelFunc(journalHeader);
@@ -195,24 +195,25 @@ function setJournal(data){
         tables['journal'].marshall();
         tables['journal'].permuteColumns(['iperiod', 'ccode', 'cclass', 'ccode_name', 'mb', 'mc', 'md', 'me'])
         
-        tables['journal'].nest({
-            key: 'ccode',
-            distinctKey: 'iperiod',
-            labelFunc: (e) => e.slice(0, e.length - 2),
-            termFunc:  (e) => e[key].length > 4,
-            critAdd:   (n, l) => n[key].length === l[key].length,
-            critRep:   (n, l) => n[key].length  >  l[key].length,
+        tables['journal'].head['ccode'].operations = {
+            'gather': {
+                labelFunc: (e) => e.slice(0, e.length - 2),
+                termFunc:  (e) => e.ccode.length > 4,
+                oper:(e) =>e.ccode.length,
 
-            summaryFunc: (recs) => {
-                let rec = Object.assign({}, recs[0]);
-                rec.ccode_name = '...';
-                rec.mb = recs.map(e=>e.mb).sum();
-                rec.mc = recs.map(e=>e.mc).sum();
-                rec.md = recs.map(e=>e.md).sum();
-                rec.me = recs.map(e=>e.me).sum();
-                return rec;
+                summaryFunc: (recs) => {
+                    let rec = Object.assign({}, recs[0]);
+                    rec.ccode_name = '...';
+                    rec.mb = parseFloat(recs.map(e=>e.mb).sum()).toFixed(2);
+                    rec.mc = parseFloat(recs.map(e=>e.mc).sum()).toFixed(2);
+                    rec.md = parseFloat(recs.map(e=>e.md).sum()).toFixed(2);
+                    rec.me = parseFloat(recs.map(e=>e.me).sum()).toFixed(2);
+
+                    return rec;
+                }
             },
-        });
+        };
+        // tables['journal'].setGather('ccode');
 
         console.log(tables['journal']);
     } else throw TypeError('journal table (GL_accsum) is mandatory');

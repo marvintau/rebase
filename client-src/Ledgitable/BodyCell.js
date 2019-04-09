@@ -11,13 +11,13 @@ export default class BodyCell extends Component {
     }
 
     toggleEditing(){
-        if(this.props.updateEnabled)
+        if(this.props.editable)
             this.setState({editing: !this.state.editing});
     }
 
     render() {
 
-        const {data, attr, col, row, updateCell, updateEnabled} = this.props;
+        const {data, attr, col, row, updateCell} = this.props;
         let displayedData = (data === null || data === undefined) ? '空' : 
                             (data.data !== null && data.data !== undefined ) ? data.data : data;
 

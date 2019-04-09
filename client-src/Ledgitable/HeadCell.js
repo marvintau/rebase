@@ -70,10 +70,11 @@ export default class HeadCell extends Component {
 
     render() {
 
-        const {data, attr, columnEditing, sortMethod, filterColumn, toggleFold, aggregateColumn} = this.props;
+        const {data, attr, columnEditing, sortMethod, filterColumn, toggleFold, gatherColumn} = this.props;
         let condElems = [];
         if(attr.filter.text === ''){
-            condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>aggregateColumn(data)} key="0">聚合</button>);
+            let text = attr.gathered ? "取消聚合" : "按此列聚合";
+            condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>gatherColumn(data)} key="0">{text}</button>);
         }
         if(this.state.filtering){
             condElems.push(<div  key="1">
