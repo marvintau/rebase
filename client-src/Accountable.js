@@ -1,4 +1,3 @@
-import "./ExtendObject.js"
 import "./ExtendArray.js"
 
 export default class Accountable {
@@ -9,10 +8,47 @@ export default class Accountable {
         this.presBody = body;
 
         this.sortKeyOrder  = [];
-        this.filters = [];
-        this.pagers  = [];
 
         this.tableState = "NORMAL";
+    }
+
+    applyColumn(keys, func){
+        for (let i = 0; i < this.body.length; i++){
+            for (let key of keys){
+                this.body[i][key] = func(this.body[i][key], this.head[key]);
+            }
+        }
+    }
+
+    insertRecord(path, record){
+        
+        record = record ? record : this.head.map((k, v)=>v.default);
+
+        let ref = this.body;
+        for (let i = 0; i < path.length-1; i++){
+            ref = ref[path[i]].children;
+        }
+        
+        ref.splice(path.last()+1, 0, record);
+    }
+
+    removeRecord(path){
+
+        let ref = this.body;
+        for (let i = 0; i < path.length-1; i++){
+            ref = ref[path[i]].children;
+        }
+        ref.splice(path.last(), 1);
+
+    }
+
+    updateCell(path, columnKey, data){
+
+        let ref = this.body;
+        for (let i = 0; i < path.length-1; i++){
+            ref = ref[path[i]].children;
+        }
+        ref[path.last()][columnKey] = data;
     }
 
     permuteColumns(colNameOrder){
@@ -80,21 +116,14 @@ export default class Accountable {
     }
 
     setGather(key){
-        console.log(this.head[key]);
+
         if( 'gather' in this.head[key].operations ){
 
             if (!this.head[key].gathered){
                 this.tableState = "GATHER";
                 this.head[key].gathered = true;
-
-                let {summaryFunc, labelFunc, termFunc, oper} = this.head[key].operations['gather'];
     
-                this.body = this.body.nest(key, {
-                    summaryFunc,
-                    labelFunc,
-                    termFunc,
-                    oper,
-                });
+                this.body = this.body.nest(key, this.head[key].operations['gather']);
 
                 this.body.sortBy(key);
                 this.presBody = this.body;    
@@ -103,17 +132,13 @@ export default class Accountable {
                 this.tableState = "NORMAL";
                 this.head[key].gathered = false;
 
+                console.time('flatten')
                 this.body = this.body.flatten((e) => e.children);
                 this.presBody = this.body;
+                console.timeEnd('flatten')
             }
 
 
-        }
-    }
-
-    setPage(key){
-        if('pager' in this.head[key].operations ){
-            
         }
     }
 }

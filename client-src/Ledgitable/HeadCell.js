@@ -58,40 +58,17 @@ class SortButton extends Component {
 export default class HeadCell extends Component {
     
     constructor(props, context){
-        super(props, context);
-        this.state = {filtering: false};
-        
-        this.setFilter = this.setFilter.bind(this);
-    }
-
-    setFilter(){
-        this.setState({filtering: !this.state.filtering});
+        super(props, context);        
     }
 
     render() {
 
-        const {data, attr, columnEditing, sortMethod, filterColumn, toggleFold, gatherColumn} = this.props;
+        const {data, attr, columnEditing, sortMethod, gatherColumn} = this.props;
         let condElems = [];
-        if(attr.filter.text === ''){
+
+        if(attr.operations && ('gather' in attr.operations)){
             let text = attr.gathered ? "取消聚合" : "按此列聚合";
             condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>gatherColumn(data)} key="0">{text}</button>);
-        }
-        if(this.state.filtering){
-            condElems.push(<div  key="1">
-                <input autoFocus
-                    type="text"
-                    className="input"
-                    placeholder="按回车键确认"
-                    defaultValue={attr.filter.text}
-                    onKeyDown={(e) => {
-                        if(e.key=="Enter"){
-                            console.log(data);
-                            filterColumn(data, e.target.value);
-                            this.setState({filtering: false});
-                        }
-                    }}
-                ></input>
-            </div>)
         }
 
         let title = attr.def ? attr.def : data;
@@ -102,12 +79,7 @@ export default class HeadCell extends Component {
             return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>
             {title}
             <div>   
-                {/* <button className="btn-sm btn-modify btn-warning" onClick={(e) => sortColumn(data)}> {nextSort[attr.sorted]} </button> */}
                 <SortButton sortMethod={sortMethod} sortState={attr.sorting} colName={data}/>
-                <button
-                    className="btn-sm btn-modify btn-primary"
-                    onClick={(e) =>this.setFilter()} key="0"
-                >{attr.filter.text==="" ? "添加筛选" : "更改筛选"}</button>
                 {condElems}
             </div>
             </th>);

@@ -1,11 +1,79 @@
 
-Array.prototype.prev = function(cur){
-    return cur == 0 ? 0 : cur-1;
-}
+/**
+ * Object.prototype.map
+ * ====================
+ * Apply function over each value of the property, with both key and value as
+ * parameter. Returns a new Object.
+ */
+Object.defineProperty(Object.prototype, "map", {
+    value: function(func){
+        let newObject = {},
+            keys = Object.keys(this);
+        for (let i = 0; i < keys.length; i++)
+            newObject[keys[i]] = func(keys[i], this[keys[i]]);        
+        return newObject;
+    }
+})
 
-Array.prototype.next = function(cur){
-    return cur == this.length-1 ? cur : cur+1;
-}
+/**
+ * Object.prototype.forEach
+ * ========================
+ * The in-place version of Object.prototype.map, slightly different to Array's
+ * forEach. The function passed into should always return a value, which will
+ * be assigned to corresponding property.
+ */
+Object.defineProperty(Object.prototype, "forEach", {
+    value: function(func){
+        let keys = Object.keys(this);
+        for (let i = 0; i < keys.length; i++)
+            this[keys[i]] = func(keys[i], this[keys[i]]);
+        return this;
+    }
+})
+
+Object.defineProperty(Object.prototype, 'some', {
+    value: function(func){
+        let values = Object.values(this);
+        return values.some(func);
+    }
+})
+
+/**
+ * Object.prototype.values
+ * =======================
+ * copy the static method Object.values into prototype.
+ */
+Object.defineProperty(Object.prototype, 'values', {
+    value: function(){
+        return Object.values(this);
+    }
+})
+
+Object.defineProperty(Object.prototype, 'keys', {
+    value: function(){
+        return Object.keys(this);
+    }
+})
+
+/**
+ * Object.prototype.rewrite
+ * ========================
+ * rewrite an object with given key order. Non-existed keys will be omitted.
+ */
+Object.defineProperty(Object.prototype, 'rewrite', {
+    value: function(keys){
+        let newObject = {};
+
+        for (let i = 0; i < keys.length; i++){
+            // console.log(keys[i]);
+            if (this[keys[i]] !== undefined){
+                newObject[keys[i]] = this[keys[i]];
+            }
+        }
+
+        return newObject;
+    }
+})
 
 Array.prototype.last = function(){
     return this[this.length - 1];
@@ -53,14 +121,12 @@ Array.prototype.groupBy = function(labelFunc) {
 };
 
 Array.prototype.flatten = function(childFunc){
+
     return this.reduce((flattened, item) => {
 
         let children = childFunc(item);
 
-        if(children === undefined)
-            return flattened.concat(item);
-        else
-            return flattened.concat(children.flatten(childFunc));
+        return (children === undefined) ? flattened.concat(item) : flattened.concat(children.flatten(childFunc));
     }, [])
 }
 
@@ -74,64 +140,9 @@ Array.prototype.sortBy = function(colName){
     )
 }
 
-Array.prototype.columnFilter = function(crit) {
-    return this.map(entry=>entry.filter(crit));
-}
-
-Array.prototype.zip = function(colSums){
-    let record = {};
-
-    if(colSums === undefined){
-        colSums = this[0].map((k, v) => (values) => "...");
-    }
-
-    for (let colName in this[0]){
-
-        let children = this.map(row => row[colName]),
-            value    = colSums[colName] ? colSums[colName](children): "...";
-
-        record[colName] = {value, children};
-    }
-
-    Object.defineProperty(record, "gid", {
-        value: this.map((e, i) => e.gid ? e.gid : i),
-        writable: false,
-        enumerable: false
-    })
-    
-    return record;
-}
-
 Array.prototype.sum = function(){
     return this.reduce((s, x) => s+x, 0);
 }
-
-Array.prototype.range = function(){
-    return `${Math.min(...this)}-${Math.max(...this)}`;
-}
-
-function randomString(len){
-    return Math.random().toString(36).substr(2, len);
-}
-
-function generateCategories(len){
-    let res = [];
-
-    for (let i = 0; i < len; i++) {
-        let pos = Math.ceil(Math.random()*res.length + 5);
-        if (pos >= res.length)
-            res.push(randomString(4));
-        else
-            res.push(res[pos] + randomString(2));
-    }
-
-    res.sort();
-
-    return res.map((e) => ({ccode: e, mb: Math.random(), mc: Math.random(), md: Math.random()}));
-    
-}
-
-let cate = generateCategories(500);
 
 Array.prototype.extrema = function(oper, func){
 
@@ -179,8 +190,6 @@ Array.prototype.nest = function(key, funcs){
         
         Object.defineProperty(record, "children", {
             value: groupedRecs,
-            // enumerable: false,
-            // writable: false
         });
     
         return record;

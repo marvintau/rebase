@@ -17,7 +17,7 @@ export default class BodyCell extends Component {
 
     render() {
 
-        const {data, attr, col, row, updateCell} = this.props;
+        const {data, attr, path, col, updateCell} = this.props;
         let displayedData = (data === null || data === undefined) ? '空' : 
                             (data.data !== null && data.data !== undefined ) ? data.data : data;
 
@@ -29,8 +29,7 @@ export default class BodyCell extends Component {
             onBlur: this.toggleEditing,
             onKeyDown : (e) => {if (e.key == "Escape" || e.key == "Enter"){
                 e.preventDefault();
-                // console.log(e.target.value);
-                if(e.key === "Enter") updateCell && updateCell(row, col, e.target.value);
+                if(e.key === "Enter") updateCell && updateCell(path, col, e.target.value);
                 this.toggleEditing();
             }}
         };

@@ -16,7 +16,7 @@ class Paginator extends Component {
           <button className="btn btn-outline-info" onClick={(e)=>{prevPage()}}>&laquo;</button>
           <button className="btn btn-outline-info" onClick={(e)=>{nextPage()}}>&raquo;</button>
       </div>
-      <span className="page-indicator"> {currPage} / {totalPage}</span>
+      <span className="page-indicator">第 {currPage} / {totalPage} 页 </span>
       </div>)
     }
 }
@@ -26,7 +26,8 @@ class BodyRow extends Component {
     constructor(props, context){
         super(props, context);
         this.state = {
-            displayChildren : false
+            displayChildren : false,
+            displayVouch : true
         }
     }
 
@@ -36,28 +37,37 @@ class BodyRow extends Component {
         })
     }
 
+    toggleDisplayVouch(){
+        this.setState({
+            displayVouch : ! this.state.displayVouch
+        })
+    }
+
     render() {
-        const {row, updateCell, columnAttr, insertRecord, removeRecord, level} = this.props;
+        const {row, path, updateCell, columnAttr, insertRecord, removeRecord, isReadOnly} = this.props;
 
-        let insertRec = (e) => { insertRecord(row);},
-            removeRec = (e) => { removeRecord(row);};
-
+        let insertRec = (e) => { insertRecord(path);},
+            removeRec = (e) => { removeRecord(path);};
+        
         let editButton;
-        if(!columnAttr.some((e)=>e.folded || e.filtered || e.aggregated)){
-            if(row.children){
-                editButton = (<td className="edit-bar" key="edit">
-                    <button
-                    className="btn-sm btn-modify btn-outline-primary"
-                    onClick={(e) => {this.toggleDisplayChildren()}}
-                    >{ this.state.displayChildren ? "收拢" : "展开"}</button>
-                    {/* <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button> */}
-                </td>)
-            } else {
-                editButton = (<td className="edit-bar" key="edit">
-                    <button className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>
-                </td>)
+        if(row.children){
+            editButton = (
+                <button
+                className="btn-sm btn-modify btn-info"
+                onClick={(e) => {this.toggleDisplayChildren()}}
+                >{ this.state.displayChildren ? "收拢" : "展开"}</button>
+            )
+        } else {
+            editButton = [
+                <button key={0} className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>,
+                <button key={1} className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>,
+            ]
+            if (row.voucher){
+                editButton.push(<button key={2} className="btn-sm btn-modify btn-outline-info"    onClick={(e) =>{this.toggleDisplayVouch()}}>凭证</button>);
             }
         }
+
+        let editCell = isReadOnly ? [] : <td className="edit-bar" key="edit">{editButton}</td> ;
 
         let editable = row.children === undefined;
         
@@ -65,7 +75,7 @@ class BodyRow extends Component {
         for (let colName in row) {
             colElems.push(<BodyCell
                 key={colName}
-                // row={rowNumber}
+                path={path}
                 col={colName}
                 data={row[colName]}
                 attr={columnAttr[colName]}
@@ -74,21 +84,27 @@ class BodyRow extends Component {
             />)
         };
 
+        let vouch = [];
+        if(this.state.displayVouch && row.voucher){
+            vouch.push(<tr><td colSpan={row.keys().length+1}><LedgerTable table={row.voucher} isReadOnly={true} /></td></tr>)
+        }
+
         let childrenRows = [];
         if(row.children && this.state.displayChildren){
-            childrenRows = row.children.map(child => {
+            childrenRows = row.children.map((child, i) => {
                 return <BodyRow
+                    key={i}
                     row={child}
-                    level={level+1}
+                    path={path.concat(i)}
                     updateCell={updateCell}
                     columnAttr={columnAttr}
-                    insertReccord={insertRecord}
+                    insertRecord={insertRecord}
                     removeRecord={removeRecord}
                 />
             })
         }
 
-        return ([<tr>{colElems}{editButton}</tr>, childrenRows]);
+        return ([<tr>{editCell}{colElems}</tr>, vouch, childrenRows]);
     }
 }
 
@@ -96,13 +112,13 @@ class BodyRow extends Component {
 class HeadRow extends Component {
 
     render() {
-        const {cols, ...rest} = this.props;
+        const {cols, isReadOnly, ...rest} = this.props;
         const colElems = [];
+        if(!isReadOnly){
+            colElems.push(<HeadCell data="编辑" className="edit-bar" key="edit" attr={({})}/>)
+        }
         for (let colKey in cols){
             colElems.push(<HeadCell data={colKey} attr={cols[colKey]} key={colKey} {...rest}/>);
-        }
-        if(!cols.some((e)=>e.folded || e.filtered || e.aggregated)){
-            colElems.push(<HeadCell data="编辑" className="edit-bar" key="edit" attr={({})}/>)
         }
         return (<tr>
             {colElems}</tr>);
@@ -111,10 +127,10 @@ class HeadRow extends Component {
 
 class TableBody extends Component {
     render(){
-        const {rows, startingRow, ...rest} = this.props;
+        const {rows, isReadOnly, startingRow, ...rest} = this.props;
         const rowElems = [];
         rows.forEach((row, rowNum) => {
-            rowElems.push(<BodyRow row={row} key={rowNum} rowNumber={startingRow+rowNum} level={0} {...rest}/>);
+            rowElems.push(<BodyRow isReadOnly={isReadOnly} row={row} path={[startingRow+rowNum]} key={startingRow+rowNum} {...rest}/>);
             return true;
         });
         return (<tbody>{rowElems}</tbody>);
@@ -123,8 +139,8 @@ class TableBody extends Component {
 
 class TableHead extends Component {
     render(){
-        const {cols, ...rest} = this.props;
-        return (<thead><HeadRow cols={cols} {...rest}/></thead>);
+        const {cols, isReadOnly, ...rest} = this.props;
+        return (<thead><HeadRow isReadOnly={isReadOnly} cols={cols} {...rest}/></thead>);
     }
 }
 
@@ -146,7 +162,6 @@ export default class LedgerTable extends Component {
 
         this.columnEditing = this.columnEditing.bind(this);
         this.sortMethod = this.sortMethod.bind(this);
-        this.toggleFold = this.toggleFold.bind(this);
 
         this.gatherColumn = this.gatherColumn.bind(this);
 
@@ -166,14 +181,6 @@ export default class LedgerTable extends Component {
         this.setState({currPage: currPage == totalPage ? currPage : currPage+1});
     }
 
-    toggleFold(col){
-        let head   = this.state.table.head,
-            folded = head[col].folded;
-        head[col].folded = !folded;
-
-        this.setState({head: head});
-    }
-
     columnEditing(col){
         let head = this.state.table.head;
 
@@ -182,35 +189,24 @@ export default class LedgerTable extends Component {
         this.setState({head: head});
     }
 
-    insertRecord(row){
-        let body = this.state.table.body,
-            head = this.state.table.head;
-        body.splice(row+1, 0, Object.map(head, e=>e.default));
-        for(let key in head) head[key].filter = "";
-        this.setState({
-            head: head,
-            body: body
-        });
+    insertRecord(path){
+        let table = this.state.table;
+        table.insertRecord(path);
+        this.setState({table});
     }
 
-    removeRecord(row){
-        let head = this.state.table.head,
-            body = this.state.table.body;
-        body.splice(row, 1);
-        for(let key in head) head[key].filter = "";
-        this.setState({
-            head: head,
-            body: body
-        });
+    removeRecord(path){
+        let table = this.state.table;
+        table.removeRecord(path);
+        this.setState({table});
     }
 
-    updateCell(row, col, data){
-        let body = this.state.table.body;
-        body[row][col].data = data;
-        this.setState({
-            body: body,
-            presentBody: body
-        });
+    updateCell(path, col, data){
+
+        let table = this.state.table;
+        table.updateCell(path, col, data);
+        this.setState({table});
+
     }
 
     sortMethod(method, col){
@@ -233,7 +229,7 @@ export default class LedgerTable extends Component {
 
     render() {
 
-        const {name} = this.props;
+        const {name, isReadOnly} = this.props;
         let tableID = `table-${name}`;
 
         let currPage = this.state.currPage,
@@ -241,20 +237,29 @@ export default class LedgerTable extends Component {
             startingRecord = (currPage-1) * recordPerPage,
             endingRecord = startingRecord + recordPerPage;
 
+        let totalPage = Math.ceil(this.state.table.presBody.length/this.state.recordPerPage);
+        let pager = totalPage > 1 ? (<Paginator
+            prevPage={this.prevPage}
+            nextPage={this.nextPage}
+            currPage={currPage}
+            totalPage={totalPage}
+        />) : [];
+
         return(
         <div>
             <div id={tableID} className="table-outer">
             <table>
                 <TableHead
                     name={name}
+                    isReadOnly={isReadOnly}
                     cols={this.state.table.head}
                     columnEditing={this.columnEditing}
                     sortMethod={this.sortMethod}
-                    toggleFold = {this.toggleFold}
                     gatherColumn = {this.gatherColumn}
                 />
                 <TableBody
                     name={name}
+                    isReadOnly={isReadOnly}
                     startingRow={startingRecord}
                     rows={this.state.table.presBody.slice(startingRecord, endingRecord)}
                     columnAttr={this.state.table.head}
@@ -263,12 +268,7 @@ export default class LedgerTable extends Component {
                     removeRecord={this.removeRecord}
                     />
             </table></div>
-            <Paginator
-                prevPage={this.prevPage}
-                nextPage={this.nextPage}
-                currPage={currPage}
-                totalPage={Math.ceil(this.state.table.presBody.length/this.state.recordPerPage)}
-            />
+            {pager}
         </div>);
     }
 

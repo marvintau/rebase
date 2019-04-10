@@ -123,45 +123,6 @@ function setCategoryDict(data){
 
 }
 
-function setLabelFunc(colAttr){
-    
-    let typeDict = {
-        money: {
-            sum: (colChildren) => {
-                let sum = colChildren
-                    .map(n => parseFloat(n))
-                    .filter(e=>!isNaN(e))
-                    .reduce((acc, n) => acc+n, 0);
-                return "Total: " + sum;
-            }
-        }
-    }
-
-    let columnSpecDict = {
-        ccode : {
-            label: (col) => {
-                return col.length > 4 ? col.slice(0, -2) + '-Gathered' : col;
-            },
-            sort:  (a, b) => {
-                let ra = a.ccode.data ? a.ccode.data : a.ccode, 
-                    rb = b.ccode.data ? b.ccode.data : b.ccode;
-                
-                return ra > rb ? 1 : ra < rb ? -1 : 0;
-            }    
-        }
-    }
-
-    for (let k in colAttr){
-        if (k in columnSpecDict){
-            Object.assign(colAttr[k], columnSpecDict[k]);
-        } else if (colAttr[k].type in typeDict){
-            Object.assign(colAttr[k], typeDict[colAttr[k].type]);
-        }
-    };
-
-    return colAttr;
-}
-
 function setDefault(colAttr){
     let typeDefault = {
         money: 0,
@@ -198,31 +159,34 @@ function applyCategoryCode(table){
     return table;
 }
 
-function setVouchers(data){
+function setJournal(data){
 
     if('GL_accvouch' in data){
 
         let vouchDict   = tables['fieldTypeDict']['GL_accvouch'],
-            vouchTable  = data['GL_accvouch'].columnFilter((key,_val) => (key[0] != "b" && key.slice(0,2)!= "cD" && vouchDict[key] !== undefined)),
-            commonAttr  = {sorted: "NONE", filter:""},
-            vouchHeader = vouchTable[0].map((k, _v) => Object.assign({}, commonAttr, vouchDict[k]));
-
-        tables['vouchers'] = new Accountable(vouchHeader, vouchTable);
+            vouchTable  = data['GL_accvouch'],
+            commonAttr  = {sorted: "NONE", filter:""};
+        
+        var vouchHeader = vouchTable[0].map((k, _v) => Object.assign({}, commonAttr, vouchDict[k])),
+            vouchers = new Accountable(vouchHeader, vouchTable);
+        vouchers.permuteColumns(['iperiod', 'ioutperiod', 'doutbilldate', 'doutdate', 'cbill', 'cbook', 'ccashier', 'ccheck', 'ccode', 'ccode_equal', 'ccus_id', 'cdigest', 'mc', 'md']);
+        vouchers.applyColumn(['doutbilldate', 'doutdate'], (d, h) => {
+            return (d === undefined || d === null) ? '空' : d.split('T')[0];
+        })
+    
+        var voucherGrouped = vouchers.body.groupBy(rec => rec.ccode).map((k, recs)=>recs.groupBy(rec=>rec.iperiod))
 
     } else throw TypeError('voucher table (GL_accvouch) is mandatory');
-}
 
-function setJournal(data){
 
     if('GL_accsum' in data){
         let journalDict = tables['fieldTypeDict']['GL_accsum'],
-            journalTable = data['GL_accsum'].columnFilter();
+            journalTable = data['GL_accsum'];
         journalTable = applyCategoryCode(journalTable);
 
-        let commonAttr = {sorting: undefined, filter: {text:"", func:(e)=>true}, folded: false, filtered: false, gathered: false},
+        let commonAttr = {sorting: undefined, gathered: false},
             journalHeader = journalTable[0].map((k, _v) => Object.assign({}, commonAttr, journalDict[k]));
 
-        journalHeader = setLabelFunc(journalHeader);
         journalHeader = setDefault(journalHeader);
 
         
@@ -230,6 +194,15 @@ function setJournal(data){
         tables['journal'].marshall();
         tables['journal'].permuteColumns(['iperiod', 'ccode', 'cclass', 'ccode_name', 'mb', 'mc', 'md', 'me'])
         
+        for (let i = 0; i < tables['journal'].body.length; i++){
+            let {iperiod, ccode} = tables['journal'].body[i];
+            
+            if (voucherGrouped[ccode] && voucherGrouped[ccode][iperiod])
+                Object.defineProperty(tables['journal'].body[i], 'voucher', {
+                    value: new Accountable(vouchers.head, voucherGrouped[ccode][iperiod])
+                })
+        }
+
         tables['journal'].head['ccode'].operations = {
             'gather': {
                 labelFunc: (e) => e.slice(0, e.length - 2),
@@ -249,9 +222,7 @@ function setJournal(data){
                 }
             },
         };
-        // tables['journal'].setGather('ccode');
 
-        console.log(tables['journal']);
     } else throw TypeError('journal table (GL_accsum) is mandatory');
     
 }
@@ -264,14 +235,9 @@ localFile.setOnload((event, instance) => {
     setCategoryDict(data);
     // setVouchers(data);
     setJournal(data);
-    // applyCategoryCode('GL_accvouch');
-    // applyCategoryCode('GL_accsum');
 
-    // let balance = Object.entries(tables['GL_accsum'].groupBy("ccode")).sort();
-
-    // let voucherTable = transformData('GL_accvouch');
     
-    render(<LedgerTable table={tables['journal']} />, document.getElementById("container"));
+    render(<LedgerTable table={tables['journal']} style={{height: "100vh"}} isReadOnly={false} />, document.getElementById("container"));
 
 })
 
