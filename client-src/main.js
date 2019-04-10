@@ -237,7 +237,7 @@ localFile.setOnload((event, instance) => {
     setJournal(data);
 
     
-    render(<LedgerTable table={tables['journal']} style={{height: "100vh"}} isReadOnly={false} />, document.getElementById("container"));
+    render(<LedgerTable table={tables['journal']} recordsPerPage={30} isReadOnly={false} />, document.getElementById("container"));
 
 })
 

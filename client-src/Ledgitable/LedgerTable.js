@@ -27,7 +27,7 @@ class BodyRow extends Component {
         super(props, context);
         this.state = {
             displayChildren : false,
-            displayVouch : true
+            displayVouch : false
         }
     }
 
@@ -63,7 +63,11 @@ class BodyRow extends Component {
                 <button key={1} className="btn-sm btn-modify btn-outline-danger"  onClick={removeRec}>删除</button>,
             ]
             if (row.voucher){
-                editButton.push(<button key={2} className="btn-sm btn-modify btn-outline-info"    onClick={(e) =>{this.toggleDisplayVouch()}}>凭证</button>);
+                editButton.push(<button
+                    key={2}
+                    className="btn-sm btn-modify btn-outline-info"
+                    onClick={(e) =>{this.toggleDisplayVouch()}}
+                    >{this.state.displayVouch ? "隐藏凭证" : "查看凭证"}</button>);
             }
         }
 
@@ -86,7 +90,7 @@ class BodyRow extends Component {
 
         let vouch = [];
         if(this.state.displayVouch && row.voucher){
-            vouch.push(<tr><td colSpan={row.keys().length+1}><LedgerTable table={row.voucher} isReadOnly={true} /></td></tr>)
+            vouch.push(<tr><td colSpan={row.keys().length+1}><LedgerTable table={row.voucher} recordsPerPage={10} isReadOnly={true} /></td></tr>)
         }
 
         let childrenRows = [];
@@ -150,11 +154,11 @@ export default class LedgerTable extends Component {
         super(props, context);
 
         this.state = {
-            recordPerPage: 30,
             currPage: 1,
             table : props.table,
         }
-        this.state.totalPage = this.state.table.body.size / this.state.recordPerPage + 1;
+        this.state.totalPage = Math.ceil(this.state.table.body.length / props.recordsPerPage) + 1;
+        console.log(this.state.table.body.length / props.recordsPerPage);
 
         this.updateCell = this.updateCell.bind(this);
         this.insertRecord = this.insertRecord.bind(this);
@@ -174,11 +178,9 @@ export default class LedgerTable extends Component {
         this.setState({currPage: currPage == 1 ? 1:currPage-1});
     }
     nextPage(pager){
-        let currPage = this.state.currPage,
-            recLength = this.state.table.body.length,
-            recordPerPage = this.state.recordPerPage,
-            totalPage = recLength / recordPerPage + 1;
-        this.setState({currPage: currPage == totalPage ? currPage : currPage+1});
+        let currPage = this.state.currPage;
+        
+        this.setState({currPage: currPage == this.state.totalPage ? currPage : currPage+1});
     }
 
     columnEditing(col){
@@ -229,20 +231,18 @@ export default class LedgerTable extends Component {
 
     render() {
 
-        const {name, isReadOnly} = this.props;
+        const {name, recordsPerPage, isReadOnly} = this.props;
         let tableID = `table-${name}`;
 
         let currPage = this.state.currPage,
-            recordPerPage = this.state.recordPerPage,
-            startingRecord = (currPage-1) * recordPerPage,
-            endingRecord = startingRecord + recordPerPage;
+            startingRecord = (currPage-1) * recordsPerPage,
+            endingRecord = startingRecord + recordsPerPage;
 
-        let totalPage = Math.ceil(this.state.table.presBody.length/this.state.recordPerPage);
-        let pager = totalPage > 1 ? (<Paginator
+        let pager = this.state.totalPage > 1 ? (<Paginator
             prevPage={this.prevPage}
             nextPage={this.nextPage}
             currPage={currPage}
-            totalPage={totalPage}
+            totalPage={this.state.totalPage}
         />) : [];
 
         return(
