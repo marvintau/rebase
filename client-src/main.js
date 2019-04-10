@@ -33,6 +33,41 @@ backupFile.setStartFunc((instance) =>{
 
 
 
+class Range {
+    constructor(a=1, b=1){
+        this.a = a;
+        this.b = b;
+    }
+
+    add(n){
+        if(n.constructor.name === 'Range'){
+            if(n.a < this.a){
+                this.a = n.a;
+            }
+            if(n.b > this.b){
+                this.b = n.b;
+            }
+        } if (n < this.a){
+            this.a = n;
+        } else if (n > this.b){
+            this.b = n;
+        }
+    }
+
+    fromArray(array){
+        for (let i = 0; i < array.length; i++){
+            this.add(array[i]);
+        }
+        return this;
+    }
+
+    toString(){
+        let res = this.a == this.b ? `${this.a}` : `${this.a}-${this.b}`;
+        return res;
+    }
+}
+
+
 /**
  * setTypeDict
  * ===========
@@ -204,10 +239,11 @@ function setJournal(data){
                 summaryFunc: (recs) => {
                     let rec = Object.assign({}, recs[0]);
                     rec.ccode_name = '...';
-                    rec.mb = parseFloat(recs.map(e=>e.mb).sum()).toFixed(2);
-                    rec.mc = parseFloat(recs.map(e=>e.mc).sum()).toFixed(2);
-                    rec.md = parseFloat(recs.map(e=>e.md).sum()).toFixed(2);
-                    rec.me = parseFloat(recs.map(e=>e.me).sum()).toFixed(2);
+                    rec.iperiod = (new Range()).fromArray(recs.map(e=>e.iperiod)).toString();
+                    rec.mb = parseFloat(recs.filter(e=>e.iperiod===1).map(e=>e.mb).sum()).toFixed(2);
+                    rec.mc = parseFloat(recs.filter(e=>e.children===undefined).map(e=>e.mc).sum()).toFixed(2);
+                    rec.md = parseFloat(recs.filter(e=>e.children===undefined).map(e=>e.md).sum()).toFixed(2);
+                    rec.me = parseFloat(recs.filter(e=>e.iperiod===12).map(e=>e.me).sum()).toFixed(2);
 
                     return rec;
                 }

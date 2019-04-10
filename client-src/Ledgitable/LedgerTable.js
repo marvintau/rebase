@@ -37,7 +37,7 @@ class BodyRow extends Component {
     }
 
     render() {
-        const {row, updateCell, columnAttr, insertRecord, removeRecord} = this.props;
+        const {row, updateCell, columnAttr, insertRecord, removeRecord, level} = this.props;
 
         let insertRec = (e) => { insertRecord(row);},
             removeRec = (e) => { removeRecord(row);};
@@ -50,7 +50,7 @@ class BodyRow extends Component {
                     className="btn-sm btn-modify btn-outline-primary"
                     onClick={(e) => {this.toggleDisplayChildren()}}
                     >{ this.state.displayChildren ? "收拢" : "展开"}</button>
-                    <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button>
+                    {/* <button className="btn-sm btn-modify btn-outline-primary" onClick={insertRec}>插入</button> */}
                 </td>)
             } else {
                 editButton = (<td className="edit-bar" key="edit">
@@ -77,11 +77,18 @@ class BodyRow extends Component {
         let childrenRows = [];
         if(row.children && this.state.displayChildren){
             childrenRows = row.children.map(child => {
-                return <BodyRow row={child} updateCell={updateCell} columnAttr={columnAttr} insertReccord={insertRecord} removeRecord={removeRecord} />
+                return <BodyRow
+                    row={child}
+                    level={level+1}
+                    updateCell={updateCell}
+                    columnAttr={columnAttr}
+                    insertReccord={insertRecord}
+                    removeRecord={removeRecord}
+                />
             })
         }
 
-        return ([[<tr>{editButton}{colElems}</tr>, childrenRows]]);
+        return ([<tr>{colElems}{editButton}</tr>, childrenRows]);
     }
 }
 
@@ -91,11 +98,11 @@ class HeadRow extends Component {
     render() {
         const {cols, ...rest} = this.props;
         const colElems = [];
-        if(!cols.some((e)=>e.folded || e.filtered || e.aggregated)){
-            colElems.push(<HeadCell data="编辑" className="edit-bar" key="edit" attr={({})}/>)
-        }
         for (let colKey in cols){
             colElems.push(<HeadCell data={colKey} attr={cols[colKey]} key={colKey} {...rest}/>);
+        }
+        if(!cols.some((e)=>e.folded || e.filtered || e.aggregated)){
+            colElems.push(<HeadCell data="编辑" className="edit-bar" key="edit" attr={({})}/>)
         }
         return (<tr>
             {colElems}</tr>);
@@ -107,7 +114,7 @@ class TableBody extends Component {
         const {rows, startingRow, ...rest} = this.props;
         const rowElems = [];
         rows.forEach((row, rowNum) => {
-            rowElems.push(<BodyRow row={row} key={rowNum} rowNumber={startingRow+rowNum} {...rest}/>);
+            rowElems.push(<BodyRow row={row} key={rowNum} rowNumber={startingRow+rowNum} level={0} {...rest}/>);
             return true;
         });
         return (<tbody>{rowElems}</tbody>);
@@ -139,7 +146,6 @@ export default class LedgerTable extends Component {
 
         this.columnEditing = this.columnEditing.bind(this);
         this.sortMethod = this.sortMethod.bind(this);
-        this.filterColumn = this.filterColumn.bind(this);
         this.toggleFold = this.toggleFold.bind(this);
 
         this.gatherColumn = this.gatherColumn.bind(this);
@@ -225,14 +231,6 @@ export default class LedgerTable extends Component {
         this.setState({table});
     }
 
-    filterColumn(col, filter){
-
-        let table = this.state.table;
-        table.setFilter(col, filter);
-        
-        this.setState({ table , currPage: 1});
-    }
-
     render() {
 
         const {name} = this.props;
@@ -252,7 +250,6 @@ export default class LedgerTable extends Component {
                     cols={this.state.table.head}
                     columnEditing={this.columnEditing}
                     sortMethod={this.sortMethod}
-                    filterColumn = {this.filterColumn}
                     toggleFold = {this.toggleFold}
                     gatherColumn = {this.gatherColumn}
                 />

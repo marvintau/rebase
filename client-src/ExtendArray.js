@@ -1,36 +1,4 @@
 
-class Range {
-    constructor(a=0, b=0){
-        this.a = a;
-        this.b = b;
-    }
-
-    add(n){
-        if(n.constructor.name === 'Range'){
-            if(n.a < this.a){
-                this.a = n.a;
-            }
-            if(n.b > this.b){
-                this.b = n.b;
-            }
-        } if (n < this.a){
-            this.a = n;
-        } else if (n > this.b){
-            this.b = n;
-        }
-    }
-
-    fromArray(array){
-        for (let i = 0; i < array.length; i++){
-            this.add(array[i]);
-        }
-    }
-
-    toString(){
-        return this.a == this.b ? `${this.a}` : `${this.a}-${this.b}`;
-    }
-}
-
 Array.prototype.prev = function(cur){
     return cur == 0 ? 0 : cur-1;
 }
@@ -84,12 +52,15 @@ Array.prototype.groupBy = function(labelFunc) {
     }, {});
 };
 
-Array.prototype.flatten = function(childKey){
+Array.prototype.flatten = function(childFunc){
     return this.reduce((flattened, item) => {
-        if(item[childKey] === undefined)
+
+        let children = childFunc(item);
+
+        if(children === undefined)
             return flattened.concat(item);
         else
-            return flattened.concat(item[childKey].flatten(childKey));
+            return flattened.concat(children.flatten(childFunc));
     }, [])
 }
 

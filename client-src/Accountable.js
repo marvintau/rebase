@@ -59,44 +59,6 @@ export default class Accountable {
         }
     }
 
-    setFilter(colName, filter){
-
-        let makeFilterFunc = (filterText) => {
-            let func;
-            if (filterText === ""){
-                func = (e) => true;
-            } else if (filterText[0].match(/(\<|\>)/) && filterText.slice(1).match(/ *-?\d*\.?\d*/)){
-                func = (e) => {return eval(e+filterText)}
-            } else {
-                func = (e) => {
-                    if (isNaN(e))
-                        return e === filterText || e.includes(filterText);
-                    else
-                        return e === parseFloat(filterText);
-                };
-            }
-            return func;    
-        }
-
-        this.head[colName].filter = {
-            text : filter,
-            func : makeFilterFunc(filter)
-        };
-
-        this.presBody = this.body;
-
-        for (let colName in this.head){
-            let filterFunc = this.head[colName].filter.func;
-            this.presBody = this.presBody.filter((rec) => filterFunc(rec[colName]));
-        }
-
-        if (this.head.values().some(col=>col.filter.text !== "")){
-            this.tableState = 'FILTER';
-        } else {
-            this.tableState = 'NORMAL';
-        }
-    }
-
     /**
      * sort
      * ============
@@ -124,6 +86,7 @@ export default class Accountable {
             if (!this.head[key].gathered){
                 this.tableState = "GATHER";
                 this.head[key].gathered = true;
+
                 let {summaryFunc, labelFunc, termFunc, oper} = this.head[key].operations['gather'];
     
                 this.body = this.body.nest(key, {
@@ -132,10 +95,16 @@ export default class Accountable {
                     termFunc,
                     oper,
                 });
+
                 this.body.sortBy(key);
                 this.presBody = this.body;    
             } else {
-                this.body = this.body.flatten();
+
+                this.tableState = "NORMAL";
+                this.head[key].gathered = false;
+
+                this.body = this.body.flatten((e) => e.children);
+                this.presBody = this.body;
             }
 
 
@@ -144,9 +113,7 @@ export default class Accountable {
 
     setPage(key){
         if('pager' in this.head[key].operations ){
-            this.tableState = 'PAGED';
-
-            // this.pagePath 
+            
         }
     }
 }
