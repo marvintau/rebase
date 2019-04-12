@@ -5,7 +5,6 @@ export default class Accountable {
         
         this.head     = head;
         this.body     = body;
-        this.presBody = body;
 
         this.sortKeyOrder  = [];
 
@@ -54,7 +53,6 @@ export default class Accountable {
     permuteColumns(colNameOrder){
         this.head = this.head.rewrite(colNameOrder);
         this.body = this.body.map(record => record.rewrite(colNameOrder));
-        this.presBody = this.body;
     }
 
     marshall(){
@@ -112,7 +110,6 @@ export default class Accountable {
             this.body.sort((a, b) => ((a[colName] < b[colName]) ? -1 : 1) * isDesc);
         }
 
-        this.presBody = this.body;
     }
 
     setGather(key){
@@ -126,7 +123,6 @@ export default class Accountable {
                 this.body = this.body.nest(key, this.head[key].operations['gather']);
 
                 this.body.sortBy(key);
-                this.presBody = this.body;    
             } else {
 
                 this.tableState = "NORMAL";
@@ -134,7 +130,6 @@ export default class Accountable {
 
                 console.time('flatten')
                 this.body = this.body.flatten((e) => e.children);
-                this.presBody = this.body;
                 console.timeEnd('flatten')
             }
 

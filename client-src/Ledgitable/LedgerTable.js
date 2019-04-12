@@ -90,7 +90,14 @@ class BodyRow extends Component {
 
         let vouch = [];
         if(this.state.displayVouch && row.voucher){
-            vouch.push(<tr><td colSpan={row.keys().length+1}><LedgerTable table={row.voucher} recordsPerPage={10} isReadOnly={true} /></td></tr>)
+            vouch.push(<tr key={'vouch'}><td colSpan={row.keys().length+1}>
+            <LedgerTable
+                table={row.voucher}
+                recordsPerPage={10}
+                isReadOnly={true}
+                tableStyle={'table-embedded'}
+            />
+            </td></tr>)
         }
 
         let childrenRows = [];
@@ -108,7 +115,7 @@ class BodyRow extends Component {
             })
         }
 
-        return ([<tr>{editCell}{colElems}</tr>, vouch, childrenRows]);
+        return ([<tr key={'rec'}>{editCell}{colElems}</tr>, vouch, childrenRows]);
     }
 }
 
@@ -129,25 +136,6 @@ class HeadRow extends Component {
     }
 }
 
-class TableBody extends Component {
-    render(){
-        const {rows, isReadOnly, startingRow, ...rest} = this.props;
-        const rowElems = [];
-        rows.forEach((row, rowNum) => {
-            rowElems.push(<BodyRow isReadOnly={isReadOnly} row={row} path={[startingRow+rowNum]} key={startingRow+rowNum} {...rest}/>);
-            return true;
-        });
-        return (<tbody>{rowElems}</tbody>);
-    }
-}
-
-class TableHead extends Component {
-    render(){
-        const {cols, isReadOnly, ...rest} = this.props;
-        return (<thead><HeadRow isReadOnly={isReadOnly} cols={cols} {...rest}/></thead>);
-    }
-}
-
 export default class LedgerTable extends Component {
 
     constructor(props, context){
@@ -157,7 +145,7 @@ export default class LedgerTable extends Component {
             currPage: 1,
             table : props.table,
         }
-        this.state.totalPage = Math.ceil(this.state.table.body.length / props.recordsPerPage) + 1;
+        this.state.totalPage = Math.ceil(this.state.table.body.length / props.recordsPerPage);
         console.log(this.state.table.body.length / props.recordsPerPage);
 
         this.updateCell = this.updateCell.bind(this);
@@ -179,7 +167,7 @@ export default class LedgerTable extends Component {
     }
     nextPage(pager){
         let currPage = this.state.currPage;
-        
+
         this.setState({currPage: currPage == this.state.totalPage ? currPage : currPage+1});
     }
 
@@ -231,7 +219,7 @@ export default class LedgerTable extends Component {
 
     render() {
 
-        const {name, recordsPerPage, isReadOnly} = this.props;
+        const {name, recordsPerPage, isReadOnly, tableStyle} = this.props;
         let tableID = `table-${name}`;
 
         let currPage = this.state.currPage,
@@ -245,28 +233,34 @@ export default class LedgerTable extends Component {
             totalPage={this.state.totalPage}
         />) : [];
 
+        let rows = this.state.table.body.slice(startingRecord, endingRecord);
+
         return(
         <div>
-            <div id={tableID} className="table-outer">
+            <div id={tableID} className={tableStyle}>
             <table>
-                <TableHead
+                <thead><HeadRow
                     name={name}
                     isReadOnly={isReadOnly}
                     cols={this.state.table.head}
                     columnEditing={this.columnEditing}
                     sortMethod={this.sortMethod}
                     gatherColumn = {this.gatherColumn}
-                />
-                <TableBody
-                    name={name}
-                    isReadOnly={isReadOnly}
-                    startingRow={startingRecord}
-                    rows={this.state.table.presBody.slice(startingRecord, endingRecord)}
-                    columnAttr={this.state.table.head}
-                    updateCell={this.updateCell}
-                    insertRecord={this.insertRecord}
-                    removeRecord={this.removeRecord}
-                    />
+                /></thead>
+                <tbody>
+                    {rows.map((row, rowNum) =>
+                        (<BodyRow 
+                            isReadOnly={isReadOnly}
+                            row={row}
+                            path={[startingRecord+rowNum]}
+                            key={startingRecord+rowNum}
+                            columnAttr={this.state.table.head}
+                            updateCell={this.updateCell}
+                            insertRecord={this.insertRecord}
+                            removeRecord={this.removeRecord}        
+                        />)
+                    )}
+                </tbody>
             </table></div>
             {pager}
         </div>);
