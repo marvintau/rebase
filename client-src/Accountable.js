@@ -129,7 +129,7 @@ export default class Accountable {
                 this.head[key].gathered = false;
 
                 console.time('flatten')
-                this.body = this.body.flatten((e) => e.children);
+                this.body = this.body.flatten2((e) => e.children);
                 console.timeEnd('flatten')
             }
 

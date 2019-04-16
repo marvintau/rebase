@@ -130,6 +130,22 @@ Array.prototype.flatten = function(childFunc){
     }, [])
 }
 
+Array.prototype.flatten2 = function(childFunc){
+
+    let res = [];
+
+    for (let item of this){
+        let children = childFunc(item);
+        if (children) {
+            res.push(...children.flatten2(childFunc));
+        } else {
+            res.push(item);
+        }
+    }
+
+    return res;
+}
+
 Array.prototype.sortBy = function(colName){
 
     let val = (e) => e.value ? e.value : e;

@@ -74,10 +74,10 @@ export default class HeadCell extends Component {
         let title = attr.def ? attr.def : data;
 
         if (!attr.editing) {
-            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>{title}</th>);
+            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}><div>{title}</div></th>);
         } else {
-            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}>
-            {title}
+            return (<th type={attr.type} className={"th-header "+attr.type}>
+            <div onDoubleClick={(e)=>{columnEditing(data);}}>{title}</div>
             <div>   
                 <SortButton sortMethod={sortMethod} sortState={attr.sorting} colName={data}/>
                 {condElems}
