@@ -19,35 +19,24 @@ export default class Accountable {
         }
     }
 
-    insertRecord(path, record){
-        
-        record = record ? record : this.head.map((k, v)=>v.default);
-
-        let ref = this.body;
+    ref(path, childFunc=(e)=>e.children){
+        let r = this.body;
         for (let i = 0; i < path.length-1; i++){
-            ref = ref[path[i]].children;
+            r = childFunc(r[path[i]]);
         }
-        
-        ref.splice(path.last()+1, 0, record);
+        return r;
     }
 
-    removeRecord(path){
-
-        let ref = this.body;
-        for (let i = 0; i < path.length-1; i++){
-            ref = ref[path[i]].children;
-        }
-        ref.splice(path.last(), 1);
-
+    insert(path){
+        this.ref(path).splice(path.last()+1, 0, this.head.map((k, v)=>v.default));
     }
 
-    updateCell(path, columnKey, data){
+    remove(path){
+        this.ref(path).splice(path.last(), 1);
+    }
 
-        let ref = this.body;
-        for (let i = 0; i < path.length-1; i++){
-            ref = ref[path[i]].children;
-        }
-        ref[path.last()][columnKey] = data;
+    update(path, columnKey, data){
+        this.ref(path)[path.last()][columnKey] = data;
     }
 
     permuteColumns(colNameOrder){
