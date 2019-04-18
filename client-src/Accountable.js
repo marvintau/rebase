@@ -11,14 +11,6 @@ export default class Accountable {
         this.tableState = "NORMAL";
     }
 
-    applyColumn(keys, func){
-        for (let i = 0; i < this.body.length; i++){
-            for (let key of keys){
-                this.body[i][key] = func(this.body[i][key], this.head[key]);
-            }
-        }
-    }
-
     ref(path, childFunc=(e)=>e.children){
         let r = this.body;
         for (let i = 0; i < path.length-1; i++){
@@ -37,11 +29,6 @@ export default class Accountable {
 
     update(path, columnKey, data){
         this.ref(path)[path.last()][columnKey] = data;
-    }
-
-    permuteColumns(colNameOrder){
-        this.head = this.head.rewrite(colNameOrder);
-        this.body = this.body.map(record => record.rewrite(colNameOrder));
     }
 
     marshall(){

@@ -8,10 +8,9 @@ import {render} from "react-dom";
 window.React = React;
 
 import LedgerTable from "./Ledgitable/LedgerTable.js"
-import BookData from './BookData';
+import bookData from './BookData';
 
-var socket = io.connect(),
-    tables = {};
+var socket = io.connect();
 
 let backupFile = new FileSend(),
     localFile  = new FileSend();
@@ -34,10 +33,10 @@ backupFile.setStartFunc((instance) =>{
 localFile.setOnload((event, instance) => {
     
     let data = JSON.parse(event.target.result),
-        book = new BookData(data);
+        journal = bookData(data);
     
     render(<LedgerTable
-        table={book.journal}
+        table={journal}
         recordsPerPage={30}
         isReadOnly={false}
         tableStyle={'table-outer'}

@@ -146,6 +146,10 @@ Array.prototype.flatten2 = function(childFunc){
     return res;
 }
 
+Array.prototype.permute = function(colNameOrder){
+    return this.map(record => record.rewrite(colNameOrder));
+}
+
 Array.prototype.sortBy = function(colName){
 
     let val = (e) => e.value ? e.value : e;
