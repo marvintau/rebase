@@ -11,15 +11,15 @@ window.React = React;
 import LedgerTable from "./Ledgitable/LedgerTable.js"
 import bookData from './BookData';
 
-import {BehaviorSubject} from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
-// const currentUserSubject = new BehaviorSubject(JSON.parse(localStorage.getItem('currentUser')));
+const currentUserSubject = new BehaviorSubject(JSON.parse(localStorage.getItem('currentUser')));
 
 export const authenticationService = {
     login,
     logout,
-    // currentUser: currentUserSubject.asObservable(),
-    // get currentUserValue () { return currentUserSubject.value }
+    currentUser: currentUserSubject.asObservable(),
+    get currentUserValue () { return currentUserSubject.value }
 };
 
 // function login(username, password) {
@@ -63,11 +63,11 @@ function login(){
             password: 'test',
         })
     }).then(res=>res.body)
-    .then(body=>{
+    .then((body)=>{
         const reader = body.getReader();
         let result = "";
 
-        reader.read().then(function process({done, value}){
+        return reader.read().then(function process({done, value}){
             if(done) {
                 return result;
             } else {
@@ -77,7 +77,10 @@ function login(){
         })
 
     }).then(res => {
-        console.log(res);
+
+        localStorage.setItem('currentUser', res);
+        currentUserSubject.next(JSON.parse(res));
+
     })
     .catch(e => {
         // fancier error handler

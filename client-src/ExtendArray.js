@@ -12,7 +12,8 @@ Object.defineProperty(Object.prototype, "map", {
         for (let i = 0; i < keys.length; i++)
             newObject[keys[i]] = func(keys[i], this[keys[i]]);        
         return newObject;
-    }
+    },
+    writable: true
 })
 
 /**
@@ -28,14 +29,16 @@ Object.defineProperty(Object.prototype, "forEach", {
         for (let i = 0; i < keys.length; i++)
             this[keys[i]] = func(keys[i], this[keys[i]]);
         return this;
-    }
+    },
+    writable: true
 })
 
 Object.defineProperty(Object.prototype, 'some', {
     value: function(func){
         let values = Object.values(this);
         return values.some(func);
-    }
+    },
+    writable: true
 })
 
 /**
@@ -46,13 +49,15 @@ Object.defineProperty(Object.prototype, 'some', {
 Object.defineProperty(Object.prototype, 'values', {
     value: function(){
         return Object.values(this);
-    }
+    },
+    writable: true
 })
 
 Object.defineProperty(Object.prototype, 'keys', {
     value: function(){
         return Object.keys(this);
-    }
+    },
+    writable: true
 })
 
 /**
@@ -72,7 +77,8 @@ Object.defineProperty(Object.prototype, 'rewrite', {
         }
 
         return newObject;
-    }
+    },
+    writable: true
 })
 
 Array.prototype.last = function(){
