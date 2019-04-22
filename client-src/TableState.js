@@ -1,6 +1,6 @@
 import "./ExtendArray.js"
 
-export default class Accountable {
+export default class TableState {
     constructor(head, body){
         
         this.head     = head;
@@ -29,16 +29,6 @@ export default class Accountable {
 
     update(path, columnKey, data){
         this.ref(path)[path.last()][columnKey] = data;
-    }
-
-    marshall(){
-        for (let i = this.body.length-1; i>=0; i--)
-        for (let colName in this.body[i]){
-            let cell = this.body[i][colName];
-            if (cell === null || cell === undefined){
-                this.body[i][colName] = this.head[colName].default;
-            }
-        }
     }
 
     addSort(colName){

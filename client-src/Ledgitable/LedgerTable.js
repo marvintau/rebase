@@ -1,10 +1,10 @@
-import {Component} from 'react';
+import React from 'react';
 
 import HeadRow from "./HeadRow.js";
 import BodyRow from "./BodyRow.js";
 import Paginator from "./Paginator.js";
 
-export default class LedgerTable extends Component {
+export default class LedgerTable extends React.Component {
 
     constructor(props, context){
         super(props, context);

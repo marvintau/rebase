@@ -1,7 +1,6 @@
-import {Component} from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
 
-export default class BodyCell extends Component {
+export default class BodyCell extends React.Component {
     
     constructor(props, context){
         super(props, context);

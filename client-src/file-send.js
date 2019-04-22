@@ -14,8 +14,6 @@ export default class FileSend {
     start(id){
         this.file = document.getElementById(id).files[0];
 
-        console.log("started");
-
         if (this.file && this.startFunc)
             this.startFunc(this);
         else

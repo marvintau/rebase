@@ -1,4 +1,4 @@
-import Accountable from "./Accountable.js";
+import TableState from "./TableState.js";
 
 class Range {
     constructor(a=1, b=1){
@@ -129,7 +129,7 @@ function vouch(table, typeDict){
 
     return vouchTable
         .groupBy(rec => rec.ccode).
-        map((k, recs)=>recs.groupBy(rec=>rec.iperiod).map((k, v) => new Accountable(vouchHeader, v)));
+        map((k, recs)=>recs.groupBy(rec=>rec.iperiod).map((k, v) => new TableState(vouchHeader, v)));
 }
 
 function journalTable(table, typeDict, cateCodeDict){
@@ -154,7 +154,7 @@ function journalTable(table, typeDict, cateCodeDict){
         }
     }
 
-    return new Accountable(journalHeader, journalTable);
+    return new TableState(journalHeader, journalTable);
 
 }
 

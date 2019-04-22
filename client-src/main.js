@@ -1,26 +1,70 @@
 import io from 'socket.io-client';
-import FileSaver from 'file-saver';
-import FileSend from './file-send';
 
 import React from 'react';
 import {render} from "react-dom";
+import FileInput from './FileInput.js';
+
+import {Router, Route, Link} from 'react-router-dom';
+import { createBrowserHistory } from "history";
 
 window.React = React;
 
 import LedgerTable from "./Ledgitable/LedgerTable.js"
 import bookData from './BookData';
 
-var socket = io.connect();
+// var socket = io.connect();
 
-let backupFile = new FileSend(),
-    localFile  = new FileSend();
+const customHistory = createBrowserHistory();
 
-backupFile.setStartFunc((instance) =>{
-    socket.emit('start', {
-        name: instance.file.name,
-        size: instance.file.size
-    });
-});
+
+class Login extends React.Component {
+
+}
+
+var Home = () => (<div>
+    dsadsadsa
+</div>)
+
+var TopBar = () => (
+    <Router history={customHistory}>
+        <nav className="navbar navbar-style navbar-default navbar-fixed-top">
+            
+
+        <Link to='/' style={{float: "right"}}><h1 style={{letterSpacing: "-0.07em"}}>
+                <img src="a61ce20ec695c877e21b8ea099fe49c8.png" width={40}/> Auditool 审计通
+            </h1></Link>
+        <Link to='/login' style={{float: "right"}}>登录</Link>
+    
+        </nav>
+        <Route exact path="/" component={Home} />
+        <Route path='/login' component={Login} />
+    </Router>
+)
+
+render(<TopBar />, document.getElementById('root'));
+
+// let localOnLoad = (event) => {
+    
+//     let data = JSON.parse(event.target.result),
+//         journal = bookData(data);
+    
+//     render(<LedgerTable
+//         table={journal}
+//         recordsPerPage={30}
+//         isReadOnly={false}
+//         tableStyle={'table-outer'}
+//     />, document.getElementById("container"));
+
+// };
+
+// render(<FileInput type={'text'} onload={localOnLoad} />, document.getElementById('local-upload'));
+
+// backupFile.setStartFunc((instance) =>{
+//     socket.emit('start', {
+//         name: instance.file.name,
+//         size: instance.file.size
+//     });
+// });
 
 // backupFile.setOnload((event, instance) => {
 //     socket.emit('upload', {
@@ -29,30 +73,11 @@ backupFile.setStartFunc((instance) =>{
 //     });
 // });
 
-
-localFile.setOnload((event, instance) => {
-    
-    let data = JSON.parse(event.target.result),
-        journal = bookData(data);
-    
-    render(<LedgerTable
-        table={journal}
-        recordsPerPage={30}
-        isReadOnly={false}
-        tableStyle={'table-outer'}
-    />, document.getElementById("container"));
-
-})
-
 // $('#choose-backup-file').on('change', function () {
 //     // console.log('here');
 //     backupFile.start('choose-backup-file');
 // });
 
-$('#choose-local-file').on('change', function () {
-    localFile.start('choose-local-file');
-    localFile.readAsText();
-});
 
 // $('#dump-data').on('click', function(){
 //     FileSaver.saveAs(new Blob([JSON.stringify(tables)], {type: "mime"}), "tables.json");

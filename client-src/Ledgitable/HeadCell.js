@@ -1,6 +1,6 @@
-import {Component} from "react";
+import React from "react";
 
-class SortButton extends Component {
+class SortButton extends React.Component {
 
     constructor(props, contexts){
         super(props, contexts);
@@ -55,34 +55,26 @@ class SortButton extends Component {
     }
 }
 
-export default class HeadCell extends Component {
+export default function HeadCell({data, attr, columnEditing, sortMethod, gatherColumn}){
     
-    constructor(props, context){
-        super(props, context);        
+    let condElems = [];
+
+    if(attr.operations && ('gather' in attr.operations)){
+        let text = attr.gathered ? "取消聚合" : "按此列聚合";
+        condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>gatherColumn(data)} key="0">{text}</button>);
     }
 
-    render() {
+    let title = attr.def ? attr.def : data;
 
-        const {data, attr, columnEditing, sortMethod, gatherColumn} = this.props;
-        let condElems = [];
-
-        if(attr.operations && ('gather' in attr.operations)){
-            let text = attr.gathered ? "取消聚合" : "按此列聚合";
-            condElems.push(<button className="btn-sm btn-modify btn-info" onClick={(e) =>gatherColumn(data)} key="0">{text}</button>);
-        }
-
-        let title = attr.def ? attr.def : data;
-
-        if (!attr.editing) {
-            return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}><div>{title}</div></th>);
-        } else {
-            return (<th type={attr.type} className={"th-header "+attr.type}>
-            <div onDoubleClick={(e)=>{columnEditing(data);}}>{title}</div>
-            <div>   
-                <SortButton sortMethod={sortMethod} sortState={attr.sorting} colName={data}/>
-                {condElems}
-            </div>
-            </th>);
-        }
+    if (!attr.editing) {
+        return (<th type={attr.type} className={"th-header "+attr.type} onDoubleClick={(e)=>{columnEditing(data);}}><div>{title}</div></th>);
+    } else {
+        return (<th type={attr.type} className={"th-header "+attr.type}>
+        <div onDoubleClick={(e)=>{columnEditing(data);}}>{title}</div>
+        <div>   
+            <SortButton sortMethod={sortMethod} sortState={attr.sorting} colName={data}/>
+            {condElems}
+        </div>
+        </th>);
     }
 }
