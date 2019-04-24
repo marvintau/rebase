@@ -1,109 +1,13 @@
 import React from 'react';
 import {render} from "react-dom";
+import App from './App.js';
 import FileInput from './FileInput.js';
-
-import {Router, Route, Link} from 'react-router-dom';
-import { createBrowserHistory } from "history";
-const customHistory = createBrowserHistory();
-
-window.React = React;
 
 import LedgerTable from "./Ledgitable/LedgerTable.js"
 import bookData from './BookData';
 
-import { BehaviorSubject } from 'rxjs';
 
-const currentUserSubject = new BehaviorSubject(JSON.parse(localStorage.getItem('currentUser')));
-
-export const authenticationService = {
-    login,
-    logout,
-    currentUser: currentUserSubject.asObservable(),
-    get currentUserValue () { return currentUserSubject.value }
-};
-
-// function login(username, password) {
-//     const requestOptions = {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ username, password })
-//     };
-
-//     return fetch(`${config.apiUrl}/users/authenticate`, requestOptions)
-//         .then(handleResponse)
-//         .then(user => {
-//             // store user details and jwt token in local storage to keep user logged in between page refreshes
-//             localStorage.setItem('currentUser', JSON.stringify(user));
-//             currentUserSubject.next(user);
-
-//             return user;
-//         });
-// }
-
-function logout() {
-    // remove user from local storage to log user out
-    localStorage.removeItem('currentUser');
-    currentUserSubject.next(null);
-}
-
-var Home = () => (<div>
-    dsadsadsa
-</div>)
-
-function login(){
-
-    fetch('users/authenticate/', {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            username: 'test',
-            password: 'test',
-        })
-    }).then(res=>res.body)
-    .then((body)=>{
-        const reader = body.getReader();
-        let result = "";
-
-        return reader.read().then(function process({done, value}){
-            if(done) {
-                return result;
-            } else {
-                result += new TextDecoder("utf-8").decode(value);
-                return reader.read().then(process);
-            }
-        })
-
-    }).then(res => {
-
-        localStorage.setItem('currentUser', res);
-        currentUserSubject.next(JSON.parse(res));
-
-    })
-    .catch(e => {
-        // fancier error handler
-        console.error(e);
-    })
-}
-
-class TopBar extends React.Component {
-    render(){
-        return (
-            <nav className="navbar navbar-style navbar-default navbar-fixed-top">
-        
-            <a href='#' style={{float: "right"}}><h1 style={{letterSpacing: "-0.07em"}}>
-                    <img src="a61ce20ec695c877e21b8ea099fe49c8.png" width={40}/> Auditool 审计通
-                </h1></a>
-            <a href='#' style={{float: "right"}} onClick={login}>登录</a>
-
-            </nav>
-        )
-    }
-}
-
-render(<TopBar />, document.getElementById('root'));
+render(<App />, document.getElementById('root'));
 
 // let localOnLoad = (event) => {
     

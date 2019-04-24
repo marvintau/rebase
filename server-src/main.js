@@ -57,7 +57,7 @@ app.post('/users/authenticate/', function authenticate(req, res, next) {
             });
         } else resolve(undefined);
     }))(req.body)
-        .then(user => user ? res.json(user) : res.json({ message: 'Username or password is incorrect' }))
+        .then(user => user ? res.json(user) : res.status(400).json({ message: '啊啦啦，用户名或密码不对' }))
         .catch(err => next(err));
 });
 
