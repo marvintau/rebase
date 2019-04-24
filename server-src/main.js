@@ -4,6 +4,7 @@ import path from 'path';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 
+import bcrypt from 'bcryptjs';
 import expressJWT  from 'express-jwt';
 import jwt from 'jsonwebtoken';
 
@@ -12,11 +13,11 @@ import authConfig from '../config.json';
 import FileRecv from './file-recv.js';
 const Files = {};
 
-import sql from 'mssql';
-let config = {
+import mssql from 'mssql';
+const msPool = new mssql.ConnectionPool({
     user: "marvin",
     password: "1q0o2w9i3e8u",
-    server: "192.168.0.127",
+    server: "localhost",
     options: {encrypt: true},
     authentication: {
       type: "default",
@@ -25,7 +26,16 @@ let config = {
         password: "1q0o2w9i3e8u",
     }
   }
-}
+})
+
+import pg from 'pg';
+const pgpool = new pg.Pool({
+    user: 'yuetao',
+    host: 'localhost',
+    database: 'rebase',
+    password: '1q0o2w9i3e8u',
+    port: 5432
+})
 
 var app = express();
 
@@ -42,23 +52,23 @@ app.use(cors());
 // use JWT auth to secure the api
 app.use(expressJWT({secret: authConfig.secret}).unless({path: ['/users/authenticate/']}));
 
-
-const users = [{ id: 1, username: 'test', password: 'test', firstName: 'Test', lastName: 'User' }];
-
 app.post('/users/authenticate/', function authenticate(req, res, next) {
 
-    (({username, password}) => new Promise(function(resolve, reject){
-        const user = users.find(u => u.username === username && u.password === password);
-        if (user) {
-            const { password, ...userWOPass } = user;
-            resolve({
-                token:jwt.sign({ sub: user.id }, authConfig.secret),
-                ...userWOPass
-            });
-        } else resolve(undefined);
-    }))(req.body)
-        .then(user => user ? res.json(user) : res.status(400).json({ message: '啊啦啦，用户名或密码不对' }))
-        .catch(err => next(err));
+    let {username, password} = req.body;
+    userLogin(username, password)
+        .then(user =>{
+            const { password, ...rest } = user;
+            res.json({
+                token:jwt.sign({ sub: user.username }, authConfig.secret),
+                ...rest
+            })
+        })
+        .catch(err => {
+            switch(err.type){
+                case 'WRONG_ACCOUNT' : res.status(400).json({ message: '啊啦啦，用户名或密码不对' }); break;
+                default : next(err)
+            }
+        });
 });
 
 app.use(function errorHandler(err, req, res, next) {
@@ -80,20 +90,18 @@ app.use(function errorHandler(err, req, res, next) {
 
 var restore = function(pool, path){
     const query = 
-        "declare @mdfpath nvarchar(max),"                          +
-        "        @ldfpath nvarchar(max)"                           +
-        ""                                                         +
-        "select @mdfpath = [0], @ldfpath = [1]"                    +
-        "    from (select type, physical_name "                    +
-        "            from sys.master_files"                        +
-        "            WHERE database_id = DB_ID(N'rebase'))"        +
-        "    as paths "                                            +
-        "pivot(max(physical_name) for type in ([0], [1])) as pvt;" +
-        ""                                                         +
-        "restore database rebase from disk = N'"+path+"' WITH FILE = 1," +
-        "MOVE N'Ufmodel'     TO @mdfpath,"                         +
-        "MOVE N'Ufmodel_LOG' TO @ldfpath, "                        +
-        "NOUNLOAD,  REPLACE,  STATS = 10;"                         ;
+        `declare @mdfpath nvarchar(max),
+                 @ldfpath nvarchar(max)
+        select @mdfpath = [0], @ldfpath = [1]
+            from (select type, physical_name 
+                    from sys.master_files
+                    WHERE database_id = DB_ID(N'rebase'))
+            as paths 
+        pivot(max(physical_name) for type in ([0], [1])) as pvt;
+        restore database rebase from disk = N'${path}' WITH FILE = 1,
+        MOVE N'Ufmodel'     TO @mdfpath,
+        MOVE N'Ufmodel_LOG' TO @ldfpath, 
+        NOUNLOAD,  REPLACE,  STATS = 10;`
 
     return pool.request().query(query);
 }
@@ -101,8 +109,56 @@ var restore = function(pool, path){
 var fetchTable = function (pool, tableName){
 
     let req = pool.request();
-    return req.query("use rebase; select * from "+tableName+";");
+    return req.query(`use rebase; select * from ${tableName};`);
 }
+
+var userCheck = function(username){
+    return pgpool
+        .query(`select * from useraccount where username='${username}'`)
+        .then(res => res.rows)
+        .catch(error => console.error("USERCHECK: ", error));
+}
+
+var userRegister = function(username, password, nickname){
+    return userCheck(username)
+        .then(res=>{
+            if (res.length === 0) {
+                return bcrypt.hash(password, 2)
+                .then(hashed=>{
+                    return pgpool.query(`insert into useraccount(username, password, nickname) values ('${username}', '${hashed}', '${nickname}')`);
+                })
+                .catch(error=>{
+                    console.error(error);
+                })
+            } else {
+                return {type: 'USERNAME_EXISTS', reason: 'username exists'}
+            }
+        }).then(res => {
+            return {result: 'OK'}
+        }).catch(error => {
+            console.error(error);
+        })
+}
+
+var userLogin = function(username, password){
+    return new Promise((resolve, reject) => {
+        userCheck(username).then(res => {
+            if (res.length === 0){
+                reject({type: 'WRONG_ACCOUNT', reason: 'wrong account info'})
+            } else {
+                return bcrypt.compare(password, res[0].password)
+                    .then(match=>{
+                        if (match) resolve(res[0])
+                        else reject({type: 'WRONG_ACCOUNT', reason: 'wrong account info'})
+                    })
+            }
+        })
+    })
+}
+
+console.log(
+    userRegister('asdasdasd', '123123123', "老陶")
+);
 
 // io.sockets.on('connection', function (socket) {
 

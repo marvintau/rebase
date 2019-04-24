@@ -62,10 +62,10 @@ function formEntry(fieldName, placeholder, errors, touched){
 function Links(currentUser){
     if(currentUser){
         // console.log(currentUser);
-        const {firstName, lastName} = currentUser;
+        const {nickname} = currentUser;
         return (<div className="compact-form">
             <div className="form-entry">
-                <button className="form-control form-btn-down btn-sm btn-outline-primary" onClick={logout}>{`${firstName}${lastName}`}-登出</button>
+                <button className="form-control form-btn-down btn-sm btn-outline-primary" onClick={logout}>{`${nickname}`}-登出</button>
             </div>
         </div>)
     } else {
