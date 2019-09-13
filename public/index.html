@@ -1,212 +1,22 @@
 <!doctype html>
 <head>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <link rel="stylesheet" href="./pagination.css">
     <style>
-
-    select {
-        padding: 5px;
-        width: 50px;
-        margin: 0 10px;
-    }
-
-    .select-wrapper{
-        margin: 10px 0;
-    }
-
-    input{
-        width: 100%;
-        margin-top: 5px;
-        padding: 5px 3px;
-        outline: none;
-        border: 0px solid transparent;
-        border-radius: 3px;
-    }
-    .table-outer {
-        margin-bottom: 20px;
-        height: 90vh;
-        font-size: 90%;
-        border: 1px solid black;
-        position: relative;
-        overflow:auto;
-        background: transparent;
-    }
-    
-    .table-embedded {
-        transition: all .5s;
-        overflow:auto;
-        font-size: 90%;
-        border: 1px solid black;
-        position: relative;
-        overflow:auto;
-        background: transparent;
-    }
-
-    .table-title{
-        font-size: 200%;
-        font-weight: bolder;
-    }
-
-    .paginator{
-        margin-bottom: 40px;
-    }
-
-    .table-wrapper {
-        margin-bottom: 40px;
-    }
-
-    #container{
-        min-width: 0;
-        margin: 10px;
-    }
-
-    .cell-editing{
-        margin: -1px;
-        border: 1px solid rgb(128, 128, 128, 0.7);
-    }
-
-    .btn-modify{
-        font-size: 85%;
-        margin-top: 4px;
-        margin-right: 5px;
-    }
-
-    .btn-modify:focus{
-        outline-style:none;
-        box-shadow:none;
-        border-color:transparent;
-    }
-
-    table {
-        /* height: 100%; */
-        border-collapse: collapse;
-        width: 100%;
-    }
-
-    tr {
-        position : relative;
-    }
-    
-    th, td {
-        /* max-width: 200px; */
-        font-family: "consolas", "inconsolata", "TheSansMono Office", monospace;
-        -webkit-user-select: none; /* webkit (safari, chrome) browsers */
-        -moz-user-select: none; /* mozilla browsers */
-        padding: 8px;
-        border: 1px solid;
-        white-space: pre;
-        word-wrap: none;
-    }
-
-    .agg {
-        display:block;
-        margin: 5px;
-        z-index: -9999;
-    }
-
-    .th-header {
-        border: 1px solid black !important;
-        background-color: black !important;
-        padding: 5px;
-        color: rgb(255, 251, 247) !important;
-        /* opacity: 0.75; */
-        position: sticky;
-        top: -1px !important;
-    }
-
-    .item{
-        margin: 10px;
-    }
-
-    .btn-area{
-        display: inline-block;
-    }
-
-
-    .sidebar {
-        width: 20%;
-        position: sticky;
-        top: 0;
-        margin: 10px;
-    }
-
-    .varchar{
-        background-color: #eee8d5;
-    }
-
-    .smallint, .tinyint{
-        background-color: #99ffff;
-    }
-
-    .float, .money{
-        font-weight: bold;
-        background-color: #d33682;
-    }
-
-    .fold{
-        margin: 1px !important;
-        padding: 3px !important;
-    }
-
-    .page-indicator{
-        margin-left: 30px;
-    }
-
-    </style>
-
-    <style>
-
     .navbar-style {
-        height: 10vh;
+        height: 50px;
         background: #eee8d5;
-    }
-
-    .compact-form{
-        height: 100%;
         display: flex;
-        align-items: top;
-    }
-    
-    .form-entry{
-        margin: 0 5px;
+        align-content: center;
     }
 
-    .form-btn-down{
-        margin-top: 6px;
+    #root {
+        width: 100%;
     }
 
-    .login-alert{
-        margin: -1px;
-    }
-    </style>
+   </style>
 </head>
 <body>
     <div id="root">
             
-    </div>
-
-    <div class="sidebar">
-        
-        <div id="local-upload">
-            <!-- <div class="custom-file">
-                <input type="file" class="custom-file-input" id="choose-local-file" aria-describedby="inputGroupFileAddon02">
-                <label class="custom-file-label" for="choose-local-file">选择上传一个导出到本地的.JSON文件</label>
-            </div> -->
-        </div>        
-
-        <!-- <div id="backup-upload-area" class="input-group col-md-12">
-            <div class="custom-file">
-                <input type="file" class="custom-file-input" id="choose-backup-file" aria-describedby="inputGroupFileAddon01">
-                <label class="custom-file-label" for="choose-backup-file">选择将要导入SQLServer的.BAK文件</label>
-            </div>
-        </div> -->
-
-        <!-- <div class="label col-md-12" style=" margin-bottom:10px;" id="indicator">就绪</div> -->
-
-    </div>
-
-    <div id="container" style="margin-top:10px;">
-        <div id="table-area" ></div>
     </div>
 </body>
 

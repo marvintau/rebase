@@ -1,41 +1,17 @@
 
+const BACKUP_PATH='E:/tempBackupStorage';
+
 import express from 'express';
 import path from 'path';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 
-import bcrypt from 'bcryptjs';
-import expressJWT  from 'express-jwt';
-import jwt from 'jsonwebtoken';
-
-import authConfig from '../config.json';
+const fs = require('fs').promises;
 
 import FileRecv from './file-recv.js';
 const Files = {};
 
-import mssql from 'mssql';
-const msPool = new mssql.ConnectionPool({
-    user: "marvin",
-    password: "1q0o2w9i3e8u",
-    server: "localhost",
-    options: {encrypt: true},
-    authentication: {
-      type: "default",
-      options: {  
-        userName: "marvin",
-        password: "1q0o2w9i3e8u",
-    }
-  }
-})
-
-import pg from 'pg';
-const pgpool = new pg.Pool({
-    user: 'yuetao',
-    host: 'localhost',
-    database: 'rebase',
-    password: '1q0o2w9i3e8u',
-    port: 5432
-})
+import {operate, retrieveAndStore} from './database.js';
 
 var app = express();
 
@@ -44,209 +20,188 @@ var server = app.listen(1337, function () {
   console.log("run from the " + __dirname);
 });
 
+const io = require('socket.io').listen(server);
+const tableServer = io.of('/TABLES');
+const uploadServer = io.of('/UPLOAD');
+
+
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
-// use JWT auth to secure the api
-app.use(expressJWT({secret: authConfig.secret}).unless({path: ['/users/authenticate/']}));
+uploadServer.on('connection', function (socket) {
 
-app.post('/users/authenticate/', function authenticate(req, res, next) {
+    socket.on('START', function (data) { 
 
-    let {username, password} = req.body;
-    userLogin(username, password)
-        .then(user =>{
-            const { password, ...rest } = user;
-            res.json({
-                token:jwt.sign({ sub: user.username }, authConfig.secret),
-                ...rest
-            })
-        })
-        .catch(err => {
-            switch(err.type){
-                case 'WRONG_ACCOUNT' : res.status(400).json({ message: '啊啦啦，用户名或密码不对' }); break;
-                default : next(err)
-            }
+        var fileStub;
+        Files[data.name] = fileStub = new FileRecv(data.size, path.join(BACKUP_PATH, data.path));
+
+        fileStub.open('a').then(function(fd){
+            console.log("[start] file " + data.name + " desc created, ready to receive more.");
+            fileStub.handler = fd;
+            socket.emit('UPLOAD_MORE', { 'position': 0, 'percent': 0 });
+        }).catch(function(err){
+            console.error('[start] file open error: ' + err.toString());
         });
-});
+    });
 
-app.use(function errorHandler(err, req, res, next) {
+    socket.on('SEND', function (data) {
 
-    if (typeof (err) === 'string') {
-        // custom application error
-        return res.status(400).json({ message: err });
-    }
+        var fileStub = Files[data.name];
+    
+        fileStub.updateLen(data.segment);
 
-    if (err.name === 'UnauthorizedError') {
-        // jwt authentication error
-        return res.status(401).json({ message: 'Invalid Token' });
-    }
+        if (fileStub.isFinished()) {
 
-    // default to 500 server error
-    console.log(err);
-    return res.status(500).json({ message: err.message });
+            fileStub.write().then(function(){
+                return fileStub.close();
+            }).then(function(){
+                return fs.readdir(BACKUP_PATH)
+            }).then(res => {
+                socket.emit('DONE', {list: res})
+            })
+        
+        
+        } else if (fileStub.data.length > 10485760) { //buffer >= 10MB
+            fileStub.write().then(function(){
+                fileStub.data = ''; //reset the buffer
+                socket.emit('MORE', fileStub.progress());
+            }).catch(function(err){
+                console.error(err);
+            });
+
+        } else {
+            socket.emit('MORE', fileStub.progress());
+        }
+    });
+
 })
 
-var restore = function(pool, path){
-    const query = 
-        `declare @mdfpath nvarchar(max),
-                 @ldfpath nvarchar(max)
-        select @mdfpath = [0], @ldfpath = [1]
-            from (select type, physical_name 
-                    from sys.master_files
-                    WHERE database_id = DB_ID(N'rebase'))
-            as paths 
-        pivot(max(physical_name) for type in ([0], [1])) as pvt;
-        restore database rebase from disk = N'${path}' WITH FILE = 1,
-        MOVE N'Ufmodel'     TO @mdfpath,
-        MOVE N'Ufmodel_LOG' TO @ldfpath, 
-        NOUNLOAD,  REPLACE,  STATS = 10;`
 
-    return pool.request().query(query);
-}
+tableServer.on('connection', function (socket) {
 
-var fetchTable = function (pool, tableName){
+    socket.on('REQUIRE_LIST', function(){
+        fs.readdir(BACKUP_PATH).then(res => {
+            socket.emit('LIST', {list: res});
+        }).catch(err => {
+            console.log('server reading local file failed', err);
+        })    
+    })
 
-    let req = pool.request();
-    return req.query(`use rebase; select * from ${tableName};`);
-}
+    socket.on('START', function({projName, sheetName, type}){
+        let fileName = `${projName}.${sheetName}${type === undefined ? "" : "."+type}.JSON`,
+            filePath = path.join(BACKUP_PATH, fileName);
 
-var userCheck = function(username){
-    return pgpool
-        .query(`select * from useraccount where username='${username}'`)
-        .then(res => res.rows)
-        .catch(error => console.error("USERCHECK: ", error));
-}
-
-var userRegister = function(username, password, nickname){
-    return userCheck(username)
-        .then(res=>{
-            if (res.length === 0) {
-                return bcrypt.hash(password, 2)
-                .then(hashed=>{
-                    return pgpool.query(`insert into useraccount(username, password, nickname) values ('${username}', '${hashed}', '${nickname}')`);
+        fs.open(filePath).then((fileHandle) => {
+            Files[fileName] = {fileHandle, buffer: Buffer.alloc(524288), blockSize: 524288, currPosition: 0};
+            console.log('opening file', fileName);
+            socket.emit('TRANS', {projName, sheetName, progress: 0, data: undefined, type: 'FIRST'})
+        }).catch(err => {
+            console.log('opening file failed', err);
+            if(err.code ==='ENOENT' && type ==="CONF"){
+                console.log('CONF file not created yet. Now create it.');
+                fs.writeFile(filePath, '[]')
+                .then((res) => {
+                    return fs.open(filePath)
                 })
-                .catch(error=>{
-                    console.error(error);
+                .then((fileHandle) => {
+                    Files[fileName] = {fileHandle, buffer: Buffer.alloc(524288), blockSize: 524288, currPosition: 0};
+                    console.log('opening file', fileName);
+                    socket.emit('TRANS', {projName, sheetName, progress: 0, data: undefined, type: 'FIRST'})
                 })
-            } else {
-                return {type: 'USERNAME_EXISTS', reason: 'username exists'}
-            }
-        }).then(res => {
-            return {result: 'OK'}
-        }).catch(error => {
-            console.error(error);
-        })
-}
-
-var userLogin = function(username, password){
-    return new Promise((resolve, reject) => {
-        userCheck(username).then(res => {
-            if (res.length === 0){
-                reject({type: 'WRONG_ACCOUNT', reason: 'wrong account info'})
-            } else {
-                return bcrypt.compare(password, res[0].password)
-                    .then(match=>{
-                        if (match) resolve(res[0])
-                        else reject({type: 'WRONG_ACCOUNT', reason: 'wrong account info'})
-                    })
+                .catch(err => {
+                    console.log('opening file failed, even just the newly touched one', err);
+                })
             }
         })
     })
-}
 
-console.log(
-    userRegister('asdasdasd', '123123123', "老陶")
-);
+    socket.on('READY', function({projName, sheetName, type}){
+        let fileName = `${projName}.${sheetName}${type === undefined ? "" : "."+type}.JSON`;
+        let {fileHandle, buffer, blockSize, currPosition} = Files[fileName];
 
-// io.sockets.on('connection', function (socket) {
+        let size;
 
-//     socket.on('start', function (data) { 
-
-//         var fileStub;
-//         Files[data.name] = fileStub = new FileRecv(data.size, path.join('D:/temp', data.name));
-
-//         fileStub.open().then(function(fd){
-//             console.log("[start] file " + data.name + " desc created, ready to receive more.");
-//             fileStub.handler = fd;
-//             socket.emit('more', { 'position': 0, 'percent': 0 });
-//         }).catch(function(err){
-//             console.error('[start] file open error: ' + err.toString());
-//         });
-//     });
-
-//     socket.on('single-table-request', function(message){
-
-//         sql.connect(config)
-//         .then(function(pool){
-//             return fetchTable(pool);
-//         }).then(function(res){
-//             console.log(Object.keys(res));
-//             socket.emit('msg', {type:"VOUCHER", voucher: res.recordset});
-//         }).catch(function(err){
-//             socket.emit('err', {type: err});
-//         }).finally(function(){
-//             sql.close();
-//         });
-//     });
-
-//     socket.on('upload', function (data) {
-
-//         var fileStub = Files[data.name];
-    
-//         fileStub.updateLen(data.segment);
-
-//         if (fileStub.isFinished()) {
-
-//             fileStub.write().then(function(){
-//                 return fileStub.close();
-//             }).then(function(){
-//                 socket.emit('msg', { type:"UPLOAD_DONE", file: fileStub.name });
-//                 return sql.connect(config);
-//             }).then(function(pool){
-//                 return restore(pool, fileStub.filePath)
-//                         .then(function(res){
-//                             console.log(res);
-//                             socket.emit('msg', {type:"RESTORE_DONE"});
-//                             return fetchTable(pool, "code");
-//                         }).then(function(res){
-//                             socket.emit('msg', {type:"DATA", tableName:"SYS_code", data: res.recordset});
-//                             return pool.query('select * from RPT_ItmDEF');
-//                         }).then(function(res){
-//                             socket.emit('msg', {type:"DATA", tableName:"SYS_RPT_ItmDEF", data: res.recordset});
-//                             return fetchTable(pool, "GL_accvouch");
-//                         }).then(function(res){
-//                             socket.emit('msg', {type:"DATA", tableName:"GL_accvouch", data:res.recordset});
-//                             return fetchTable(pool, "GL_accsum");
-//                         }).then(function(res){
-//                             socket.emit('msg', {type:"DATA", tableName:"GL_accsum", data:res.recordset});
-//                         }).catch(function(err){
-//                             socket.emit('err', {type: err});
-//                         }).finally(function(){
-//                             // DURING DEVELOPMENT: delete the file anyway. 
-//                             return fileStub.delete();
-//                         });
-
-//             }).then(function(){
-//                 fileStub = undefined;
-//                 return sql.close();
-//             }).catch(function(err){
-//                 console.error(err);
-//             });
+        fileHandle.stat().then(res => {
         
-//         } else if (fileStub.data.length > 10485760) { //buffer >= 10MB
-//             fileStub.write().then(function(){
-//                 fileStub.data = ''; //reset the buffer
-//                 socket.emit('more', fileStub.progress());
-//             }).catch(function(err){
-//                 console.error(err);
-//             });
+            size = res.size;
+            return fileHandle.read(buffer, 0, blockSize) 
+        
+        }).then(({bytesRead, buffer}) => {
+            if(currPosition === size){
+                socket.emit('DONE', {projName, sheetName})
+                fileHandle.close();
+            } else {
+                Files[fileName].currPosition += bytesRead;
+                let res = {type: 'REST', data : buffer.buffer.slice(0, bytesRead)};
+                socket.emit('TRANS', {projName, sheetName, progress: currPosition/size, ...res})
+            }
+        }).catch(err=>{
+            console.log(err, 'file')
+        })
+    })
 
-//         } else {
-//             socket.emit('more', fileStub.progress());
-//         }
-//     });
-// });
+    socket.on('SAVE', function({project, sheet, type, data}){
+        let filePath = `${project}.${sheet}${type===undefined ? "" : "."+type}.JSON`;
+
+        // console.log('SAVED FILE', filePath, data.slice(0, 20));
+
+        fs.writeFile(path.join(BACKUP_PATH, filePath), JSON.stringify(data)).then(res => {
+            socket.emit('SAVED');
+        })
+    })
+
+    socket.on('RESTORE', function(data){
+
+        const initialTables = [
+            'BALANCE',
+            'ENTRIES',
+            'CATEGORY',
+        ];
+    
+        console.log('begin restoring', data);
+        operate('RESTORE', path.join(BACKUP_PATH, `${data.path}.BAK`)).then(res => {
+            let dataPath = path.join(BACKUP_PATH, data.path);
+            
+            Promise.all(initialTables.map(method => retrieveAndStore(dataPath, method)))
+                .then(res => {
+                    return fs.writeFile(path.join(BACKUP_PATH, `${data.path}.RESTORED`))
+                })
+                .then(res => {
+                    socket.emit('FILEPREPARED', {})
+                })
+
+        }).catch(err=>{
+            console.error(err, 'restore');
+            socket.emit('ERROR', {type:"ERROR", data:{err, from:"restore"}})
+        });
+
+        let processDetected = false;
+
+        (function polling(){
+            operate('PROGRESS').then(function(res){
+
+                if(res.recordset.length === 0){
+                    if(processDetected){
+                        console.log('no more restoring process');
+                        socket.emit('RESTOREDONE', {});    
+                    } else {
+                        setTimeout(polling, 100);
+                    }
+
+                } else {
+                    processDetected = true;
+                    console.log(res.recordset[0], 'prog');
+                    socket.emit('PROG', {data : res.recordset[0] });
+                    setTimeout(polling, 100);
+                }
+            }).catch(err=>{
+                console.log(err, 'polling');
+                socket.emit('ERROR', {type:"ERROR", data: {err, from:"polling"}})
+            })
+        })();
+    })
+});
 
 
