@@ -94,10 +94,11 @@ function handleRawList(rawList){
     rawList.map((e) => {
         return e.split('.')
     }).forEach(([name, type]) => {
+        console.log(name, type)
         if (type === 'BAK'){
-            dict[name] = {projName:name, projStat: 'no-restored'}
+            Object.assign(dict, {[name]: {projName:name, projStat: 'no-restored'}});
         } else if (type === 'RESTORED'){
-            dict[name].projStat = 'restored';
+            Object.assign(dict, {[name]: {projName:name, projStat: 'restored'}});
         }
     });
 
@@ -131,11 +132,7 @@ export default class ProjectManager extends React.Component {
 
     selectProject(index){
 
-        let sheetList = Object.entries(ProceduralSheets).map(
-            ([k, v]) => ({sheetName: k, ...v})
-        )
-
-        console.log(sheetList);
+        let sheetList = Object.assign({}, ProceduralSheets);
 
         this.setState({
             proj: {...this.state.projList[index], sheetList}
@@ -145,13 +142,13 @@ export default class ProjectManager extends React.Component {
     selectSheet = (e) => {
         
         let {initTable} = this.props;
-        
-        let index = e.target.dataset.key,
-            {proj} = this.state,
-            {projName} = proj,
-            {sheetName, desc, type, head, referred, proc, saveProc} = this.state.proj.sheetList[index];
-        
-        initTable({projName, sheetName, desc, type, head, referred, proc, saveProc});
+
+        let sheetName = e.target.dataset.key,
+            sheetSpec = this.state.proj.sheetList[sheetName],
+            {projName} = this.state.proj;
+
+        console.log(e.target, sheetName, sheetSpec, 'before calling initTable')
+        initTable({projName, sheetName, sheetSpec});
     }
 
     backToList = (e) => {
@@ -180,11 +177,13 @@ export default class ProjectManager extends React.Component {
             if (proj.projStat !== 'restored'){
                 elemDisplay = <RestoreBackup path={name} socket={socket}/> 
             } else {
-                elemDisplay = proj.sheetList.map(({desc, progress, status}, index) =>{
-                    return <Button key={index} data-key={index} onClick={this.selectSheet}>
-                        <div>{desc}</div>
-                    </Button>
-                })
+                elemDisplay = [];
+                for (let sheetName in proj.sheetList){
+                    let {desc} = proj.sheetList[sheetName];
+                    elemDisplay.push(<Button key={sheetName} data-key={sheetName} onClick={this.selectSheet}>
+                        {desc}
+                    </Button>)
+                }
             }
 
             displayed = <ProjItem>

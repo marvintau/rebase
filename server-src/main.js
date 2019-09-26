@@ -1,5 +1,5 @@
 
-const BACKUP_PATH='E:/tempBackupStorage';
+const BACKUP_PATH='/Users/yuetao/SimulateServerStorage';
 
 import express from 'express';
 import path from 'path';

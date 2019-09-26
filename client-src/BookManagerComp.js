@@ -1,14 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
+import Formwell from 'formwell';
 
 import ProjectManager from './ProjectManager';
-import SheetComp from './BookComponent/SheetComp';
-
-import Sheet from './Booking/Sheet';
 
 import {address} from './Config.js';
 
 import io from 'socket.io-client';
+
+import {List} from 'mutated';
 
 const Log = styled.div`
     margin: 10px;
@@ -41,7 +41,7 @@ export default class BookManagerComp extends React.Component{
             currRecordPath : []
         }
 
-        this.data = {};
+        this.sheets = {};
 
         this.socket = io(`http://${address}/TABLES`);
 
@@ -49,12 +49,12 @@ export default class BookManagerComp extends React.Component{
 
             switch(type){
                 case 'FIRST':
-                    this.data[sheetName].blobs = [];
-                    this.socket.emit('READY', {projName, sheetName, type: this.data[sheetName].type});
+                    this.sheets[sheetName].blobs = [];
+                    this.socket.emit('READY', {projName, sheetName, type: this.sheets[sheetName].type});
                     break;
                 case 'REST':
-                    this.data[sheetName].blobs.push(data);
-                    this.socket.emit('READY', {projName, sheetName, type: this.data[sheetName].type});
+                    this.sheets[sheetName].blobs.push(data);
+                    this.socket.emit('READY', {projName, sheetName, type: this.sheets[sheetName].type});
                     this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已下载${(progress*100).toFixed(2)}%`, true)
                     break;
             }
@@ -63,22 +63,21 @@ export default class BookManagerComp extends React.Component{
 
             this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 下载完毕`)
 
-            let blob = new Blob(this.data[sheetName].blobs);
+            let blob = new Blob(this.sheets[sheetName].blobs);
             let reader = new FileReader();
-            this.data[sheetName].blobs = undefined;
+            this.sheets[sheetName].blobs = undefined;
 
             reader.onload = (e) => {
                 this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 正在解析JSON`, true);
                 let data = JSON.parse(e.target.result);
-                this.data[sheetName].sheet = new Sheet(data, {});
-                this.data[sheetName].status = 'ready';
-                this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 解析完毕, 共${this.data[sheetName].sheet.data.length}行数据`, true);
+                this.sheets[sheetName].data = data;
+                this.sheets[sheetName].status = 'ready';
+                this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 解析完毕, 共${this.sheets[sheetName].data.length}行数据`, true);
 
                 this.proceedExecuteProcedure();
             }
             reader.onprogress = (e) => {
                 this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已读取${(e.loaded/e.total*100).toFixed(2)}%`, true);
-                // this.notify(projectName, sheetNameName, {progress: e.loaded/e.total, status: 'PARSING'})
             }
             reader.readAsText(blob);
 
@@ -94,7 +93,7 @@ export default class BookManagerComp extends React.Component{
     }
 
     clearCurrentProject = (e) => {
-        this.data = {};
+        this.sheets = {};
         console.log('clearing')
         this.setState({
             currProjectName: undefined,
@@ -119,56 +118,79 @@ export default class BookManagerComp extends React.Component{
         })
     }
 
-    initTable = ({projName, sheetName, desc, type, head, referred, proc, saveProc}) => {
+    initTable = ({projName, sheetName, sheetSpec}) => {
 
-        if(this.data[sheetName] && this.data[sheetName].status === 'ready'){
-            this.log(`表 ${sheetName} 已经就绪，直接切换`);
+        // called by selectSheet from ProjectManager.
+
+        // initTable checks if the dependency is satisfied. If the required data
+        // is not retrieved yet, then send request to server.
+
+        if(this.sheets[sheetName] && this.sheets[sheetName].status === 'ready'){
+
+            let {type, desc} = sheetSpec;
+
+            this.log(`表 ${desc} 已经就绪，直接切换`);
             this.setState({
                 currProjectName: projName,
                 currSheet: sheetName,
                 currType: type
             })
-        }
 
-        this.log(`准备获取 [${desc}]，检查引用的数据是否存在。`);
+        } else {
 
-        if(referred === undefined){
-            this.log(`${desc} 里就没写refer了谁，赶紧查一下代码吧`)
-        }
+            let {referred, desc} = sheetSpec;
 
-        for (let sheet in referred){
-            if(!(sheet in this.data) && referred[sheet] === 'local'){
-                this.log(`${desc} 所依赖的本地表 ${sheet} 并不存在，需要先获取上一层依赖关系的表` );
-                return;
+            this.log(`准备获取 [${desc}]，检查引用的数据是否存在。`);
+
+            if(referred === undefined){
+                this.log(`${desc} 里referred表未定义`)
             }
-        }
 
-        for (let sheet in referred){
-            this.log(`${referred[sheet].location === 'remote' ? '远程' : '本地'}表 ${referred[sheet].desc}，${sheet in this.data ? '存在' : '不存在'}`);
-            if(!(sheet in this.data) && referred[sheet].location === 'remote'){
-                let {type, desc} = referred[sheet];
-                this.data[sheet] = {status: 'pending', desc, type};
-                this.socket.emit('START', {projName, sheetName: sheet, type})
+            // check if there is any local table that not defined.
+            // if there is, stop, otherwise proceed.
+
+            for (let sheet in referred){
+                if(!(sheet in this.sheets) && referred[sheet] === 'local'){
+                    this.log(`${desc} 所依赖的本地表 ${sheet} 并不存在，需要先获取上一层依赖关系的表` );
+                    return;
+                }
+            }    
+
+            // retrieve the remote tables.
+
+            for (let sheet in referred){
+                this.log(`${referred[sheet].location === 'remote' ? '远程' : '本地'}表 ${referred[sheet].desc}，${sheet in this.sheets ? '存在' : '不存在'}`);
+                if(!(sheet in this.sheets) && referred[sheet].location === 'remote'){
+                    let {type, desc} = referred[sheet];
+                    this.sheets[sheet] = {status: 'pending', desc, type};
+                    this.socket.emit('START', {projName, sheetName: sheet, type})
+                }
             }
-        }
+    
+            // temp stores current table that waiting for remote tables.
+            // Notice that temp only stores one single table, because there could 
+            // be only one table to wait.
 
-        this.proceeding = {projName, sheetName, desc, head, type, proc, saveProc};
+            this.temp = {projName, sheetName, sheetSpec};
+            console.log(this.temp)
+        }
     }
 
     proceedExecuteProcedure = () => {
 
-        for (let sheet in this.data){
-            if(this.data[sheet].status !== 'ready'){
-                this.log(`表 ${sheet}(${this.data[sheet].desc}) 尚未就绪，等待下一次检查`);
+        for (let sheet in this.sheets){
+            if(this.sheets[sheet].status !== 'ready'){
+                this.log(`表 ${sheet}(${this.sheets[sheet].desc}) 尚未就绪，等待下一次检查`);
                 return;
             } else {
-                this.log(`表 ${sheet}(${this.data[sheet].desc}) 已就绪`);
+                this.log(`表 ${sheet}(${this.sheets[sheet].desc}) 已就绪`);
             }
         }
 
-        let {projName, sheetName, desc, head, type, proc, saveProc} = this.proceeding;
-        console.log(this.data, desc, type, 'before creating sheet');
-        this.data[sheetName] = {status: 'ready', sheet: new Sheet(this.data, {proc, saveProc, head, desc, type: type ? type : 'DATA'})};
+        let {projName, sheetName, sheetSpec} = this.temp,
+            {importProc, exportProc, desc, type='DATA'} = sheetSpec;
+
+        this.sheets[sheetName] = {status: 'ready', importProc, exportProc, desc, type, ...importProc(this.sheets)};
 
         this.setState({
             currProjectName: projName,
@@ -194,14 +216,12 @@ export default class BookManagerComp extends React.Component{
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
-                {sheet} = this.data[sheetName];
+                sheet = this.sheets[sheetName];
 
-            displayedContent = <WorkAreaContainer><SheetComp
-                table={sheet}
-                pageSize={20}
-                currPath={this.state.currRecordPath}
-                setRecordPath={this.setRecordPath}
-                save={this.save}
+            console.log(sheet.data.constructor === List, 'bookmanager');
+
+            displayedContent = <WorkAreaContainer><Formwell
+                {...sheet}
             /></WorkAreaContainer>;
         }
 

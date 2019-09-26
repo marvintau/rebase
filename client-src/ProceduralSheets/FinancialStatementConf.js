@@ -1,6 +1,4 @@
-import Sheet from "../Booking/Sheet";
-import List from "../Booking/List";
-import Record from "../Booking/Record";
+import {Record, List} from 'mutated';
 
 const SheetCategory = new List(
     {entry: '00', entry_name: '资产' },
@@ -79,9 +77,9 @@ export default {
         savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
         CATEGORY: {desc: '科目类别', location:'remote'}
     },
-    proc({CATEGORY, savedFinancialStatementConf: saved}, logger){
+    proc({CATEGORY, savedFinancialStatementConf: saved}){
 
-        let categoryData = CATEGORY.sheet.data;
+        let categoryData = CATEGORY.data;
         categoryData = categoryData
         .tros((rec) => rec.get('ccode'))
         .uniq((rec) => rec.get('ccode'))
@@ -89,20 +87,20 @@ export default {
             let descCode = desc.get('ccode'),
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
-        }, logger, '按科目级联')
+        }, '按科目级联')
         .toCascadedObject('ccode_name');
 
         console.log(categoryData);
 
-        let head = [
-            {colKey: 'entry', name: '条目级次'},
-            {colKey: 'entry_name', name: '条目名称'},
-            {colKey: 'corrCategory', name:'对应科目',attr:{type: 'cascadedSelect', spec: {optionTree: categoryData}}},
-            // {colKey: 'assigned', name: '对应操作',attr:{type: 'select', spec: 'SumMethod'}}
+        let colsAttr = [
+            {colKey: 'entry', colDesc: '条目级次'},
+            {colKey: 'entry_name', colDesc: '条目名称'},
+            {colKey: 'corrCategory', colDesc:'对应科目', cellType: 'CascadedSelect', options: categoryData},
+            {colKey: 'assigned', name: '对应操作', cellType: 'SingleSelect', options: methods}
         ]
         
-        // let savedData = saved.sheet.data,
-        //     categoryData = CATEGORY.sheet.data,
+        // let savedData = saved.data,
+        //     categoryData = CATEGORY.data,
         //     savedDict = {};
 
         // for (let i = 0; i<savedData.length; i++){
@@ -127,9 +125,9 @@ export default {
                 let descCode = desc.get('entry'),
                     ancesCode = ances.get('entry');
                 return descCode.slice(0, ancesCode.length).includes(ancesCode)
-            }, logger, '按科目级联');
+            }, '按科目级联');
 
-        return {head, data};
+        return {colsAttr, data};
     },
     saveProc(originalData){
         return originalData.flatten().map(e => e.toObject());

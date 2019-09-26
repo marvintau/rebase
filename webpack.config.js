@@ -1,4 +1,5 @@
 const webpack = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
 const path = require('path');
 const fs = require('fs');
@@ -46,6 +47,9 @@ const clientConfigure = {
 
 	resolve: {
 		extensions: ['.js', '.json'],
+		// alias: {
+		//   "styled-components": path.resolve(__dirname, "node_modules", "formwell", "node_modules", "styled-components"),
+		// }
 	},
 
 	entry: {
@@ -73,20 +77,26 @@ const clientConfigure = {
 	mode: 'development',
 
 	optimization: {
-		splitChunks: {
-			cacheGroups: {
-				vendors: {
-					priority: -10,
-					test: /[\\/]node_modules[\\/]/
-				}
-			},
-
-			chunks: 'async',
-			minChunks: 1,
-			minSize: 30000,
-			name: true
-		}
-	}
+		minimizer: [
+			new TerserPlugin({
+				terserOptions: {
+				ecma: undefined,
+				warnings: false,
+				parse: {},
+				compress: {},
+				mangle: true,
+				module: false,
+				output: null,
+				toplevel: false,
+				nameCache: null,
+				ie8: false,
+				keep_classnames: undefined,
+				keep_fnames: true, // change to true here
+				safari10: false,
+				},
+			}),
+		],
+	},
 };
 
 module.exports = [clientConfigure, serverConfigure];
