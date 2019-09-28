@@ -1,32 +1,66 @@
+import {Record, List, Header} from 'mutated';
 
-let SheetCategory = [
-{entry: '0', entry_name: '经营活动产生的现金流量'},
-{entry: '001', entry_name: '销售商品、提供劳务收到的现金'},
-{entry: '002', entry_name: '收到其他与经营活动有关的现金'},
-{entry: '003', entry_name: '购买商品、接受劳务支付的现金'},
-{entry: '004', entry_name: '支付给职工以及为职工支付的现金'},
-{entry: '005', entry_name: '支付的各项税费'},
-{entry: '006', entry_name: '支付其他与经营活动有关的现金'},
-{entry: '1', entry_name: '投资活动产生的现金流量'},
-{entry: '108', entry_name: '收回投资收到的现金'},
-{entry: '109', entry_name: '处置子公司及其他营业单位收回的现金净额'},
-{entry: '110', entry_name: '取得投资收益收到的现金'},
-{entry: '111', entry_name: '处置固定资产、无形资产和其他长期资产收回的现金净额'},
-{entry: '112', entry_name: '收到其他与投资活动有关的现金'},
-{entry: '113', entry_name: '购建固定资产、无形资产和其他长期资产所支付的现金'},
-{entry: '114', entry_name: '投资支付的现金'},
-{entry: '115', entry_name: '取得子公司及其他营业单位支付的现金净额'},
-{entry: '116', entry_name: '支付其他与投资活动有关的现金'} ,
-{entry: '2', entry_name: '筹资活动产生的现金流量'},
-{entry: '218', entry_name: '吸收投资收到的现金'},
-{entry: '219', entry_name: '取得借款所收到的现金'},
-{entry: '220', entry_name: '收到其他与筹资活动有关的现金'},
-{entry: '221', entry_name: '偿还债务所支付的现金'},
-{entry: '222', entry_name: '分配股利、利润或偿付利息所支付的现金'},
-{entry: '223', entry_name: '支付其他与筹资活动有关的现金'},
-{entry: '3', entry_name: '汇率变动对现金及现金等价物的影响'},
-{entry: '4', entry_name: '现金及现金等价物净增加额'},
-{entry: '426', entry_name: '现金及现金等价物净增加额'},
-{entry: '427', entry_name: '加期初现金及现金等价物余额'},
-{entry: '5', entry_name: '期末现金及现金等价物余额'},
-];
+import cashflowStatementDirectDetails from './local/cashflowStatementDirectDetails.txt.json';
+
+export default {
+    referred: {
+        // savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
+        CATEGORY: {desc: '科目类别', location:'remote'}
+    },
+    importProc({CATEGORY}){
+
+        let sideOptions = [
+            new Record({method: '期初', methodName: '期初'}),
+            new Record({method: '贷方', methodName: '贷方'}),
+            new Record({method: '借方', methodName: '借方'})
+        ]
+
+        let methodOptions = [
+            new Record({method: '计入', methodName: '计入'}),
+            new Record({method: '减去', methodName: '减去'}),
+        ]
+
+        let category = new List(...CATEGORY.data.map(e => new Record(e)))
+        .tros(e => e.get('ccode'))
+        .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
+            let descCode = desc.get('ccode'),
+                ancesCode = ances.get('ccode');
+            return descCode.slice(0, ancesCode.length).includes(ancesCode)
+        }, '按科目级联');
+
+        let head = new Header(
+            {colKey: 'title', colDesc: '项目', cellType: 'Display', cellStyle: 'display', expandControl: true, isTitle:true},
+            {colKey: 'category', colDesc: '对应的科目类别', cellType: 'CascadeSelect', cellStyle: 'display', options: category, displayKey:'ccode_name', valueKey: 'ccode'},
+            {colKey: 'side', colDesc: '取值方式', cellType: 'SingleSelect', cellStyle: 'display', options: sideOptions, displayKey: 'methodName', valueKey: 'method'},
+            {colKey: 'method', colDesc: '计入方式', cellType: 'SingleSelect', cellStyle: 'display', options: methodOptions, displayKey: 'methodName', valueKey:'method'},
+            {colKey: 'editControl', cellType: 'EditControl', cellStyle: 'control'}
+        )
+
+        console.log(head, 'head');
+
+        let data = new List(...Object.entries(cashflowStatementDirectDetails))
+            .map(([title, content]) => {
+                let rec = new Record({title});
+
+                rec.subs = new List(...Object.entries(content).map(([title, content]) => {
+                    let rec = new Record({title});
+                    rec.subs = content.map(con => new Record(con));
+                    console.log(content, 'content');
+                    return rec;
+                }));
+
+                return rec
+            })
+            .flat(2)
+
+        console.log(data, 'imported');
+
+        return {data, head, tableAttr:{expandable: true}}
+
+    },
+    exportProc(originalData){
+        return originalData.flatten().map(e => e.toObject());
+    },
+    desc: '现金流量表配置表',
+    type: 'CONF'
+}

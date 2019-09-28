@@ -2,25 +2,23 @@ import { equal } from "assert";
 import {Record, List, Header} from 'mutated';
 
 let voucherHead = new Header(
-    {cellType:"Display", cellStyle:"display", colKey: 'ino_id', colDesc:'凭证编号', type: 'String', expandControl: true},
+    {cellType:"Display", cellStyle:"display", colKey: 'ino_id', colDesc:'凭证编号', dataType: 'String', expandControl: true},
+    {cellType:"Display", cellStyle:"display", colKey: 'ccode_name', colDesc: '科目名称', dataType: 'String'},
     {cellType:"Display", cellStyle:"display", colKey: 'ccode', colDesc: '科目编码', display:'none'},
-    {cellType:"Display", cellStyle:"display", colKey: 'ccode_name', colDesc: '科目名称', type: 'String'},
-    {cellType:"Display", cellStyle:"display", colKey: 'dbill_date', colDesc: '开票日期'},
     {cellType:"Display", cellStyle:"display", colKey: 'cCusName', colDesc: '客户名称'},
-    {cellType:"Display", cellStyle:"display", colKey: 'ccode_equal', colDesc: '对方科目', type:'String'},
+    {cellType:"Display", cellStyle:"display", colKey: 'ccode_equal', colDesc: '对方科目', dataType: 'String'},
     {cellType:"Display", cellStyle:"display", colKey: 'cdigest', colDesc: '摘要'},
-    {cellType:"Display", cellStyle:"display", colKey: 'md', colDesc: '借方发生', sortable: true, type: 'Number'},
-    {cellType:"Display", cellStyle:"display", colKey: 'mc', colDesc: '贷方发生', sortable: true, type: 'Number'},
+    {cellType:"Display", cellStyle:"display", colKey: 'md', colDesc: '借方发生', sortable: true, dataType: 'Number'},
+    {cellType:"Display", cellStyle:"display", colKey: 'mc', colDesc: '贷方发生', sortable: true, dataType: 'Number'},
 )
 
 let analyzeHead = new Header(
-    {cellType: "Display", cellStyle:"display", colKey: 'ccode', colDesc: "科目编码", display:'none'},
     {cellType: "Display", cellStyle:"display", colKey: 'ccode_name', colDesc: "科目名称", expandControl: true},
-    {cellType: "Display", cellStyle:"display", colKey: 'mb', colDesc: '期初余额', sortable: true, type: 'Number'},
-    {cellType: "Display", cellStyle:"display", colKey: 'me', colDesc: '期末余额', sortable: true, type: 'Number'},
-    {cellType: "Display", cellStyle:"display", colKey: 'ino_id', colDesc: "所在凭证", sortable: true, type: 'String'},
-    {cellType: "Display", cellStyle:"display", colKey: 'md', colDesc: '借方发生', sortable: true, type: 'Number'},
-    {cellType: "Display", cellStyle:"display", colKey: 'mc', colDesc: '贷方发生', sortable: true, type: 'Number'},
+    {cellType: "Display", cellStyle:"display", colKey: 'ccode', colDesc: "科目编码", display:'none'},
+    {cellType: "Display", cellStyle:"display", colKey: 'mb', colDesc: '期初余额', sortable: true, dataType: 'Number'},
+    {cellType: "Display", cellStyle:"display", colKey: 'me', colDesc: '期末余额', sortable: true, dataType: 'Number'},
+    {cellType: "Display", cellStyle:"display", colKey: 'md', colDesc: '借方发生', sortable: true, dataType: 'Number'},
+    {cellType: "Display", cellStyle:"display", colKey: 'mc', colDesc: '贷方发生', sortable: true, dataType: 'Number'},
 )
 
 export default{

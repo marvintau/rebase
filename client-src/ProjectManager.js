@@ -61,10 +61,6 @@ const Title = styled.div`
     margin: 10px 0px;
 `
 
-const Note = styled.div`
-    font-size: 80%;
-    margin: 10px 0px;
-`
 const Button = styled.button`
     display:flex;
     justify-content: space-between;
