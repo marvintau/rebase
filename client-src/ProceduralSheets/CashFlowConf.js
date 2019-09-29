@@ -4,10 +4,10 @@ import cashflowStatementDirectDetails from './local/cashflowStatementDirectDetai
 
 export default {
     referred: {
-        // savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
+        savedCashFlowConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
         CATEGORY: {desc: '科目类别', location:'remote'}
     },
-    importProc({CATEGORY}){
+    importProc({CATEGORY, savedCashFlowConf}){
 
         let sideOptions = [
             new Record({method: '期初', methodName: '期初'}),
@@ -21,6 +21,8 @@ export default {
         ]
 
         let category = new List(...CATEGORY.data.map(e => new Record(e)))
+        .map(e => [e, new Record({...e.cols, ccode:e.cols.ccode+'00', ccode_name:'全部'})])
+        .flat()
         .tros(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
             let descCode = desc.get('ccode'),
@@ -36,16 +38,18 @@ export default {
             {colKey: 'editControl', cellType: 'EditControl', cellStyle: 'control'}
         )
 
-        console.log(head, 'head');
+        let data = cashflowStatementDirectDetails;
+        if (savedCashFlowConf.data.length > 0 || Object.keys(savedCashFlowConf.data).length > 0){
+            data = savedCashFlowConf.data;
+        }
 
-        let data = new List(...Object.entries(cashflowStatementDirectDetails))
+        data = new List(...Object.entries(data))
             .map(([title, content]) => {
                 let rec = new Record({title});
 
                 rec.subs = new List(...Object.entries(content).map(([title, content]) => {
                     let rec = new Record({title});
                     rec.subs = content.map(con => new Record(con));
-                    console.log(content, 'content');
                     return rec;
                 }));
 
@@ -53,13 +57,24 @@ export default {
             })
             .flat(2)
 
-        console.log(data, 'imported');
-
-        return {data, head, tableAttr:{expandable: true}}
+        return {data, head, tableAttr:{expandable: true, editable: true, savable: true}}
 
     },
-    exportProc(originalData){
-        return originalData.flatten().map(e => e.toObject());
+    exportProc(data){
+        let entries = data.slice().map(e => {
+            let entries = e.subs.map (sub => {
+                let entryList = sub.subs.map(entry => {
+                    let {method, category, side} = entry.cols;
+                    return {method, category, side};
+                });
+
+                return [sub.cols.title, entryList]
+            });
+
+            return [e.cols.title, Object.fromEntries(entries)]
+        })
+
+        return Object.fromEntries(entries);
     },
     desc: '现金流量表配置表',
     type: 'CONF'

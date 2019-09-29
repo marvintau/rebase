@@ -1,14 +1,13 @@
 import React from 'react';
 import styled from 'styled-components';
-import Formwell from 'formwell';
+import io from 'socket.io-client';
 
+
+import Formwell from 'formwell';
 import ProjectManager from './ProjectManager';
 
 import {address} from './Config.js';
 
-import io from 'socket.io-client';
-
-import {List} from 'mutated';
 
 const Log = styled.div`
     margin: 10px;
@@ -18,7 +17,7 @@ const Log = styled.div`
 `
 
 const WorkAreaContainer = styled.div`
-    width: 1000px;
+    width: 800px;
     font-size : 85%;
     margin: 10px;
 `
@@ -107,14 +106,18 @@ export default class BookManagerComp extends React.Component{
         this.setState({currRecordPath});
     }
 
-    save = (table) => {
-        let {currProjectName, currSheet} = this.state;
-        let savedDataForm = table.toSavedForm();
+    // when calling this function, we have process the table data with exportProc.
+    // thus save would receive the data in plain Array & Object form.
+    save = (data) => {
+        let {currProjectName, currSheet, currType} = this.state;
+
+        console.log(data, 'to be saved');
+
         this.socket.emit('SAVE', {
             project: currProjectName,
-            sheet: `saved${currSheet}`,
-            data: savedDataForm,
-            type: table.type
+            sheet: currSheet,
+            type: currType,
+            data
         })
     }
 
@@ -172,7 +175,6 @@ export default class BookManagerComp extends React.Component{
             // be only one table to wait.
 
             this.temp = {projName, sheetName, sheetSpec};
-            console.log(this.temp)
         }
     }
 
@@ -201,15 +203,6 @@ export default class BookManagerComp extends React.Component{
 
     render(){
 
-        let statusDict = {
-            'NONE': '',
-            'FIRST': '开始下载',
-            'REST': '正在下载',
-            'PARSING': '正在读取',
-            'PARSED': '读取完毕',
-            'LOCAL': '本地'
-        }
-
         let logs = this.state.logs.map((log, index) => <div key={index}>{log}</div>)
 
         let displayedContent = <Log>{logs}</Log>;
@@ -218,10 +211,10 @@ export default class BookManagerComp extends React.Component{
             let sheetName = this.state.currSheet,
                 sheet = this.sheets[sheetName];
 
-            console.log(sheet.data.constructor === List, 'bookmanager');
+            // console.log(sheet.data.constructor === List, 'bookmanager');
 
             displayedContent = <WorkAreaContainer><Formwell
-                {...sheet}
+                saveRemote={this.save} {...sheet}
             /></WorkAreaContainer>;
         }
 

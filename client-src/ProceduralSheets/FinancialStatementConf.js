@@ -7,7 +7,9 @@ export default {
         savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
         CATEGORY: {desc: '科目类别', location:'remote'}
     },
-    importProc({CATEGORY}){
+    importProc({CATEGORY, savedFinancialStatementConf}){
+
+        console.log(savedFinancialStatementConf, 'saved')
 
         let sideOptions = [
             new Record({method: '期初', methodName: '期初'}),
@@ -21,12 +23,16 @@ export default {
         ]
 
         let category = new List(...CATEGORY.data.map(e => new Record(e)))
+        .map(e => [e, new Record({...e.cols, ccode:e.cols.ccode+'00', ccode_name:'全部'})])
+        .flat()
         .tros(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
             let descCode = desc.get('ccode'),
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
         }, '按科目级联');
+
+        // console.log(category, 'imported');
 
         let head = new Header(
             {colKey: 'title', colDesc: '项目', cellType: 'Display', cellStyle: 'display', expandControl: true, isTitle:true},
@@ -44,14 +50,16 @@ export default {
             })
             .flat()
 
-        console.log(category, 'imported');
-
-        return {data, head, tableAttr:{expandable: true, editable: true}}
+        return {data, head, tableAttr:{expandable: true, editable: true, savable: true}}
 
     },
-    exportProc(originalData){
-        return originalData.flatten().map(e => e.toObject());
-    },
+    exportProc(data){
+        return data.slice().map(e => {
+            return Object.assign({}, e.cols, {
+                content: e.subs.map(entry => entry.cols)
+            })
+        })
+   },
     desc: '资产负债表配置表',
     type: 'CONF'
 }

@@ -143,11 +143,9 @@ tableServer.on('connection', function (socket) {
     })
 
     socket.on('SAVE', function({project, sheet, type, data}){
-        let filePath = `${project}.${sheet}${type===undefined ? "" : "."+type}.JSON`;
+        let filePath = `${project}.saved${sheet}${type===undefined ? "" : "."+type}.JSON`;
 
-        // console.log('SAVED FILE', filePath, data.slice(0, 20));
-
-        fs.writeFile(path.join(BACKUP_PATH, filePath), JSON.stringify(data)).then(res => {
+        fs.writeFile(path.join(BACKUP_PATH, filePath), JSON.stringify(data, null, 4)).then(res => {
             socket.emit('SAVED');
         })
     })
