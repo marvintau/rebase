@@ -90,7 +90,6 @@ function handleRawList(rawList){
     rawList.map((e) => {
         return e.split('.')
     }).forEach(([name, type]) => {
-        console.log(name, type)
         if (type === 'BAK'){
             Object.assign(dict, {[name]: {projName:name, projStat: 'no-restored'}});
         } else if (type === 'RESTORED'){

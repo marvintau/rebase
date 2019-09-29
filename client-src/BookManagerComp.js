@@ -10,6 +10,7 @@ import {address} from './Config.js';
 
 
 const Log = styled.div`
+    white-space: pre-wrap;
     margin: 10px;
     font-size: 80%;
     line-height: 2em;
@@ -153,8 +154,9 @@ export default class BookManagerComp extends React.Component{
             // if there is, stop, otherwise proceed.
 
             for (let sheet in referred){
-                if(!(sheet in this.sheets) && referred[sheet] === 'local'){
-                    this.log(`${desc} 所依赖的本地表 ${sheet} 并不存在，需要先获取上一层依赖关系的表` );
+                console.log(sheet, this.sheets[sheet], 'listing sheet');
+                if( this.sheets[sheet] === undefined && referred[sheet].location === 'local'){
+                    this.log(`[${desc}] 所依赖的本地表 [${referred[sheet].desc}] 并不存在，\n请您先点一下左边对应的按钮，获取到表格之后再回到这里` );
                     return;
                 }
             }    
