@@ -18,7 +18,6 @@ const Log = styled.div`
 `
 
 const WorkAreaContainer = styled.div`
-    width: 800px;
     font-size : 85%;
     margin: 10px;
 `
@@ -29,6 +28,10 @@ const FlexBox = styled.div`
     height: 100vh;
 `
 
+const Title = styled.div`
+    font-size: 200%;
+    font-weight: black;
+`
 
 export default class BookManagerComp extends React.Component{
     constructor(props){
@@ -213,11 +216,12 @@ export default class BookManagerComp extends React.Component{
             let sheetName = this.state.currSheet,
                 sheet = this.sheets[sheetName];
 
-            // console.log(sheet.data.constructor === List, 'bookmanager');
-
-            displayedContent = <WorkAreaContainer><Formwell
-                saveRemote={this.save} {...sheet}
-            /></WorkAreaContainer>;
+            displayedContent = <WorkAreaContainer>
+                <Title>{sheet.desc}</Title>
+                <Formwell
+                    saveRemote={this.save} {...sheet}
+                />
+            </WorkAreaContainer>;
         }
 
         return (<FlexBox>

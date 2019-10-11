@@ -32,7 +32,7 @@ import styled from 'styled-components';
 import UploadBackup from './UploadBackup';
 import RestoreBackup from './RestoreBackup';
 
-import ProceduralSheets from './ProceduralSheets/index';
+import FinancialTables from 'yonyou-financial-tables';
 
 const Container = styled.div`
     width: 250px;
@@ -127,7 +127,7 @@ export default class ProjectManager extends React.Component {
 
     selectProject(index){
 
-        let sheetList = Object.assign({}, ProceduralSheets);
+        let sheetList = Object.assign({}, FinancialTables);
 
         this.setState({
             proj: {...this.state.projList[index], sheetList}

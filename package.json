@@ -19,7 +19,7 @@
     "express-fileupload": "^1.1.5",
     "express-jwt": "^5.3.1",
     "file-saver": "^2.0.2",
-    "formwell": "0.0.7",
+    "formwell": "github:marvintau/formwell",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "install": "^0.12.2",
@@ -27,6 +27,7 @@
     "mssql": "^4.3.7",
     "multer": "^1.4.2",
     "mutated": "0.0.15",
+    "persisted": "marvintau/persisted",
     "react": "^16.9.0",
     "react-dom": "^16.9.0",
     "react-router": "^5.0.1",
@@ -36,7 +37,8 @@
     "rxjs": "^6.5.2",
     "socket.io": "^2.2.0",
     "styled-components": "^4.4.0",
-    "tedious": "^3.0.1"
+    "tedious": "^3.0.1",
+    "yonyou-financial-tables": "github:marvintau/yonyou-financial-tables"
   },
   "devDependencies": {
     "@babel/core": "^7.5.5",
