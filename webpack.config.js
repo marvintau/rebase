@@ -30,7 +30,7 @@ const serverConfigure = {
 					presets: ['@babel/preset-env']
 				}
 				
-			}
+			},
 		]
 	},
 	mode: "development",
@@ -70,7 +70,11 @@ const clientConfigure = {
 			{
 				test: /\.css$/,
 				use: ["css-loader", "style-loader"]
-			}
+			},
+	　　　　{
+	　　　　　　test: /\.(png|jpg)$/,
+	　　　　　　loader: 'url-loader?limit=8192'
+	　　　　}						
 		]
 	},
 

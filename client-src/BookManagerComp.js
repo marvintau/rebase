@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import io from 'socket.io-client';
 
 
-import Formwell from 'formwell';
+import Formwell from './Forms/Formwell';
 import ProjectManager from './ProjectManager';
 
 import {address} from './Config.js';

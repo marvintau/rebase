@@ -32,7 +32,9 @@ import styled from 'styled-components';
 import UploadBackup from './UploadBackup';
 import RestoreBackup from './RestoreBackup';
 
-import FinancialTables from 'yonyou-financial-tables';
+import FinancialTables from './FinancialTables';
+
+console.log(FinancialTables, 'yonyou')
 
 const Container = styled.div`
     width: 250px;
