@@ -1,7 +1,5 @@
 import {Head, Record, List} from 'persisted';
 
-console.log('persisted', Head);
-
 export default {
     referred: {
         BALANCE: {desc:'科目余额', location:'remote'}
@@ -14,32 +12,38 @@ export default {
             cclass:     'String',
             mb:         'Float',
             me:         'Float',
-            iperiod:    'Integer',
-            iyear:      'Integer'
+            iperiod:    'String',
+            iyear:      'String'
         })
 
-        head.setColProp({colDesc: "年"}, 'iyear')
-        head.setColProp({colDesc: "期间"}, 'iperiod')
+        head.setColProp({colDesc: "年", hidden: true}, 'iyear')
+        head.setColProp({colDesc: "期间", hidden: true}, 'iperiod')
         head.setColProp({colDesc: "科目名称", isExpandToggler: true}, 'ccode_name')
         head.setColProp({colDesc: "科目编码"}, 'ccode' )
         head.setColProp({colDesc: "科目类别"}, 'cclass')
         head.setColProp({colDesc: '期初金额'}, 'mb'    )
         head.setColProp({colDesc: '期末金额'}, 'me'    )
 
-        let balanceData = (new List(...BALANCE.data)).map(entry => head.createRecord(entry));
+        // console.log(BALANCE.data.constructor, 'balance type');
+        let balanceData = List.from(BALANCE.data)
+            .map(entry => head.createRecord(entry))
+            .uniq(entry => `${entry.get('ccode')}-${entry.get('iperiod')}-${entry.get('iyear')}`);
         let data = balanceData
             .grip(rec => rec.get('iyear'), {desc:'年'})
             .iter((key, recs) => {
                 return recs
                     .grip((rec) => rec.get('iperiod'), {desc: '期间'})
                     .iter((key, codeRecs) => {
-                        return codeRecs
-                            .ordr(e => e.get('ccode'))
+                        let final = codeRecs
+                            .ordr(rec=>rec.get('ccode'))
                             .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
                                 let descCode = desc.get('ccode'),
                                     ancesCode = ances.get('ccode');
-                                return descCode.slice(0, ancesCode.length).includes(ancesCode)
+                                return descCode.startsWith(ancesCode)
                             });
+
+                        console.log(final, 'aftercascade');
+                        return final;
                     })
             });
 

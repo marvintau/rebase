@@ -1,5 +1,37 @@
 import React from 'react';
 import Row from './Row';
+import styled from 'styled-components';
+
+const ENTRIES_PER_PAGE = 15;
+
+const PaginatorTR = styled.tr`
+    width: 100%;
+    font-family: 'Optima';
+    font-weight: 300;
+`
+
+const PaginatorTD = styled.div`
+    border-top: 1px solid black !important;
+
+    display: flex;
+    justify-content: space-between;
+
+    & div {
+        text-align: center;
+        padding: 10px;
+    }
+`
+
+const Button = styled.div`
+
+    user-select: none;
+
+    &:hover {
+        background-color: #DEF9F3;
+        cursor: pointer;
+    }
+`
+
 
 export default class Rows extends React.PureComponent {
     constructor(props){
@@ -7,7 +39,8 @@ export default class Rows extends React.PureComponent {
 
         this.state = {
             data : props.data,
-            expanded: []
+            page : 0,
+            expanded: -1
         }
     }
 
@@ -35,14 +68,15 @@ export default class Rows extends React.PureComponent {
 
     // You might notice that Rows doesn't call an update method
     // of its parent. Because we only permit a Row calling its
-    // parental Rows.
+    // parental Rows, meanwhile Rows shouldn't modify its parent
+    // row.
 
     updateRows = (operation, args) => {
         
         if (operation === 'insert') {
             args.push(this.props.head.createRecord());
         }
-
+        console.log(this.state.data, operation, args, 'updateRows');
         let data = this.state.data[operation](...args);
 
         this.setState({
@@ -54,31 +88,86 @@ export default class Rows extends React.PureComponent {
     updateRowsExpanded = (rowIndex) => {
 
         let {expanded} = this.state;
-        let newExpanded = expanded.filter(e => e !== rowIndex);
-        if(newExpanded.length === expanded.length){
-            newExpanded.push(rowIndex);
-        }
 
-        this.setState({expanded: newExpanded, fromInside: true});
+        this.setState({
+            expanded: expanded === rowIndex ? -1 : rowIndex,
+            fromInside: true
+        });
+    }
+
+    turnPage = (direction) => {
+
+        let {data, page} = this.state,
+            pages = Math.ceil(data.length / ENTRIES_PER_PAGE);
+
+        if (direction > 0) {
+            this.setState({
+                page : Math.min(pages - 1, page + 1),
+                fromInside: true
+            })
+        } else {
+            this.setState({
+                page: Math.max(0, page - 1),
+                fromInside: true
+            })
+        }
     }
 
     render(){
-        let {head, tableAttr, level=0} = this.props;
-        let {data} = this.state;
+        let {head, colSpan, tableAttr, level=0} = this.props;
+        let {data, page, expanded} = this.state;
 
-        return data.map((entry, rowIndex) => {
-            return <Row
-                key={rowIndex}
-                rowIndex={rowIndex}
-                level={level}
-                data={entry}
-                tableAttr={tableAttr}
-                head={head}
-                updateRows={this.updateRows}
-                updateRowsExpanded={this.updateRowsExpanded}
-                rowsExpanded={this.state.expanded}
-            />
-        })
+        let rowProps = {
+            head,
+            level,
+            tableAttr,
+            rowsExpanded: expanded,
+            updateRows: this.updateRows,
+            updateRowsExpanded: this.updateRowsExpanded,
+        }
+
+        if (expanded === -1){
+
+            let paginator = <PaginatorTR key={'tab'}>
+                <td colSpan={colSpan}><PaginatorTD>
+                    <Button onClick={() => this.turnPage(-1)}>前一页</Button>
+                    <div>当前第{page+1}页，共{Math.ceil(data.length/ENTRIES_PER_PAGE)}页，{data.length}个条目</div>
+                    <Button onClick={() => this.turnPage(1)}>后一页</Button>
+                </PaginatorTD></td>
+            </PaginatorTR>
+
+            let elems;
+            if(data.length <= ENTRIES_PER_PAGE){
+                elems = data.map((entry, rowIndex) => {
+                    return <Row
+                        key={rowIndex}
+                        rowIndex={rowIndex}
+                        data={entry}
+                        {...rowProps}
+                    />
+                })
+                return elems;
+            } else {
+                let {page} = this.state;
+                elems = data.slice(page*ENTRIES_PER_PAGE, (page+1)*ENTRIES_PER_PAGE).map((entry, rowIndex) => {
+                    return <Row
+                        key={rowIndex}
+                        rowIndex={rowIndex+page*ENTRIES_PER_PAGE}
+                        data={entry}
+                        {...rowProps}
+                    />
+                })
+                return [paginator, elems];
+            }
+            
+        } else {
+            return [<Row
+                key={expanded}
+                rowIndex={expanded}
+                data={data[expanded]}
+                {...rowProps}
+            />]
+        }
 
     }
 }

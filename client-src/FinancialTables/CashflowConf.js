@@ -2,29 +2,33 @@ import {Record, List, Head} from 'persisted';
 
 import cashflowStatementDirectDetails from './local/cashflowStatementDirectDetails.txt.json';
 
+let categoryHead = new Head({
+    ccode: 'String',
+    ccode_name: 'String'
+})
+
+let methodHead = new Head({
+    method: 'String',
+    methodName: 'String'
+})
+
 let sideOptions = [
-    new Record({method: '期初', methodName: '期初'}),
-    new Record({method: '贷方', methodName: '贷方'}),
-    new Record({method: '借方', methodName: '借方'})
+    methodHead.createRecord({method: '期初', methodName: '期初'}),
+    methodHead.createRecord({method: '贷方', methodName: '贷方'}),
+    methodHead.createRecord({method: '借方', methodName: '借方'})
 ]
 
 let methodOptions = [
-    new Record({method: '计入', methodName: '计入'}),
-    new Record({method: '减去', methodName: '减去'}),
+    methodHead.createRecord({method: '计入', methodName: '计入'}),
+    methodHead.createRecord({method: '减去', methodName: '减去'}),
 ]
 
-let head = new Header({
+let head = new Head({
     title:       "String",
     category:    "Path",
     side:        "Path",
     method:      "Path",
 })
-
-head.setColProp({colDesc: '项目'}, 'title')
-head.setColProp({colDesc: '对应的科目类别'}, 'gategory')
-head.setColProp({colDesc: '取值方式'}, 'side')
-head.setColProp({colDesc: '计入方式'}, 'method')
-
 
 export default {
     referred: {
@@ -33,8 +37,7 @@ export default {
     },
     importProc({CATEGORY, savedCashFlowConf}){
 
-        let category = new List(...CATEGORY.data.map(e => new Record(e)))
-        .map(e => [e, new Record({...e.cols, ccode:e.cols.ccode+'00', ccode_name:'全部'})])
+        let category = new List(CATEGORY.data.map(e => categoryHead.createRecord(e)))
         .flat()
         .ordr(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
@@ -43,19 +46,24 @@ export default {
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
         }, '按科目级联');
 
+        console.log(cashflowStatementDirectDetails, 'detailes');
+        head.setColProp({colDesc: '项目', isTitle: true, isExpandToggler: true}, 'title')
+        head.setColProp({colDesc: '对应的科目类别', options: category, displayKey: 'ccode_name'}, 'category')
+        head.setColProp({colDesc: '取值方式', options: sideOptions, displayKey: 'methodName'}, 'side')
+        head.setColProp({colDesc: '计入方式', options: methodOptions, displayKey: 'methodName'}, 'method')
 
         let data = cashflowStatementDirectDetails;
         if (savedCashFlowConf.data.length > 0 || Object.keys(savedCashFlowConf.data).length > 0){
             data = savedCashFlowConf.data;
         }
 
-        data = new List(...Object.entries(data))
+        data = new List(Object.entries(data))
             .map(([title, content]) => {
-                let rec = new Record({title});
+                let rec = head.createRecord({title});
 
-                rec.subs = new List(...Object.entries(content).map(([title, content]) => {
-                    let rec = new Record({title});
-                    rec.subs = content.map(con => new Record(con));
+                rec.heir = new List(Object.entries(content).map(([title, content]) => {
+                    let rec = head.createRecord({title});
+                    rec.heir = new List(content).map(con => head.createRecord(con));
                     return rec;
                 }));
 
@@ -63,15 +71,20 @@ export default {
             })
             .flat(2)
 
-        return {data, head, tableAttr:{expandable: true, editable: true, savable: true}}
+        return {data, head, tableAttr:{
+                expandable: true,
+                controllable: true,
+                editable: true,
+                savable: true
+            }
+        }
 
     },
     exportProc(data){
         let entries = data.slice().map(e => {
-            let entries = e.subs.map (sub => {
-                let entryList = sub.subs.map(entry => {
-                    let {method, category, side} = entry.cols;
-                    return {method, category, side};
+            let entries = e.heir.map (sub => {
+                let entryList = sub.heir.map(entry => {
+                    return entry.valueOf()
                 });
 
                 return [sub.cols.title, entryList]

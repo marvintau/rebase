@@ -1,4 +1,5 @@
 import Normal from './Normal';
+import MultiLine from './MultiLine';
 import RotateDisplay from './RotateDisplay';
 import MultiRotateDisplay from './MultiRotateDisplay';
 
@@ -9,6 +10,7 @@ import EditControl from './EditControl';
 
 export default {
     Normal,
+    MultiLine,
     RotateDisplay,
     MultiRotateDisplay,
     SingleSelect,

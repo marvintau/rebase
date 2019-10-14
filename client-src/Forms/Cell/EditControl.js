@@ -36,14 +36,14 @@ export default class EditControl extends React.Component{
     }
 
     render(){
-        let {isRowExpanded} = this.props;
+        let {isRowExpanded, isHovered} = this.props;
 
         let move = [
             <Icon key={'create'} src={CreateRecordIcon} onClick={this.insert}/>,
             <Icon key={'rem'} src={DeleteRecordIcon} onClick={this.remove}/>,
         ]
 
-        if(isRowExpanded){
+        if(isRowExpanded || !isHovered){
             return <Control/>
         } else {
             return <Control>

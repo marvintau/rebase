@@ -1,6 +1,16 @@
 import React from 'react';
 import styled from 'styled-components';
 
+const Indicator = styled.td`
+    border-bottom: 1px solid black;
+    width: 25px;
+    min-width: 25px;
+    max-width: 25px;
+    background-color: #555555;
+    position:sticky;
+    top: -1px;
+`
+
 const TH = styled.th`
     padding: 6px 5px 4px;
     min-width: 25px;
@@ -8,7 +18,7 @@ const TH = styled.th`
     vertical-align: middle;
     text-align: center;
     line-height: 1.5em;
-    border: 1px solid black;
+    border-bottom: 1px solid black;
     background-color: #555555;
     color: #FEFEFE;
     font-family: 'Pingfang SC', 'Microsoft Yahei';
@@ -29,11 +39,14 @@ export default class Head extends React.Component{
     render(){
         let {head, tableAttr} = this.props;
 
-        let headElem = [];
+        let headElem = [<Indicator key={'indicator'} />];
 
         for (let key in head){
-            let {colDesc} = head[key];
-            headElem.push(<TH key={key}>{colDesc}</TH>)
+            let {colDesc, hidden, isTitle} = head[key];
+
+            if(!(hidden || isTitle)){
+                headElem.push(<TH key={key}>{colDesc}</TH>)
+            }
         }
 
         // 如果表格是左侧存在工具栏，那么需要新增一个空表头单元格。

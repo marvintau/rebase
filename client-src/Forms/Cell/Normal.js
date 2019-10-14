@@ -2,15 +2,7 @@ import React from 'react';
 
 import styled from 'styled-components';
 
-import CheckIcon from './icons/Check.png';
-
-const Img = styled.img`
-    margin: auto;
-    width: 25px;
-    height: 25px;
-`
-
-const Number = styled.div`
+const Digits = styled.div`
     text-align: right;
     font-size: 90%;
     font-weight: bold;
@@ -47,7 +39,6 @@ export default class Normal extends React.Component{
 
         this.state = {
             data: props.data,
-            isEditing: false
         }
     }
 
@@ -58,53 +49,54 @@ export default class Normal extends React.Component{
         return state;
     }
 
-    toggleEdit = (e) => {
-        this.setState({
-            isEditing: !this.state.isEditing
-        })
-    }
-
     updateColumn = (e) => {
         let {colKey, update} = this.props;
         update('self', 'set', [colKey, e.target.value])
     }
 
     render(){
-        let {type, editable} = this.props,
-            {data, isEditing} = this.state;
+        let {type, editable, isEditing} = this.props,
+            {data} = this.state;
     
 
         if (isEditing) {
             let value;
             switch(type.name){
-                case 'PerFloat':
-                    value = parseFloat(data).toFixed(2);
-                case 'PerInteger':
-                    value = parseInt(data);
-                case 'PerString':
+                case 'Number':
+                    let parsedNumber = parseFloat(data);
+                    if (Number.isInteger(parsedNumber)){
+                        value = parsedNumber.toFixed(0);
+                    } else {
+                        value = parsedNumber.toFixed(2);
+                    }
+                    break;
+                case 'String':
+                    value = value == "undefined" ? "" : value;
+                    break;
                 default:
-                    value = data.valueOf();
+                    value = data;
             }
 
             return [
                 <Edit key={'edit'} defaultValue={value} onChange={this.updateColumn}/>,
-                <Img key={'done'} src={CheckIcon} onClick={this.toggleEdit}/>
             ]
         } else {
             switch(type.name){
-                case 'PerFloat':
-                    return <Number onDoubleClick={editable ? this.toggleEdit: undefined}>{
-                        parseFloat(data).toFixed(2)}
-                    </Number>;
-                case 'PerInteger':
-                    return <Number onDoubleClick={editable ? this.toggleEdit: undefined}>
-                        {parseInt(data)}
-                    </Number>;
-                case 'PerString':
+                case 'Number':
+
+                    let parsedNumber = parseFloat(data),
+                        value = parsedNumber.toFixed(Number.isInteger(parsedNumber) ? 0 : 2);
+    
+                    return <Digits>{value}</Digits>;
+
+                case 'String':
+                    data = data == "undefined" ? "无" : data;
                 default:
-                    return <String onDoubleClick={editable ? this.toggleEdit: undefined}>
-                        {data.valueOf()}
-                    </String>;
+                    if (data === undefined){
+                        console.log(this.props.colKey, 'undefined');
+                        // data = new Number('123');
+                    }
+                    return <String>{data}</String>;
             }
         }
 

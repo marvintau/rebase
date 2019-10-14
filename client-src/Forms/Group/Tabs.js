@@ -23,6 +23,9 @@ const TabTD = styled.div`
 `
 
 const Button = styled.div`
+
+    user-select: none;
+
     &:hover {
         background-color: #DEF9F3;
         cursor: pointer;
@@ -45,7 +48,7 @@ export default class Tabs extends React.Component {
         if(!state.fromInside){
             if (props.data !== state.data){
                 return {
-                    currKey: props.data.keys()[0],
+                    currKey: props.data.keys ? props.data.keys()[0] : undefined,
                     fromInside : false
                 }
             }
@@ -88,14 +91,16 @@ export default class Tabs extends React.Component {
 
     render(){
 
-        let {data, head, tableAttr} = this.props;
-        
+        let {data, head, tableAttr} = this.props,
+            colSpan = head.lenDisplayed()+1;
+
         if (data.constructor.name === 'List'){
 
             let props = {
                 level: 0,
                 data,
                 head,
+                colSpan,
                 tableAttr
             }
 
@@ -104,20 +109,18 @@ export default class Tabs extends React.Component {
                 <Rows {...props} key={'table'}/>
             ]
         } else {
-            let colsLength = head.len();
 
             // 如果列表左侧有工具按钮，那么tab的宽度也需要对应增加1
             
             let tabStyle = data.tabStyle ? data.tabStyle : 'paginator';
     
-            let controller=[];
-
+            let controller;
             if(tabStyle === 'paginator'){
-                controller.push(<td colSpan={colsLength} key={'tab'}><TabTD>
+                controller = <td colSpan={colSpan}><TabTD>
                     <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
                     <div>当前第{this.state.currKey}{data.desc}</div>
                     <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
-                </TabTD></td>)
+                </TabTD></td>
             } else if (tabStyle === 'tabs') {
     
                 let keys = data.keys().map((e, i) => {
@@ -125,11 +128,11 @@ export default class Tabs extends React.Component {
                     return <Button key={i} onClick={() => this.setCurrKey(e)}>{displayed}</Button>
                 })
     
-                controller.push(<td colSpan={colsLength} key={'tab'}><TabTD  key={'tab'}>
+                controller = <td colSpan={colSpan}><TabTD>
                     <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
                     {keys}
                     <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
-                </TabTD></td>)
+                </TabTD></td> 
             }
 
             let content = data.get(this.state.currKey);
@@ -137,6 +140,7 @@ export default class Tabs extends React.Component {
             let props = {
                 level: 0,
                 data: content,
+                colSpan,
                 head,
                 tableAttr
             }

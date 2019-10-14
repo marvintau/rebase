@@ -9,19 +9,15 @@ const TD = styled.td`
     max-width: 100%;
     height: 25px;
     white-space: nowrap;
-    ${({border=true}) => border ? 'border: 1px solid black;' : ''};
+    ${({border=true}) => border ? 'border-top: 1px solid black; border-bottom: 1px solid black;' : ''};
     user-select: none;
-    ${({isControlCell=false, hovered=false}) => {
-        if (isControlCell){
-            return hovered ? 'display: hidden': '';
-        } else {
-            return hovered ? `background: #E3C08E;` : '';
-        }
+    ${({isHovered=false}) => {
+        return isHovered ? `background: #E3C08E;` : '';
     }}
 `
 
 const Indenter = styled.div`
-    height: 28px;
+    height: 25px;
     width: ${({isExpandToggler, level}) => {
         return isExpandToggler ? `${5+level*8}px` : '5px'
     }};
@@ -31,35 +27,18 @@ const TDWrapper = styled.div`
     display: flex;
 `
 
-import RightArrowIcon from './icons/right-arrow.png';
-import DownArrowIcon from './icons/down-arrow.png';
-
-const Control = styled.div`
-    width: 25px;
-    height: 25px;
-    cursor: pointer;
-    opacity: 1;
-`
-
-const Img = styled.img`
-    width: 25px;
-    height: 25px;
-    opacity: 1 !important;
-`
-
-
 export default function Cell(props){
 
-    let expandControlElem,
-        {isControlCell, expandable, isExpandToggler, isRowExpanded, toggleExpand} = props;
+    let {isControlCell, isExpandToggler} = props;
 
     if (isControlCell){
 
         let {EditControl} = CellComponent,
-            {isRowExpanded, rowIndex, update} = props;
+            {isRowExpanded, isHovered, rowIndex, update} = props;
 
-        return <TD border={false} isControlCell={true}>
+        return <TD border={false}>
             <EditControl
+                isHovered={isHovered}
                 isRowExpanded={isRowExpanded}
                 rowIndex={rowIndex}
                 update={update}
@@ -67,47 +46,30 @@ export default function Cell(props){
         </TD>
     }
 
-    if (isExpandToggler){
-        if (expandable){
-            let right = <Img src={RightArrowIcon} />,
-                down  = <Img src={DownArrowIcon} />;
-            expandControlElem = <Control onClick={toggleExpand}>
-                {isRowExpanded ? down : right}
-            </Control>
-        } else {
-            expandControlElem = <Control />
-        }
-    } else {
-        expandControlElem = [];
+    let {isHovered, style, colSpan} = props,
+        domStyle = {isHovered, style, colSpan};
+
+    let {level, type} = props,
+        CellComp;
+
+    switch(type.name){
+        case 'Path':
+            CellComp = CellComponent.SelectPath;
+            break;
+        case 'MultiLine':
+            CellComp = CellComponent.MultiLine;
+            break;
+        case 'Number':
+        case 'String':
+        default:
+            CellComp = CellComponent.Normal;
     }
 
-    let {hovered, style, disabled} = props,
-        domStyle = {hovered, style};
+    return <TD {...domStyle}>
+        <TDWrapper>
+            <Indenter isExpandToggler={isExpandToggler} level={level} />
+            <CellComp {...props}/>
+        </TDWrapper>
+    </TD>
 
-    if(disabled){
-        return <TD {...domStyle} />
-    } else {
-
-        let {level, type} = props,
-            CellComp;
-
-        switch(type.name){
-            case 'PerPath':
-                CellComp = CellComponent.SelectPath;
-                break;
-            case 'PerFloat':
-            case 'PerInteger':
-            case 'PerString':
-            default:
-                CellComp = CellComponent.Normal;
-        }
-
-        return <TD {...domStyle}>
-            <TDWrapper>
-                {expandControlElem}
-                <Indenter isExpandToggler={isExpandToggler} level={level} />
-                <CellComp {...props}/>
-            </TDWrapper>
-        </TD>
-    }
 }

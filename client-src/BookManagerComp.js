@@ -18,6 +18,7 @@ const Log = styled.div`
 `
 
 const WorkAreaContainer = styled.div`
+    flex-grow: 1.5;
     font-size : 85%;
     margin: 10px;
 `

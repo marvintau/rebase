@@ -1,30 +1,41 @@
-import {Record, List, Header} from 'persisted';
+import {Record, List, Head} from 'persisted';
 
-import CashflowStatementDirectDetails from './local/cashflowStatementDirectDetails.txt.json.js';
+import CashflowStatementDirectDetails from './local/cashflowStatementDirectDetails.txt.json';
 
-function sumAccrual(list){
+let routeHead = new Head({
+    ccode_name : 'String',
+    ccode      : 'String',
+    cclass     : 'String',
+    mb         : 'Float',
+    mc         : 'Float',
+    md         : 'Float',
+    me         : 'Float',
+    iyear      : 'Integer',
+    iperiod    : 'Integer'
+})
 
-    let head = new Header(
-        {colKey: 'ccode_name', colDesc: "科目名称", dataType: 'String'},
-        {colKey: 'ccode', colDesc: "科目编码", dataType: 'String'},
-        {colKey: 'cclass', colDesc: "科目类别", dataType: 'String'},
-        {colKey: 'mc', colDesc: '贷方发生', dataType: 'Number'},
-        {colKey: 'md', colDesc: '借方发生', dataType: 'Number'}
-    );
-
-    return head.sum(list);
-}
 
 function traceRecord(list, recKey, path){
     let listRef = list, ref;
     for (let node of path){
-        if (node === '全部') break;
-        ref = listRef.find(rec => rec.get(recKey) === node)
+        // if (node === '全部') break;
+        ref = listRef.find(rec => rec.get(recKey).valueOf() === node)
         if (ref === undefined) break;
-        listRef = ref.subs;
+        listRef = ref.heir;
     }
     return ref;
 }
+
+let head = new Head({
+    mainTitle: 'String',
+    title:     'String',
+    accrual:   'Float', 
+})
+
+head.setColProp({colDesc: '类别', isTitle: true,}, 'mainTitle')
+head.setColProp({colDesc: '项目', isExpandToggler: true}, 'title')
+head.setColProp({colDesc: '金额'}, 'accrual')
+
 
 export default{
     referred: {
@@ -32,39 +43,30 @@ export default{
         RouteAnalysis: {desc:'发生额变动分析' , location:'local', type: 'DATA'}
     },
     importProc({RouteAnalysis, savedCashflowConf}){
-
-        let head = new Header(
-            {colKey: 'mainTitle', colDesc: '类别', cellType: 'Display', cellStyle: 'display', dataType:'String', isTitle: true},
-            {colKey: 'title', colDesc: '项目', cellType: 'Display', cellStyle: 'display', expandControl: true},
-            {colKey: 'accrual', colDesc: '金额', cellType: 'Display', cellStyle: 'display', dataType: 'Number'}
-        )
         
         let headYear = 0,
             tailYear = 0,
             headPeriod = 1,
             tailPeriod = 10;
 
-        // periodical balance data
+        // 首先将之前的发生额分析完全展开
         let routeData = RouteAnalysis.data
-        .grap().flat(2) // remove year group
-        .map(e => e.grap()).flat(2) // remove iperiod group
-        .flatten() // flatten the subs of all records
-        // first get the desired period range
+        .grap().map(e => e.grap()).flat() 
+        .flatten()
+        // 然后获取我们想要的区间
         .filter(e => {
             let {iyear, iperiod} = e.cols;
             return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
         })
 
-        // sum up the accrual within the category through all the periods.
+        // 将条目按科目分类，并在想要的时间区间内求和
         .grip(e => e.get('ccode'), '科目')
         .iter((key, val) => {
-            let sorted = val.ordr(e => `${e.get('iyear')-e.get('iperiod')}`).reverse(),
-                accrualSum = sumAccrual(sorted),
-                {mc, md} = accrualSum.cols;
-            return new Record({...sorted[0].cols, mc, md});
+            let sorted = val.ordr(e => `${e.get('iyear')-e.get('iperiod')}`).reverse();
+            return routeHead.sum(sorted);
         }).grap()
 
-        // then form the cascaded records for path searching.
+        // 然后建立一个级联的经过求和的科目发生额表
         .ordr(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
             let descCode = desc.get('ccode'),
@@ -75,46 +77,49 @@ export default{
         // similar to financial statement.
         // a cascaded list of records, that containing the beginning, accumulated
         // credit and debit accrual.
-
+        console.log(routeData, 'routes')
+        
         let data = CashflowStatementDirectDetails;
         if (savedCashflowConf.data.length > 0 || Object.keys(savedCashflowConf.data).length > 0){
             data = savedCashflowConf.data;
         }
+        console.log(data, 'here')
 
-        // now calculate the accruals of corresponding entries.
-        data = new List(...Object.entries(data))
+        // 现在计算发生额
+        data = new List(Object.entries(data))
         .map(([mainTitle, headContent]) => {
 
-            let headRec = new Record({mainTitle, title: '', accrual: 0});
+            let headRec = new Record({mainTitle, title: '', accrual: 0}, {head});
 
             let headContentRec = Object.entries(headContent).map(([title, content]) => {
 
                 let accrual = 0;
-
-                // here the content are the entries listed below the title
-                // we are going to retrieve the values in balance data first,
-                // and then add them up according to the instructions, and finally
-                // make it a Record.
-
                 let entries = content.map(entry => {
-                    let [_, ...path] = entry.category.split('->');
+
+                    // 这里我们需要特别handle，在这里我们需要解除掉数据外层的包装。
+                    // 在这个版本稳定之前，不要尝试修改这里。
+                    // 同FinancialStatement
+                    if (entry.valueOf){
+                        entry = entry.valueOf();
+                    }
+
+                    let [_, ...path] = entry.category;
                     let rec = traceRecord(routeData, 'ccode_name', path);
-                    
+                    console.log(rec, 'rec');
                     if (rec === undefined){
                         return rec;
                     }
 
-                    let {mb, mc, md} = rec.cols;
-                    return {...entry, mb, mc, md}
+                    return {...entry, ...rec.valueOf()}
                 }).filter(rec => rec !== undefined)
-
-                // after find the values, and filter out the undefined,
-                // or the value that not found according to given path,
-                // we add them up.
+                console.log(entries, 'entiris');
                 
-                let subs = new List();
+                let heir = new List(0);
                 for (let rec of entries){
                     let {method, side, category} = rec;
+
+                    side = side[1];
+                    method = method[1];
 
                     let key = {
                         '借方' : 'md',
@@ -129,22 +134,20 @@ export default{
 
                     let finalValue = eval(`${sign}${rec[key]}`);
 
-                    let [_, ...path] = category.split('->');
-                    subs.push(new Record({
+                    let [_, ...path] = category;
+                    heir.push(new Record({
                         title: `${method} ${path.join('-')} ${side}`,
                         accrual: finalValue,
-                    }))
+                    }, {head}))
 
                     accrual += finalValue;
                 }
 
-                return new Record({title, accrual}, {subs});
+                return new Record({title, accrual}, {head, heir});
             });
 
-            return [headRec, headContentRec]
+            return [headRec, ...headContentRec]
         }).flat(2);
-
-        console.log(data, 'financialStatemenet items')
 
         return {head, data, tableAttr: {expandable: true}}
     },

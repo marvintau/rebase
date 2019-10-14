@@ -2,50 +2,104 @@ import {Record, List, Head} from 'persisted';
 
 // voucherHead是凭证的表头，作为科目发生额分析的子表
 let voucherHead = new Head({
+    iperiod:     'Integer',
     ino_id:      'String',
+    inid:        'String',
     ccode_name:  'String',
     ccode:       'String',
     cCusName:    'String',
-    ccode_equal: 'String',
+    ccode_equal: 'MultiLine',
     cdigest:     'String',
     md:          'Float',
     mc:          'Float',
-})
+    iyear:       'Integer',
+});
 
-voucherHead.setColProps({colDesc: '凭证编号'}, 'ino_id');
-voucherHead.setColProps({colDesc: '科目名称'}, 'ccode_name');
-voucherHead.setColProps({colDesc: '科目编码'}, 'ccode');
-voucherHead.setColProps({colDesc: '客户名称'}, 'cCusName');
-voucherHead.setColProps({colDesc: '对方科目'}, 'ccode_equal');
-voucherHead.setColProps({colDesc: '摘要'},     'cdigest');
-voucherHead.setColProps({colDesc: '借方发生'}, 'md');
-voucherHead.setColProps({colDesc: '贷方发生'}, 'mc');
+voucherHead.setColProp({colDesc: '凭证编号', isExpandToggler: true}, 'ino_id');
+voucherHead.setColProp({colDesc: '行'}, 'inid');
+voucherHead.setColProp({colDesc: '科目名称'}, 'ccode_name');
+voucherHead.setColProp({colDesc: '科目编码', hidden: true}, 'ccode');
+voucherHead.setColProp({colDesc: '客户名称', hidden: true}, 'cCusName');
+voucherHead.setColProp({colDesc: '对方科目'}, 'ccode_equal');
+voucherHead.setColProp({colDesc: '摘要'},     'cdigest');
+voucherHead.setColProp({colDesc: '借方发生'}, 'md');
+voucherHead.setColProp({colDesc: '贷方发生'}, 'mc');
+voucherHead.setColProp({colDesc: '年', hidden: true}, 'iyear');
+voucherHead.setColProp({colDesc: '期间'}, 'iperiod');
 
-voucherHead.setColProps({isExpandToggler: true}, 'ino_id');
 
 // analyzeHead是科目发生额分析的表头
 let analyzeHead = new Head({
+    iperiod:     'Integer',
     ccode_name : 'String',
+    cclass:      'String',
     ccode :      'String',
-    mb :         'Number',
-    me :         'Number',
-    md :         'Number',
-    mc :         'Number',
+    mb :         'Float',
+    mc :         'Float',
+    md :         'Float',
+    me :         'Float',
+    iyear:       'Integer',
 })
 
-analyzeHead.setColProps({colDesc: "科目名称"}, 'ccode_name');
-analyzeHead.setColProps({colDesc: "科目编码"}, 'ccode');
-analyzeHead.setColProps({colDesc: '期初余额'}, 'mb');
-analyzeHead.setColProps({colDesc: '期末余额'}, 'me');
-analyzeHead.setColProps({colDesc: '借方发生'}, 'md');
-analyzeHead.setColProps({colDesc: '贷方发生'}, 'mc');
+analyzeHead.setColProp({colDesc: "科目名称", isExpandToggler: true}, 'ccode_name');
+analyzeHead.setColProp({colDesc: "科目编码", hidden: true}, 'ccode');
+analyzeHead.setColProp({colDesc: "科目类别"}, 'cclass');
+analyzeHead.setColProp({colDesc: '期初余额'}, 'mb');
+analyzeHead.setColProp({colDesc: '期末余额'}, 'me');
+analyzeHead.setColProp({colDesc: '借方发生'}, 'md');
+analyzeHead.setColProp({colDesc: '贷方发生'}, 'mc');
+analyzeHead.setColProp({colDesc: '年', hidden: true}, 'iyear');
+analyzeHead.setColProp({colDesc: '期间', hidden: true}, 'iperiod')
+
+
+function truncName(name){
+    return name.length > 4 ? `${name[0]}...` : name
+}
 
 export default{
     referred: {
         BALANCE: {desc: '科目余额', location: 'remote'},
-        ENTRIES: {desc: '明细分录', location: 'remote'}
+        ENTRIES: {desc: '明细分录', location: 'remote'},
+        CATEGORY: {desc: '科目类别', location: 'remote'}
     },
-    importProc({BALANCE, ENTRIES}){
+    importProc({BALANCE, ENTRIES, CATEGORY}){
+
+        // 这部分我们将对对方科目进行一个处理，使得我们可以看到对方科目的路径。
+        // 我们先通过科目层级得到科目的路径，然后再建立一个科目的叶子结点对于其
+        // 路径的dict
+        let catePathDict = List.from(CATEGORY.data)
+            .ordr(rec => rec.ccode)
+            .cascade(rec=>rec.ccode.length,
+                (desc, ances) => {
+                    let descCode  = desc.ccode,
+                        ancesCode = ances.ccode;
+                    return descCode.startsWith(ancesCode);
+                },
+                (ances, desc) => {
+                    if (!ances._children){
+                        ances._children = new List(0);
+                    }
+                    ances._children.push(desc);
+                }
+            )
+            .flattenPath((e) => e._children, (e)=>e._children === undefined)
+            .map(path => {
+                if (path.length === 1){
+                    return [path[0].ccode, path[0].ccode_name]
+                } else {
+                    let truncated = path.slice(1, -1).map(e => truncName(e.ccode_name)),
+                        joined = [path[0].ccode_name, ...truncated, path.last().ccode_name].reverse().join('→');
+                    return [path[0].ccode, joined]
+                }
+            })
+            .toObject()
+
+        let voucherData = List.from(ENTRIES.data)
+            .map(e => voucherHead.createRecord(e));
+
+        for (let i = 0; i < voucherData.length; i++){
+            voucherData[i].get('ccode_equal').setLines((e)=>catePathDict[e])
+        }
 
         // 这部分所要实现的是：先按照"年-月-记账凭证编号"的方式为
         // vouchers分组。这样就得到了按期间-凭证编号划分的分录。
@@ -54,57 +108,55 @@ export default{
         // 即通过科目来找到包含在这个期间之内所有的分录中包含这个
         // 科目的凭证。
 
-        let vocuhersData = new List(...ENTRIES.data)
-            .map(e => new Record(e));
-
-        let periodicalVoucherDict = vocuhersData.grip(entry => `${entry.get('iyear')}-${entry.get('iperiod')}`, 'by-period')
+        let periodicalVouchers = voucherData
+            .grip(entry => entry.get('iyear'), 'by-year')
             .iter((key, recs) => {
                 let voucherList = recs
-                    .grip(route => route.get('ino_id'), 'by-voucher-id')
-                    .grap()
-                    .map(list => {
-                        let voucher = voucherHead.sum(list);
-                        voucher.subs = list;
+                    .grip(route => `${route.get('iperiod')}-${route.get('ino_id')}`, 'by-voucher-id')
+                    .vals();
 
-                        let subDict = {},
-                            referredCodes = list.map(e => e.get('ccode'));
-
-                        for (let code of referredCodes) {
-                            subDict[code] = voucher;
-                        }
-                        
-                        return subDict;
-                    });
-
-                let voucherDict = {};
-                for (let i = 0; i < voucherList.length; i++){
-                    let subDict = voucherList[i];
-                    for (let code in subDict){
-                        if (voucherDict[code] === undefined){
-                            voucherDict[code] = new List(0);
-                        }
-                        voucherDict[code].push(subDict[code]);
+                // voucherList现在是一个list of list，其中每个子层list是凭证。现在要将凭证中的
+                // 每一行抽出来作为索引，然后将子层放在其中。同时生成一个新的列表entryList，
+                // 这个列表用来保存凭证中每一行。
+                let entryList = new List(0);
+                for (let voucherIndex = 0; voucherIndex < voucherList.length; voucherIndex++){
+                    let voucher = voucherList[voucherIndex];
+                    for (let lineIndex = 0; lineIndex < voucher.length; lineIndex++){
+                        let line = voucher[lineIndex];
+                        line.heir = voucher;
+                        entryList.push(line);
                     }
                 }
 
-                for (let code in voucherDict){
-                    voucherDict[code] = {head: voucherHead, data: voucherDict[code], tableAttr: {expandable: true}};
-                }
-                return voucherDict;
+                // 这部分会形成一个group，作为字典
+
+                return entryList
+                    .grip(e => e.get('ccode'))
+                    .iter((key, val) => {
+                        return {
+                            head: voucherHead,
+                            data: val,
+                            tableAttr: {
+                                expandable: true,
+                                height: 300
+                            }
+                        };
+                    });
             }) 
 
-        // 接下来我们首先获得每个期间的科目发生额
-
-        let balanceData = new List(...BALANCE.data)
-            .map(e => new Record(e))
-            .ordr(category => `${category.get('iyear')}-${category.get('iperiod')}`)
-            .grip(category => `${category.get('iyear')}-${category.get('iperiod')}`, '期间-年')
+        // 接下来我们首先获得每个期间的科目发生额，然后在对应期间内
+        // 从上面的科目-凭证索引中找到所有期间内对应科目的凭证列表
+    
+        let balanceData = List.from(BALANCE.data)
+            .map(e => analyzeHead.createRecord(e))
+            .ordr(category => category.get('iyear'))
+            .grip(category => category.get('iyear'), {desc: '期间-年'})
             .iter((key, balance) => {
-                let voucherDict = periodicalVoucherDict.get(key);
-
+                let vouchers = periodicalVouchers.get(key);
+                console.log(vouchers);
                 for (let i = 0; i < balance.length; i++){
                     let ccode = balance[i].get('ccode');
-                    balance[i].subs = voucherDict[ccode];
+                    balance[i].subs = vouchers.get(ccode);
                 }
 
                 return balance
@@ -113,16 +165,14 @@ export default{
                     .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
                         let descCode  = desc.get('ccode'),
                             ancesCode = ances.get('ccode');
-                        return descCode.slice(0, ancesCode.length).includes(ancesCode)
+                        return descCode.startsWith(ancesCode)
                     });
             }).grap()
-            .grip(category => category.get('iyear'), '年')
-            .iter((key, categories) => {
-                return categories.grip(category => category.get('iperiod'), '期间')
-            })
+            .grip(category => category.get('iyear'), {desc: '年'})
 
         return {head: analyzeHead, data: balanceData, tableAttr:{
-            expandable: true
+            expandable: true,
+            editable: true
         }};
     },
     desc: '发生额变动分析',

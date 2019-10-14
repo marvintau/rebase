@@ -3,17 +3,17 @@ import Tabs from './Group/Tabs'
 import styled from 'styled-components';
 
 const Table = styled.table`
-    width: 99%;
+    min-width: 600px;
+    width: auto;
     box-sizing:border-box;
     border-collapse: collapse;
     position: relative;
+    border-bottom: 1px solid black;
 `
 
 const TableWrapper = styled.div`
-    width: 100%;
+    width: auto;
     box-sizing:border-box;
-    background-color: #FAFCFE;
-    height: ${({height=600})=>height}px;
     overflow-y: scroll;
 `
 
@@ -47,7 +47,7 @@ export default function Formwell ({saveRemote, data, head, tableAttr, exportProc
         saveButton = <SaveButton onClick={save}>保存</SaveButton>
     }
 
-    return <TableWrapper height={tableAttr.height}>
+    return <TableWrapper>
         <Table>
             <tbody><Tabs data={data} head={head} tableAttr={tableAttr}/></tbody>
         </Table>
