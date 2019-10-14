@@ -157,7 +157,7 @@ export default class Rows extends React.PureComponent {
                         {...rowProps}
                     />
                 })
-                return [paginator, elems];
+                return [elems, paginator];
             }
             
         } else {
