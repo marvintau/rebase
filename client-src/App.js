@@ -7,7 +7,7 @@ export default class App extends React.Component {
     }
 
     render() {
-
-        return <BookManagerComp/>;
+        let {address} = this.props;
+        return <BookManagerComp address={address}/>;
     }
 }

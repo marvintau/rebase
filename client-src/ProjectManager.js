@@ -154,7 +154,7 @@ export default class ProjectManager extends React.Component {
 
     render(){
 
-        let {socket, clearCurrentProject} = this.props;
+        let {socket, address, clearCurrentProject} = this.props;
 
         let {projList, proj} = this.state;
 
@@ -163,7 +163,7 @@ export default class ProjectManager extends React.Component {
                 {e.projName.split('-')[0]}
             </ProjItem>
         })
-        projElems.push(<UploadBackup key='upload' socket={socket}/>)
+        projElems.push(<UploadBackup key='upload' socket={socket} address={address}/>)
 
         let displayed = projElems;
         if(proj !== undefined){

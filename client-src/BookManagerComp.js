@@ -2,12 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 import io from 'socket.io-client';
 
-
 import Formwell from './Forms/Formwell';
 import ProjectManager from './ProjectManager';
-
-import {address} from './Config.js';
-
 
 const Log = styled.div`
     white-space: pre-wrap;
@@ -47,7 +43,9 @@ export default class BookManagerComp extends React.Component{
 
         this.sheets = {};
 
-        this.socket = io(`http://${address}/TABLES`);
+        let {address} = props;
+
+        this.socket = io(`${address}/TABLES`);
 
         this.socket.on('TRANS', ({progress, type, data, projName, sheetName})=>{
 
@@ -209,6 +207,8 @@ export default class BookManagerComp extends React.Component{
 
     render(){
 
+        let {address} = this.props;
+
         let logs = this.state.logs.map((log, index) => <div key={index}>{log}</div>)
 
         let displayedContent = <Log>{logs}</Log>;
@@ -226,8 +226,12 @@ export default class BookManagerComp extends React.Component{
         }
 
         return (<FlexBox>
-            <ProjectManager socket={this.socket} initTable={this.initTable} clearCurrentProject={this.clearCurrentProject}/>
-            {displayedContent}
+            <ProjectManager
+                address={address}
+                socket={this.socket}
+                initTable={this.initTable}
+                clearCurrentProject={this.clearCurrentProject}
+            />{displayedContent}
         </FlexBox>)
 
     }

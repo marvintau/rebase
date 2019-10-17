@@ -1,10 +1,12 @@
 {
   "name": "rebase",
   "version": "1.0.0",
-  "description": "",
+  "description": "审计",
   "main": "index.js",
   "scripts": {
     "start": "node-dev ./server.js",
+    "build-remote" : "webpack --deploy=remote",
+    "build-local" : "webpack -w --deploy=local",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

@@ -2,8 +2,6 @@ import React from 'react';
 import styled from 'styled-components';
 import io from 'socket.io-client';
 
-import {address} from './Config';
-
 const InputGroup = styled.div`
     list-style:none;
     border: 0.5px solid black;
@@ -66,7 +64,9 @@ export default class UploadBackup extends React.Component{
 
     componentDidMount(){
 
-        this.socket = io(`http://${address}/UPLOAD`);
+        const {address} = this.props;
+
+        this.socket = io(`${address}/UPLOAD`);
 
         this.socket.on('MORE', (data)=>{
             this.setState({progress : data.percent});

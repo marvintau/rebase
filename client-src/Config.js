@@ -1,1 +1,0 @@
-export const address = 'localhost:1337';

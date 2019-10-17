@@ -6,14 +6,13 @@ const fs = require('fs');
 
 const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
-const serverConfigure = {
+let serverConfigure = {
 	resolve: {
 		extensions: ['.js', '.json'],
 	},
 
-	entry: {
-		filename: "./server-src/main.js"
-	},
+	entry: {},
+
 	output: {
 		path: path.resolve(__dirname),
 		filename: 'server.js'
@@ -43,18 +42,14 @@ const serverConfigure = {
 	externals: nodeExternals()
 }
 
-const clientConfigure = {
+let clientConfigure = {
 
 	resolve: {
 		extensions: ['.js', '.json'],
-		// alias: {
-		//   "styled-components": path.resolve(__dirname, "node_modules", "formwell", "node_modules", "styled-components"),
-		// }
 	},
 
-	entry: {
-		filename: "./client-src/main.js"
-	},
+	entry: {},
+
 	output: {
 		path: path.resolve(__dirname),
 		filename: 'public/dist.js'
@@ -64,7 +59,6 @@ const clientConfigure = {
 			{
 				test: /\.jsx?$/,
 				loader: 'babel-loader',
-				// include: [path.resolve(__dirname, 'node_modules')],
 				exclude: /node_modules/
 			},
 			{
@@ -107,4 +101,17 @@ const clientConfigure = {
 	},
 };
 
-module.exports = [clientConfigure, serverConfigure];
+module.exports = (env, argv) => {
+	if (argv.deploy === 'remote') {
+		serverConfigure.entry.filename = './server-src/main-remote.js';
+		clientConfigure.entry.filename = './client-src/main-remote.js';
+		return [serverConfigure, clientConfigure];
+	} else if (argv.deploy === 'local'){
+		serverConfigure.entry.filename = './server-src/main-local.js';
+		clientConfigure.entry.filename = './client-src/main-local.js';
+		return [serverConfigure, clientConfigure];
+	} else {
+		console.log('<b>您必须得指明部署的位置，即在使用webpack时添加 "--deploy=<site>"，其中site可以是"local"或"remote"');
+		return []
+	}
+}
