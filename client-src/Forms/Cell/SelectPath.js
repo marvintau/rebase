@@ -1,14 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import CheckIcon from './icons/Check.png';
-
-const Img = styled.img`
-    margin: auto;
-    width: 25px;
-    height: 25px;
-`
-
 const Wrapper = styled.div`
     min-width: 100px;
     margin: 0px 5px;
@@ -143,11 +135,10 @@ export default class SelectPath extends React.Component {
             let selects = this.renderSelect([], data, options, displayKey);
             return <div style={{display: 'flex'}}>
                 <Wrapper>{selects}</Wrapper>
-                <Img key={'done'} src={CheckIcon} onClick={this.toggleEdit}/>
             </div>
         } else {
             let [_, ...actualPath] = data;
-            return <div style={{width: '100%'}} onDoubleClick={this.toggleEdit}>
+            return <div style={{width: '100%'}}>
                 {actualPath.map((e, i) => <String key={i}>{e}</String>)}
             </div>
         }

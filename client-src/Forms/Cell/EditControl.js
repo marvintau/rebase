@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import ModifyRecordIcon from './icons/modify.png';
 import CreateRecordIcon from './icons/create-record.png';
 import DeleteRecordIcon from './icons/cross.png';
-import SaveRecordIcon from './icons/Check.png';
+import SaveRecordIcon from './icons/check.png';
 
 const Control = styled.div`
     display: flex;
