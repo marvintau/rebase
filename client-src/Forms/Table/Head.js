@@ -32,6 +32,7 @@ const TH = styled.th`
     font-family: 'Pingfang SC', 'Microsoft Yahei';
     font-weight: bold;
     position:sticky;
+    top: -1px;
     user-select: none;
 
     &:hover {

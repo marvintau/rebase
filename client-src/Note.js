@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 const Wrap = styled.div`
-    width: 500px;
+    width: 400px;
     height: 700px;
     margin: 10px;
     overflow-y: scroll;
@@ -10,6 +10,14 @@ const Wrap = styled.div`
 
 const Header = styled.h1`
     font-size: 200%;
+`
+
+const HDiv = styled.div`
+    margin-top:5px;
+    margin-bottom:5px;
+    height:1px;
+    width:100%;
+    border-top:1px solid gray;
 `
 
 const Content = styled.div`
@@ -28,11 +36,17 @@ export default function(){
         <Content>
             <P>
                 目前这一个不完善的demo，主要目的是测试余额和发生额查询、以及报表的配置表编辑功能。
-                出于数据安全考虑，未来一些功能也不会在这个云端系统里实现。请您使用最新的Chrome、
-                Firefox或Safari浏览器，不要用360和其它IE系浏览器，否则可能会显示混乱。请将您的显示器
-                分辨率设为1440x900以上来保证最佳显示效果。最好能用一个大尺寸的显示器。
-
+                出于数据安全考虑，未来一些功能也不会在这个云端系统里实现。
             </P>
+            <P>                
+                请您使用最新的Chrome、Firefox或Safari浏览器，不要用360和其它IE系浏览器，否则可能会显示混乱。请将您的显示器
+                分辨率设为1440x900以上来保证最佳显示效果。最好能用一个大尺寸的显示器。
+            </P>
+            <P>                
+                如果有任何使用中的问题，包括显示风格、操作流程不符合您的习惯，或其它您认为需要改进的，请
+                即刻与我联系。
+            </P>
+            <HDiv />
             <P>
                 如果要开始，请点击 <b>黑龙江</b> 按钮。打开之后会看到左侧出现若干小按钮。
             </P>

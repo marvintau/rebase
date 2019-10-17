@@ -12,9 +12,10 @@ const Table = styled.table`
 `
 
 const TableWrapper = styled.div`
+    height: 90vh;
     width: auto;
     box-sizing:border-box;
-    overflow-y: scroll;
+    overflow-y: scroll !important;
 `
 
 const SaveButton = styled.div`
