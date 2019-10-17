@@ -11,7 +11,7 @@ const TRBar = styled.tr`
 
 const TDTab = styled.td`
     margin-top: 5px;
-    width: 100%;
+    width: auto;
 `
 
 const Indicator = styled.td`
@@ -39,7 +39,10 @@ export default class Row extends React.Component {
             if (props.data !== state.data){
                 return {
                     data: props.data,
-                    fromInside : false
+                    editing: false,
+                    isHovered: false,
+                    isRowExpanded: false,        
+                    fromInside : false,
                 }
             }
         } else {
@@ -55,10 +58,7 @@ export default class Row extends React.Component {
             console.log(type, method, args, 'updateRow');
             this.props.updateRows(method, args);
         } else if (type === 'self'){
-            let {data} = this.state;
-            this.setState({
-                data: data[method](...args)
-            })
+            this.state.data[method](...args);
         }
     }
 
@@ -67,20 +67,34 @@ export default class Row extends React.Component {
         updateRowsExpanded(rowIndex);
     }
 
+    toggleEdit = () => {
+        console.log('togglededit')
+        this.setState({
+            editing: !this.state.editing,
+            fromInside: true
+        })
+    }
+
     onMouseEnter = ()=>{
-        this.setState({isHovered: true});
+        this.setState({
+            isHovered: true,
+            fromInside: true,
+        });
     }
 
     onMouseLeave = ()=>{
-        this.setState({isHovered: false});
+        this.setState({
+            isHovered: false,
+            fromInside: true
+        });
     }
 
     render(){
 
         let {rowIndex, level, head, tableAttr={}, rowsExpanded} = this.props;
         
-        let {data, isHovered} = this.state,
-            {expandable, controllable} = tableAttr,
+        let {data, editing, isHovered} = this.state,
+            {expandable, editable} = tableAttr,
             isRowExpanded = rowIndex === rowsExpanded;
 
         expandable = expandable && (data.hasChild() || data.hasTable());
@@ -93,7 +107,7 @@ export default class Row extends React.Component {
             expandable
         }
 
-        let colSpan = head.lenDisplayed()+1;
+        let colSpan = head.lenDisplayed();
 
         let cols = [
             <Indicator key={'indicator'}
@@ -107,6 +121,7 @@ export default class Row extends React.Component {
                 ...sharedCellProps,
                 ...head[colKey],
                 isHovered, rowsExpanded,
+                isRowEditing: editing,
                 colKey: colKey,
                 data: data.get(colKey),
             }
@@ -116,27 +131,34 @@ export default class Row extends React.Component {
                 // 如果是title，那么cols将只包含一个cell，同时占满整个表格行。需要注意的是，
                 // 如果head中包含的title字段，在data中并不包含，或者data中包含的内容（即
                 // 字符串）是空的，那么都不会作为title来处理。
-                console.log(data.get(colKey), 'before prob')
-                if (data.get(colKey) && data.get(colKey).length > 0){
+
+                let title = data.get(colKey);
+                if (title && title.length > 0 && title != 'undefined'){
                     cols.push(<Cell key={colKey} colSpan={colSpan} {...cellProps}/>)
                     break;    
+                } else {
+                    // 如果title是空的，那么会直接被跳过去。
+                    continue;                    
                 }
-
-                // 如果title是空的，那么会直接被跳过去。
-                continue;
             }
+
             if(!(cellProps.hidden)){
                 cols.push(<Cell key={colKey}{...cellProps}/>)
             }
         }
 
-        if (controllable){
+        if (editable){
+
+            let {editing} = this.state;
+
             cols.push(<Cell
                 key={'ctrl'}
+                rowIndex={rowIndex}
                 isControlCell={true}
                 isHovered={isHovered}
+                isRowEditing={editing}
                 update={this.updateRow}
-                rowIndex={rowIndex}
+                toggleEdit={this.toggleEdit}
             />)
         }    
 
@@ -156,7 +178,7 @@ export default class Row extends React.Component {
             } else if (data.hasTable()){
 
                 subs = <tr key={'rest'}>
-                    <TDTab colSpan={colSpan} ><Formwell {...data.subs} /></TDTab>
+                    <TDTab colSpan={colSpan+1} ><Formwell {...data.subs} /></TDTab>
                 </tr>
             }
         }

@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
 
+import {Group} from 'persisted';
+
 import Rows from '../Table/Rows';
 import Head from '../Table/Head';
 
@@ -40,6 +42,7 @@ export default class Tabs extends React.Component {
         let currKey = props.data.keys ? props.data.keys()[0] : undefined;
 
         this.state = {
+            data: this.props.data,
             currKey
         }
     }
@@ -49,11 +52,12 @@ export default class Tabs extends React.Component {
             if (props.data !== state.data){
                 return {
                     currKey: props.data.keys ? props.data.keys()[0] : undefined,
-                    fromInside : false
+                    fromInside : false,
+                    sorted: false,
                 }
             }
         } else {
-            return {...state, fromInside: false}
+            return {...state, fromInside: false, sorted: false}
         }
         return state;
     }
@@ -89,9 +93,20 @@ export default class Tabs extends React.Component {
         })
     }
 
+    sortData = (key, direction) => {
+        let {data, currKey} = this.state;
+        data.set(currKey, data.get(currKey).ordr(e => e.get(key), direction == 'ascend' ? 1 : -1));
+
+        this.setState({
+            data : new Group(data),
+            fromInside: true
+        })
+    }
+
     render(){
 
-        let {data, head, tableAttr} = this.props,
+        let {head, tableAttr} = this.props,
+            {data} = this.state,
             colSpan = head.lenDisplayed()+1;
 
         if (data.constructor.name === 'List'){
@@ -128,7 +143,7 @@ export default class Tabs extends React.Component {
                     return <Button key={i} onClick={() => this.setCurrKey(e)}>{displayed}</Button>
                 })
     
-                controller = <td colSpan={colSpan}><TabTD>
+                controller = <td style={{width: '100%'}} colSpan={colSpan}><TabTD>
                     <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
                     {keys}
                     <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
@@ -142,7 +157,8 @@ export default class Tabs extends React.Component {
                 data: content,
                 colSpan,
                 head,
-                tableAttr
+                tableAttr,
+                sortData: this.sortData
             }
         
             let subLevel;

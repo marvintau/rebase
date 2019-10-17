@@ -34,14 +34,16 @@ export default function Cell(props){
     if (isControlCell){
 
         let {EditControl} = CellComponent,
-            {isRowExpanded, isHovered, rowIndex, update} = props;
+            {isRowExpanded, isRowEditing, isHovered, rowIndex, update, toggleEdit} = props;
 
         return <TD border={false}>
             <EditControl
                 isHovered={isHovered}
+                isRowEditing={isRowEditing}
                 isRowExpanded={isRowExpanded}
                 rowIndex={rowIndex}
                 update={update}
+                toggleEdit={toggleEdit}
             />
         </TD>
     }

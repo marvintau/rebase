@@ -21,8 +21,8 @@ export default {
         head.setColProp({colDesc: "科目名称", isExpandToggler: true}, 'ccode_name')
         head.setColProp({colDesc: "科目编码"}, 'ccode' )
         head.setColProp({colDesc: "科目类别"}, 'cclass')
-        head.setColProp({colDesc: '期初金额'}, 'mb'    )
-        head.setColProp({colDesc: '期末金额'}, 'me'    )
+        head.setColProp({colDesc: '期初金额', isSortable: true}, 'mb'    )
+        head.setColProp({colDesc: '期末金额', isSortable: true}, 'me'    )
 
         // console.log(BALANCE.data.constructor, 'balance type');
         let balanceData = List.from(BALANCE.data)

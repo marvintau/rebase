@@ -39,35 +39,34 @@ export default {
 
         console.log(savedFinancialStatementConf, 'saved')
 
-        let category = new List(CATEGORY.data.map(e => categoryHead.createRecord(e)))
+        let category = List.from(CATEGORY.data.map(e => categoryHead.createRecord(e)))
         .flat()
         .ordr(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
             let descCode = desc.get('ccode'),
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
-        }, '按科目级联');
+        });
 
-        financialConfHead.setColProp({colDesc: '项目', isTitle: true, isExpandToggler: true}, 'title')
+        financialConfHead.setColProp({colDesc: '项目', isTitle: true}, 'title')
         financialConfHead.setColProp({colDesc: '对应的科目类别', options: category, displayKey: 'ccode_name'}, 'category')
         financialConfHead.setColProp({colDesc: '取值方式', options: sideOptions, displayKey: 'methodName'}, 'side')
         financialConfHead.setColProp({colDesc: '计入方式', options: methodOptions, displayKey: 'methodName'}, 'method')
 
-        let data = new List(Object.entries(FinancialStatementDetails))
+        let data = List.from(Object.entries(FinancialStatementDetails))
             .map(([title, content]) => {
                 let rec = financialConfHead.createRecord({title})
-                rec.heir = new List(content).map(con => financialConfHead.createRecord(con));
+                rec.heir = List.from(content).map(con => financialConfHead.createRecord(con));
                 return rec
             })
             .flat()
-        console.log(data)
+        console.log(data, 'data')
 
         return {
             data,
             head: financialConfHead,
             tableAttr:{
                 expandable: true,
-                controllable: true,
                 editable: true,
                 savable: true
             }

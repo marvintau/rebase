@@ -70,7 +70,7 @@ export default{
             let descCode = desc.get('ccode'),
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
-        }, '按科目级联');
+        });
         // What we get so far:
         // a cascaded list of records, that containing the beginning, accumulated
         // credit and debit accrual.

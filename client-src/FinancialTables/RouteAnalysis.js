@@ -22,8 +22,8 @@ voucherHead.setColProp({colDesc: '科目编码', hidden: true}, 'ccode');
 voucherHead.setColProp({colDesc: '客户名称', hidden: true}, 'cCusName');
 voucherHead.setColProp({colDesc: '对方科目'}, 'ccode_equal');
 voucherHead.setColProp({colDesc: '摘要'},     'cdigest');
-voucherHead.setColProp({colDesc: '借方发生'}, 'md');
-voucherHead.setColProp({colDesc: '贷方发生'}, 'mc');
+voucherHead.setColProp({colDesc: '借方发生', isSortable: true}, 'md');
+voucherHead.setColProp({colDesc: '贷方发生', isSortable: true}, 'mc');
 voucherHead.setColProp({colDesc: '年', hidden: true}, 'iyear');
 voucherHead.setColProp({colDesc: '期间'}, 'iperiod');
 
@@ -44,10 +44,10 @@ let analyzeHead = new Head({
 analyzeHead.setColProp({colDesc: "科目名称", isExpandToggler: true}, 'ccode_name');
 analyzeHead.setColProp({colDesc: "科目编码", hidden: true}, 'ccode');
 analyzeHead.setColProp({colDesc: "科目类别"}, 'cclass');
-analyzeHead.setColProp({colDesc: '期初余额'}, 'mb');
-analyzeHead.setColProp({colDesc: '期末余额'}, 'me');
-analyzeHead.setColProp({colDesc: '借方发生'}, 'md');
-analyzeHead.setColProp({colDesc: '贷方发生'}, 'mc');
+analyzeHead.setColProp({colDesc: '期初余额', isSortable: true}, 'mb');
+analyzeHead.setColProp({colDesc: '期末余额', isSortable: true}, 'me');
+analyzeHead.setColProp({colDesc: '借方发生', isSortable: true}, 'md');
+analyzeHead.setColProp({colDesc: '贷方发生', isSortable: true}, 'mc');
 analyzeHead.setColProp({colDesc: '年', hidden: true}, 'iyear');
 analyzeHead.setColProp({colDesc: '期间', hidden: true}, 'iperiod')
 

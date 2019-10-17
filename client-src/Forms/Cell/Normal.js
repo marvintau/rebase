@@ -19,7 +19,8 @@ const String = styled.div`
 `
 
 const Edit = styled.input`
-    width:100%;
+    width:auto;
+    max-width: 75px;
     margin:0px 5px;
     padding: 0px 5px;
     text-align: right;
@@ -55,11 +56,11 @@ export default class Normal extends React.Component{
     }
 
     render(){
-        let {type, editable, isEditing} = this.props,
+        let {type, isRowEditing} = this.props,
             {data} = this.state;
     
 
-        if (isEditing) {
+        if (isRowEditing) {
             let value;
             switch(type.name){
                 case 'Number':
@@ -71,6 +72,8 @@ export default class Normal extends React.Component{
                     }
                     break;
                 case 'String':
+                    console.log(value);
+                    value = data;
                     value = value == "undefined" ? "" : value;
                     break;
                 default:

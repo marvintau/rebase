@@ -46,6 +46,7 @@ export default class Rows extends React.PureComponent {
 
     static getDerivedStateFromProps(props, state){
         if(!state.fromInside){
+            // console.log(props.data.map(e => e.cols.me.valueOf()), state.data.map(e => e.cols.me.valueOf()), 'list');
             if (props.data !== state.data){
                 return {
                     data: props.data,
@@ -76,7 +77,6 @@ export default class Rows extends React.PureComponent {
         if (operation === 'insert') {
             args.push(this.props.head.createRecord());
         }
-        console.log(this.state.data, operation, args, 'updateRows');
         let data = this.state.data[operation](...args);
 
         this.setState({

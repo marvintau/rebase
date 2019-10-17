@@ -41,12 +41,12 @@ function SingleSelect (props){
         return <option key={index}>{data.get(displayKey).valueOf()}</option>;
     })
 
-    // 之所以要在这里使用data-path是因为，事件触发update方法的时候，
+    // 之所以要在这里使用data是因为，事件触发update方法的时候，
     // 我们可以直接从DOM中得到path。
 
     return <Wrapper>
         <Select
-            data-path={path.join('->')}
+            data={path.join('->')}
             value={data}
             onFocus={update}
             onChange={update}
@@ -62,7 +62,6 @@ export default class SelectPath extends React.Component {
         super(props, context);
 
         this.state={
-            editing: false,
             data: props.data ? props.data : {path: [0, 0]}
         }
     }
@@ -73,16 +72,6 @@ export default class SelectPath extends React.Component {
             return {...state, data: props.data ? props.data : {path: [0, 0]}}
         }
         return state;
-    }
-
-    toggleEdit = (e) => {
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        this.setState({
-            editing: !this.state.editing
-        })
     }
 
     update = (e) => {
@@ -141,17 +130,23 @@ export default class SelectPath extends React.Component {
 
 
     render(){
-        let {options, displayKey, editable} = this.props,
-            {data, editing} = this.state;
 
-        if (editing){
-            let selects = this.renderSelect([], data.path, options, displayKey);
+        // NOTE:
+        // 此处使用data[0]是一时权宜，因为在Head中使用了Array来初始化一个Path，
+        // 但Path本身也是Array，所以就造成了Array of Array。未来重新设计persisted
+        // head的时候，对这里要进行相应修改。
+
+        let {options, displayKey, isRowEditing} = this.props,
+            {data} = this.state;
+
+        if (isRowEditing){
+            let selects = this.renderSelect([], data, options, displayKey);
             return <div style={{display: 'flex'}}>
                 <Wrapper>{selects}</Wrapper>
                 <Img key={'done'} src={CheckIcon} onClick={this.toggleEdit}/>
             </div>
         } else {
-            let [_, ...actualPath] = data.path
+            let [_, ...actualPath] = data;
             return <div style={{width: '100%'}} onDoubleClick={this.toggleEdit}>
                 {actualPath.map((e, i) => <String key={i}>{e}</String>)}
             </div>

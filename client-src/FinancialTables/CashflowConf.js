@@ -44,7 +44,7 @@ export default {
             let descCode = desc.get('ccode'),
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
-        }, '按科目级联');
+        });
 
         console.log(cashflowStatementDirectDetails, 'detailes');
         head.setColProp({colDesc: '项目', isTitle: true, isExpandToggler: true}, 'title')
@@ -73,7 +73,6 @@ export default {
 
         return {data, head, tableAttr:{
                 expandable: true,
-                controllable: true,
                 editable: true,
                 savable: true
             }
