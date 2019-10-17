@@ -94,13 +94,23 @@ export default class Tabs extends React.Component {
     }
 
     sortData = (key, direction) => {
-        let {data, currKey} = this.state;
-        data.set(currKey, data.get(currKey).ordr(e => e.get(key), direction == 'ascend' ? 1 : -1));
 
-        this.setState({
-            data : new Group(data),
-            fromInside: true
-        })
+        
+        let {data, currKey} = this.state;
+        
+        if(data.constructor.name==='Group'){
+            data.set(currKey, data.get(currKey).ordr(e => e.get(key), direction == 'ascend' ? 1 : -1));
+            console.log('sortdata called', data.constructor.name, key);
+            this.setState({
+                data : new Group(data),
+                fromInside: true
+            })
+        } else if (data.constructor.name === "List"){
+            this.setState({
+                data: data.ordr(e => e.get(key), direction == 'ascend' ? 1 : -1),
+                fromInside: true
+            })
+        }
     }
 
     render(){
@@ -120,7 +130,7 @@ export default class Tabs extends React.Component {
             }
 
             return [
-                <Head {...props} key={'head'}/>,
+                <Head sortData={this.sortData} {...props} key={'head'}/>,
                 <Rows {...props} key={'table'}/>
             ]
         } else {
@@ -158,13 +168,12 @@ export default class Tabs extends React.Component {
                 colSpan,
                 head,
                 tableAttr,
-                sortData: this.sortData
             }
         
             let subLevel;
             if (content.constructor.name === 'List'){
                 subLevel = [
-                    <Head {...props} key={'head'}/>,
+                    <Head sortData={this.sortData} {...props} key={'head'}/>,
                     <Rows {...props} key={'table'}/>
                 ]
             } else if (content.constructor.name === 'Group'){

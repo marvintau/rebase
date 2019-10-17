@@ -34,45 +34,27 @@ const TH = styled.th`
     position:sticky;
     user-select: none;
 
-    ${({isSortable}) => isSortable ? `
-        top: -1px;
-
-        &:hover {
-            background-color: #222222;
-            cursor: pointer;
-        }
-    ` : ''}
+    &:hover {
+        background-color: #222222;
+        cursor: pointer;
+    }
 `
 
 class HeadCell extends React.Component{
 
     constructor(props){
         super(props);
-
-        this.state = {
-            sorting: 'none'
-        }
-    }
-
-    switchSort = (e) => {
-        let {colKey, sortData} = this.props;
-        let {sorting} = this.state;
-
-        let newSort = sorting !== 'ascend' ? 'ascend' : 'descend';
-        sortData(colKey, newSort);
-        this.setState({
-            sorting : newSort
-        })
     }
 
     render(){
-        let {isSortable, colDesc} = this.props;
-        let {sorting} = this.state;
-        console.log(sorting, 'sorting')
-        return <TH isSortable={isSortable} onClick={this.switchSort}><div style={{display: 'flex', justifyContent:'center', alignItems:'center'}}>
-            {colDesc}
-            {(isSortable && sorting !== 'none') ? <Icon src={sorting !== 'ascend' ? SortAscend : SortDescend} /> : ''}
-        </div></TH>
+        let {colKey, colDesc, isSortedKey, sortOrder, switchSort} = this.props;
+
+        return <TH onClick={(e) => switchSort(colKey)}>
+            <div style={{display: 'flex', justifyContent:'center', alignItems:'center'}}>
+                {colDesc}
+                {(isSortedKey && sortOrder !== 'none') ? <Icon src={sortOrder !== 'ascend' ? SortAscend : SortDescend} /> : ''}
+            </div>
+        </TH>
     }
 }
 
@@ -84,21 +66,48 @@ const THControl = styled.th`
 
 export default class Head extends React.Component{
 
+    constructor(props){
+        super(props);
+
+        this.state = {
+            sortKey : undefined,
+            sortOrder : 'none'
+        }
+    }
+
+    switchSort = (colKey) => {
+        let {sortData} = this.props,
+            {sortOrder} = this.state;
+
+        let nextSortOrder = sortOrder !== 'ascend' ? 'ascend' : 'descend';
+        sortData(colKey, nextSortOrder);
+
+        this.setState({
+            sortKey : colKey,
+            sortOrder : nextSortOrder
+        })
+    }
+
     render(){
-        let {head, tableAttr, sortData} = this.props;
+        let {head, tableAttr, sortData} = this.props,
+            {sortKey, sortOrder} = this.state;
 
         let headElem = [<Indicator key={'indicator'} />];
 
         for (let key in head){
-            let {colDesc, hidden, isTitle, isSortable} = head[key];
+            let {colDesc, hidden, isTitle} = head[key];
 
             if(!(hidden || isTitle)){
                 headElem.push(<HeadCell
                     key={key}
                     colKey={key}
-                    isSortable={isSortable}
-                    sortData={sortData}
                     colDesc={colDesc}
+
+                    isSortedKey={key === sortKey}
+                    sortOrder={sortOrder}
+
+                    sortData={sortData}
+                    switchSort={this.switchSort}
                 />)
             }
         }
