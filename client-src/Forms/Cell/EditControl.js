@@ -37,11 +37,11 @@ export default class EditControl extends React.Component{
     }
 
     render(){
-        let {isRowEditing, isRowExpanded, isHovered, toggleEdit} = this.props;
+        let {isRowEditing, isHovered, toggleEdit} = this.props;
         
         if (isRowEditing){
             return <Control>
-                <Icon key={'save'} src={SaveRecordIcon} onClick={toggleEdit}/>
+                <Icon key={'save'} isHovered={isHovered} src={SaveRecordIcon} onClick={toggleEdit}/>
             </Control>
         }
 

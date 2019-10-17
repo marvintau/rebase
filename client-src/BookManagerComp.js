@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 
 import Formwell from './Forms/Formwell';
 import ProjectManager from './ProjectManager';
+import Note from './Note'
 
 const Log = styled.div`
     white-space: pre-wrap;
@@ -14,7 +15,7 @@ const Log = styled.div`
 `
 
 const WorkAreaContainer = styled.div`
-    flex-grow: 1.5;
+    // flex-grow: 1.5;
     font-size : 85%;
     margin: 10px;
 `
@@ -230,8 +231,9 @@ export default class BookManagerComp extends React.Component{
                 address={address}
                 socket={this.socket}
                 initTable={this.initTable}
-                clearCurrentProject={this.clearCurrentProject}
-            />{displayedContent}
+                clearCurrentProject={this.clearCurrentProject}/>
+            {displayedContent}
+            <Note />
         </FlexBox>)
 
     }

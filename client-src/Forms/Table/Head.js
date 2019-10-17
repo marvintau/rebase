@@ -52,7 +52,7 @@ class HeadCell extends React.Component{
         return <TH onClick={(e) => switchSort(colKey)}>
             <div style={{display: 'flex', justifyContent:'center', alignItems:'center'}}>
                 {colDesc}
-                {(isSortedKey && sortOrder !== 'none') ? <Icon src={sortOrder !== 'ascend' ? SortAscend : SortDescend} /> : ''}
+                {(isSortedKey && sortOrder !== 'none') ? <Icon src={sortOrder === 'ascend' ? SortAscend : SortDescend} /> : ''}
             </div>
         </TH>
     }
