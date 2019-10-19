@@ -87,6 +87,7 @@ uploadServer.on('connection', function (socket) {
 tableServer.on('connection', function (socket) {
 
     socket.on('REQUIRE_LIST', function(){
+        console.log('received inquiring');
         fs.readdir(BACKUP_PATH).then(res => {
             socket.emit('LIST', {list: res});
         }).catch(err => {
