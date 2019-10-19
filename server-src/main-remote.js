@@ -15,7 +15,7 @@ import {operate, retrieveAndStore} from './database.js';
 
 var app = express();
 
-var server = app.listen(80, function () {
+var server = app.listen(8080, function () {
   console.log('Server is listening 80, for HTTPS');
   console.log("run from the " + __dirname);
 });
