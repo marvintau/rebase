@@ -52,6 +52,8 @@ export default {
 
             });
 
+        console.log(data, 'balance');
+
         return {head, data, tableAttr:{
             expandable: true,
             editable:true
