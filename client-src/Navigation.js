@@ -85,6 +85,12 @@ const BottomButton = styled.button`
     padding: 5px;
 `
 
+const Note = styled.div`
+    margin: 10px 10px;
+    letter-spacing: -0.8px;
+    font-size: 80%;
+`
+
 function handleRawList(rawList){
 
     let dict = {};
@@ -213,6 +219,7 @@ export default class Navigation extends React.Component {
             let displayed = <ManuItem>
                 <Title>{name.split('-')[0]}</Title>
                 {elemDisplay}
+                <Note>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新，转换为系统的内部数据。</Note>
                 <BottomButton onClick={(e) => {
                     this.goto('restore');
                 }}>更新数据</BottomButton>
