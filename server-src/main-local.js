@@ -38,7 +38,7 @@ uploadServer.on('connection', function (socket) {
 
     socket.on('START', function (data) { 
 
-        console.log('begin receing file');
+        console.log('begin receiving file');
 
         var fileStub;
         Files[data.name] = fileStub = new FileRecv(data.size, path.join(BACKUP_PATH, data.path));
