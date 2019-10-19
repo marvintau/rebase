@@ -18,6 +18,10 @@ var app = express();
 var server = app.listen(8080, function () {
   console.log('Server is listening 80, for HTTPS');
   console.log("run from the " + __dirname);
+  fs.readdir(BACKUP_PATH)
+  .then(res => {
+      console.log(res, 'stored file');
+  })
 });
 
 const io = require('socket.io').listen(server);
