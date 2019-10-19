@@ -1,6 +1,6 @@
 
 /**
- * ProjectManager
+ * Navigation
  * --------------
  * 
  * Accounting for all interactions **BEFORE VIEWING LEDGING DATA**
@@ -20,7 +20,7 @@
  * 
  * 其中2/3/4项均需要通过socket与服务器进行交互。
  * 
- * 在选择和打开数据表之后（selectSheet方法），ProjectManager就不再更新自
+ * 在选择和打开数据表之后（selectSheet方法），Navigation就不再更新自
  * 己的状态了，而是通过一个callback来调用BookManager的方法从远程获取数据。
  * 此处的实现详见BookManager的代码。
  * 
@@ -29,28 +29,28 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import UploadBackup from './UploadBackup';
+import UploadManager from './UploadManager';
 import RestoreBackup from './RestoreBackup';
 
 import FinancialTables from './FinancialTables';
-
-console.log(FinancialTables, 'yonyou')
 
 const Container = styled.div`
     width: 250px;
     margin-top: 10px;
 `
 
-const ProjItem = styled.div`
+const ManuItem = styled.div`
     list-style:none;
     border-radius: 5px;
     border 1px solid #E7E7E7;
     background: #F0F0F0;
     padding:10px;
     margin-bottom: 10px;
+    user-select: none;
 
     &:hover{
         background-color: #F0F0F0;
+        cursor: point;
     }
 
     &:active{
@@ -74,7 +74,7 @@ const Button = styled.button`
     padding: 5px;
 `
 
-const BackButton = styled.button`
+const BottomButton = styled.button`
     display: block;
     font-weight: bold;
     width: 100%;
@@ -91,23 +91,29 @@ function handleRawList(rawList){
 
     rawList.map((e) => {
         return e.split('.')
-    }).forEach(([name, type]) => {
-        if (type === 'BAK'){
-            Object.assign(dict, {[name]: {projName:name, projStat: 'no-restored'}});
-        } else if (type === 'RESTORED'){
-            Object.assign(dict, {[name]: {projName:name, projStat: 'restored'}});
+    })
+    .filter(e => e.length > 1)
+    .forEach((nameList) => {
+        // 在这里检查服务器所存储的数据只包含新上传的数据，还是已经包含了经过复原的数据
+        let [projStat, projName, ...rest] = nameList,
+            currStat = dict[projName] ? dict[projName].projStat : undefined;
+
+        if (projStat === 'RESTORED' || (projStat === 'SOURCE' && currStat === undefined)){
+            Object.assign(dict, {[projName]: {projName, projStat}});
         }
+
     });
 
     return Object.values(dict);
 }
 
-export default class ProjectManager extends React.Component {
+export default class Navigation extends React.Component {
 
     constructor(props, context){
         super(props, context);
 
         this.state = {
+            navPos: 'start',
             projList : [],
             proj: undefined,
         }
@@ -122,9 +128,8 @@ export default class ProjectManager extends React.Component {
         socket.once('LIST', ({list}) => {
             let projList = handleRawList(list);
             this.setState({projList});
-        });
-
-        socket.emit('REQUIRE_LIST', {});
+        })
+        .emit('REQUIRE_LIST', {});
     }
 
     selectProject(index){
@@ -132,6 +137,7 @@ export default class ProjectManager extends React.Component {
         let sheetList = Object.assign({}, FinancialTables);
 
         this.setState({
+            navPos: 'sheets',
             proj: {...this.state.projList[index], sheetList}
         });
     }
@@ -152,51 +158,84 @@ export default class ProjectManager extends React.Component {
         this.setState({proj: undefined});
     }
 
+    goto = (navPos) => {
+        this.setState({navPos})
+    }
+
     render(){
 
         let {socket, address, clearCurrentProject} = this.props;
 
-        let {projList, proj} = this.state;
+        let {navPos} = this.state;
 
-        let projElems = projList.map((e, i) => {
-            return <ProjItem key={`project-${i}`} onClick={(e) => this.selectProject(i)}>
-                {e.projName.split('-')[0]}
-            </ProjItem>
-        })
-        projElems.push(<UploadBackup key='upload' socket={socket} address={address}/>)
-
-        let displayed = projElems;
-        if(proj !== undefined){
-
-            let name = proj.projName;
-
-            let elemDisplay = ''
-            if (proj.projStat !== 'restored'){
-                elemDisplay = <RestoreBackup path={name} socket={socket}/> 
-            } else {
-                elemDisplay = [];
-                for (let sheetName in proj.sheetList){
-                    let {desc} = proj.sheetList[sheetName];
-                    elemDisplay.push(<Button key={sheetName} data-key={sheetName} onClick={this.selectSheet}>
-                        {desc}
-                    </Button>)
-                }
-            }
-
-            displayed = <ProjItem>
-                <Title>{name.split('-')[0]}</Title>
-                {elemDisplay}
-                <BackButton onClick={(e) => {
-                    e.stopPropagation()
-                    this.backToList();
-                    clearCurrentProject();
-                }}>返回</BackButton>
-            </ProjItem>
+        if (navPos === 'start'){
+            return <Container>
+                <ManuItem onClick={() => this.goto('upload')}>上传一个新项目</ManuItem>
+                <ManuItem onClick={() => this.goto('open')}>打开现有项目</ManuItem>
+            </Container>
         }
 
-        return <Container>
-            {displayed}
-        </Container>
+        if (navPos === 'open'){
+            let {projList} = this.state;
+
+            let projElems = projList.map((e, i) => {
+                return <ManuItem key={`project-${i}`} onClick={(e) => this.selectProject(i)}>
+                    {e.projName.split('-')[0]}
+                </ManuItem>
+            })
+    
+            projElems.push(<ManuItem key={'back'} onClick={() => this.goto('start')}>返回</ManuItem>)
+
+            return <Container>
+                {projElems}
+            </Container>
+        }
+
+        if (navPos === 'upload'){
+            return <Container>
+                <UploadManager key='upload' socket={socket} address={address}/>
+                <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
+            </Container>
+        }
+
+        if (navPos === 'sheets'){
+            let {proj} = this.state;
+            let name = proj.projName;
+
+            let elemDisplay = [];
+            for (let sheetName in proj.sheetList){
+                let {desc} = proj.sheetList[sheetName];
+                elemDisplay.push(<Button key={sheetName} data-key={sheetName} onClick={this.selectSheet}>
+                    {desc}
+                </Button>)
+            }
+
+            let displayed = <ManuItem>
+                <Title>{name.split('-')[0]}</Title>
+                {elemDisplay}
+                <BottomButton onClick={(e) => {
+                    this.goto('restore');
+                }}>更新数据</BottomButton>
+                <BottomButton onClick={(e) => {
+                    clearCurrentProject();
+                    this.goto('start');
+                }}>返回</BottomButton>
+            </ManuItem>
+
+            return <Container>
+                {displayed}
+            </Container>
+        }
+
+        if (navPos === 'restore'){
+
+            let {projName, path} = this.state.proj;
+            console.log(projName, path, 'restoer');
+            return <Container>
+                <RestoreBackup path={path} name={projName} socket={socket} goto={this.goto} />
+            </Container>
+        }
+
     }
 
 }

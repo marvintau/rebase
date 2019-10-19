@@ -44,27 +44,26 @@ export default{
     },
     importProc({RouteAnalysis, savedCashflowConf}){
         
-        let headYear = 0,
-            tailYear = 0,
-            headPeriod = 1,
-            tailPeriod = 10;
+        // let headYear = 0,
+        //     tailYear = 0,
+        //     headPeriod = 1,
+        //     tailPeriod = 10;
 
         // 首先将之前的发生额分析完全展开
-        let routeData = RouteAnalysis.data
-        .grap().map(e => e.grap()).flat() 
-        .flatten()
-        // 然后获取我们想要的区间
-        .filter(e => {
-            let {iyear, iperiod} = e.cols;
-            return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
-        })
+        let routeData = RouteAnalysis.data.grap().flatten()
+        // // 然后获取我们想要的区间
+        // // .filter(e => {
+        // //     let {iyear, iperiod} = e.cols;
+        // //     return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
+        // // })
 
         // 将条目按科目分类，并在想要的时间区间内求和
         .grip(e => e.get('ccode'), '科目')
         .iter((key, val) => {
             let sorted = val.ordr(e => `${e.get('iyear')-e.get('iperiod')}`).reverse();
             return routeHead.sum(sorted);
-        }).grap()
+        })
+        .grap()
 
         // 然后建立一个级联的经过求和的科目发生额表
         .ordr(e => e.get('ccode'))
@@ -86,7 +85,7 @@ export default{
         console.log(data, 'here')
 
         // 现在计算发生额
-        data = new List(Object.entries(data))
+        data = List.from(Object.entries(data))
         .map(([mainTitle, headContent]) => {
 
             let headRec = new Record({mainTitle, title: '', accrual: 0}, {head});
@@ -96,23 +95,17 @@ export default{
                 let accrual = 0;
                 let entries = content.map(entry => {
 
-                    // 这里我们需要特别handle，在这里我们需要解除掉数据外层的包装。
-                    // 在这个版本稳定之前，不要尝试修改这里。
-                    // 同FinancialStatement
-                    if (entry.valueOf){
-                        entry = entry.valueOf();
-                    }
-
                     let [_, ...path] = entry.category;
                     let rec = traceRecord(routeData, 'ccode_name', path);
-                    console.log(rec, 'rec');
+
+                    // 如果配置文件是导入的，那么很可能会找不到实际的科目，那么在实际计算的过程中，
+                    // 我们将会排除掉这些科目。
                     if (rec === undefined){
                         return rec;
                     }
 
                     return {...entry, ...rec.valueOf()}
                 }).filter(rec => rec !== undefined)
-                console.log(entries, 'entiris');
                 
                 let heir = new List(0);
                 for (let rec of entries){
@@ -122,8 +115,10 @@ export default{
                     method = method[1];
 
                     let key = {
+                        '期初' : 'mb',
                         '借方' : 'md',
                         '贷方' : 'mc',
+                        '期末' : 'me'
                     }[side]
 
                     let sign = {
@@ -146,7 +141,10 @@ export default{
                 return new Record({title, accrual}, {head, heir});
             });
 
-            return [headRec, ...headContentRec]
+            let sum = headContentRec.map(e => e.get('accrual')).reduce((e, acc) => e+acc, 0);
+            console.log(sum, 'sum')
+
+            return [headRec, ...headContentRec, new Record({title: '小计', accrual: sum}, {head})]
         }).flat(2);
 
         return {head, data, tableAttr: {expandable: true}}

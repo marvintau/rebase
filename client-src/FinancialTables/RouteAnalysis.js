@@ -59,15 +59,14 @@ function truncName(name){
 export default{
     referred: {
         BALANCE: {desc: '科目余额', location: 'remote'},
-        ENTRIES: {desc: '明细分录', location: 'remote'},
-        CATEGORY: {desc: '科目类别', location: 'remote'}
+        JOURNAL: {desc: '明细分录', location: 'remote'},
     },
-    importProc({BALANCE, ENTRIES, CATEGORY}){
+    importProc({BALANCE, JOURNAL}){
 
         // 这部分我们将对对方科目进行一个处理，使得我们可以看到对方科目的路径。
         // 我们先通过科目层级得到科目的路径，然后再建立一个科目的叶子结点对于其
         // 路径的dict
-        let catePathDict = List.from(CATEGORY.data)
+        let catePathDict = List.from(BALANCE.data)
             .ordr(rec => rec.ccode)
             .cascade(rec=>rec.ccode.length,
                 (desc, ances) => {
@@ -94,7 +93,7 @@ export default{
             })
             .toObject()
 
-        let voucherData = List.from(ENTRIES.data)
+        let voucherData = List.from(JOURNAL.data)
             .map(e => voucherHead.createRecord(e));
 
         for (let i = 0; i < voucherData.length; i++){

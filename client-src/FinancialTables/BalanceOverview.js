@@ -31,20 +31,25 @@ export default {
         let data = balanceData
             .grip(rec => rec.get('iyear'), {desc:'年'})
             .iter((key, recs) => {
-                return recs
-                    .grip((rec) => rec.get('iperiod'), {desc: '期间'})
-                    .iter((key, codeRecs) => {
-                        let final = codeRecs
-                            .ordr(rec=>rec.get('ccode'))
-                            .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
-                                let descCode = desc.get('ccode'),
-                                    ancesCode = ances.get('ccode');
-                                return descCode.startsWith(ancesCode)
-                            });
 
-                        console.log(final, 'aftercascade');
-                        return final;
-                    })
+                let cas = (recs) => recs
+                    .ordr(rec=>rec.get('ccode'))
+                    .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
+                        let descCode = desc.get('ccode'),
+                            ancesCode = ances.get('ccode');
+                        return descCode.startsWith(ancesCode)
+                    });
+
+                if (recs.map(rec => rec.get('iperiod')).every(e => e=== undefined)){
+                    return cas(recs);
+                } else {
+                    return recs
+                        .grip((rec) => rec.get('iperiod'), {desc: '期间'})
+                        .iter((key, codeRecs) => {
+                            return cas(codeRecs);
+                        })
+                }
+
             });
 
         return {head, data, tableAttr:{

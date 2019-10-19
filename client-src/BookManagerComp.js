@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import io from 'socket.io-client';
 
 import Formwell from './Forms/Formwell';
-import ProjectManager from './ProjectManager';
+import Navigation from './Navigation';
 import Note from './Note'
 
 const Log = styled.div`
@@ -15,13 +15,14 @@ const Log = styled.div`
 `
 
 const WorkAreaContainer = styled.div`
-    // flex-grow: 1.5;
+    flex-grow: 1.5;
     font-size : 85%;
     margin: 10px;
 `
 
 const FlexBox = styled.div`
     display: flex;
+    justify-content: space-between;
     width: 100%;
     height: 100vh;
 `
@@ -39,7 +40,6 @@ export default class BookManagerComp extends React.Component{
             logs: [],
             currProjectName: undefined,
             currSheet: undefined,
-            currRecordPath : []
         }
 
         this.sheets = {};
@@ -101,13 +101,7 @@ export default class BookManagerComp extends React.Component{
         this.setState({
             currProjectName: undefined,
             currSheet: undefined,
-            currPath: []
         })
-    }
-
-    setRecordPath = (currRecordPath) => {
-        console.log('setPath', currRecordPath)
-        this.setState({currRecordPath});
     }
 
     // when calling this function, we have process the table data with exportProc.
@@ -127,7 +121,7 @@ export default class BookManagerComp extends React.Component{
 
     initTable = ({projName, sheetName, sheetSpec}) => {
 
-        // called by selectSheet from ProjectManager.
+        // called by selectSheet from Navigation.
 
         // initTable checks if the dependency is satisfied. If the required data
         // is not retrieved yet, then send request to server.
@@ -147,6 +141,10 @@ export default class BookManagerComp extends React.Component{
 
             let {referred, desc} = sheetSpec;
 
+            this.setState({
+                currSheet: undefined,
+            })
+            
             this.log(`准备获取 [${desc}]，检查引用的数据是否存在。`);
 
             if(referred === undefined){
@@ -213,6 +211,7 @@ export default class BookManagerComp extends React.Component{
         let logs = this.state.logs.map((log, index) => <div key={index}>{log}</div>)
 
         let displayedContent = <Log>{logs}</Log>;
+
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
@@ -227,7 +226,7 @@ export default class BookManagerComp extends React.Component{
         }
 
         return (<FlexBox>
-            <ProjectManager
+            <Navigation
                 address={address}
                 socket={this.socket}
                 initTable={this.initTable}

@@ -52,7 +52,7 @@ BALANCE : (iyearExisting) =>{
     on code.ccode=accsum.ccode;`
 },
 
-ENTRIES: (iyearExisting) => {
+JOURNAL: (iyearExisting) => {
 
     let year = iyearExisting ? "iyear" : "0 as iyear";
 

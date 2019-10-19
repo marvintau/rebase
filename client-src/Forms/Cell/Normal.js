@@ -13,9 +13,9 @@ const Digits = styled.div`
 `
 
 const String = styled.div`
-    font-weight: 300;
     line-height: 25px;
     font-family: 'Helvetica Neue', 'Pingfang SC', sans-serif;
+    ${({isTitle}) => isTitle ? 'font-size: 100%; font-weight: 700;' : 'font-weight: 300;'}
 `
 
 const Edit = styled.input`
@@ -56,10 +56,9 @@ export default class Normal extends React.Component{
     }
 
     render(){
-        let {type, isRowEditing} = this.props,
+        let {type, isRowEditing, isTitle} = this.props,
             {data} = this.state;
     
-
         if (isRowEditing) {
             let value;
             switch(type.name){
@@ -99,7 +98,7 @@ export default class Normal extends React.Component{
                         console.log(this.props.colKey, 'undefined');
                         // data = new Number('123');
                     }
-                    return <String>{data}</String>;
+                    return <String isTitle={isTitle}>{data}</String>;
             }
         }
 

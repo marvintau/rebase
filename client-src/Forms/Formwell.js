@@ -8,7 +8,6 @@ const Table = styled.table`
     box-sizing:border-box;
     border-collapse: collapse;
     position: relative;
-    border-bottom: 1px solid black;
 `
 
 const TableWrapper = styled.div`

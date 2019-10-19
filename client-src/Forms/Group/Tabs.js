@@ -95,7 +95,6 @@ export default class Tabs extends React.Component {
 
     sortData = (key, direction) => {
 
-        
         let {data, currKey} = this.state;
         
         if(data.constructor.name==='Group'){

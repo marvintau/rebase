@@ -33,11 +33,11 @@ let head = new Head({
 export default {
     referred: {
         savedCashFlowConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
-        CATEGORY: {desc: '科目类别', location:'remote'}
+        BALANCE: {desc: '科目余额', location:'remote'}
     },
-    importProc({CATEGORY, savedCashFlowConf}){
+    importProc({BALANCE, savedCashFlowConf}){
 
-        let category = new List(CATEGORY.data.map(e => categoryHead.createRecord(e)))
+        let category = new List(BALANCE.data.map(e => categoryHead.createRecord(e)))
         .flat()
         .ordr(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
@@ -57,19 +57,21 @@ export default {
             data = savedCashFlowConf.data;
         }
 
-        data = new List(Object.entries(data))
+        data = List.from(Object.entries(data))
             .map(([title, content]) => {
                 let rec = head.createRecord({title});
 
-                rec.heir = new List(Object.entries(content).map(([title, content]) => {
+                rec.heir = List.from(Object.entries(content).map(([title, content]) => {
                     let rec = head.createRecord({title});
-                    rec.heir = new List(content).map(con => head.createRecord(con));
+                    rec.heir = List.from(content).map(con => head.createRecord(con));
                     return rec;
                 }));
 
                 return rec
             })
             .flat(2)
+
+        console.log(data, 'cashflowconf');
 
         return {data, head, tableAttr:{
                 expandable: true,
@@ -83,7 +85,7 @@ export default {
         let entries = data.slice().map(e => {
             let entries = e.heir.map (sub => {
                 let entryList = sub.heir.map(entry => {
-                    return entry.valueOf()
+                    return entry.cols
                 });
 
                 return [sub.cols.title, entryList]
@@ -92,7 +94,10 @@ export default {
             return [e.cols.title, Object.fromEntries(entries)]
         })
 
-        return Object.fromEntries(entries);
+
+        let result =  Object.fromEntries(entries);
+        console.log(result, 'exported');
+        return result;
     },
     desc: '现金流量表配置表',
     type: 'CONF'

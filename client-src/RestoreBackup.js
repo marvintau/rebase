@@ -1,6 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
 
+const InputGroup = styled.div`
+    list-style:none;
+    border: 0.5px solid black;
+    border-radius: 5px;
+    padding:5px 10px 5px 10px;
+    margin: 10px 0;
+`
+
 const Note = styled.div`
     font-size: 80%;
     margin: 15px 5px;
@@ -43,41 +51,36 @@ export default class RestoreBackup extends React.Component{
         })
     }
 
-    componentWillUnmount(){
-        this.props.socket.close();
-    }
-
     render(){
 
-        let {path, back} = this.props;
+        let {path, name, goto} = this.props;
 
         switch(this.state.restoreState){
             case "NONE":
-                return <div>
-                    <Note>您上一次上传的备份文件还没有复原，您需要先完成复原才能进行后续的操作。</Note>
+                return <InputGroup>
+                    <Note><b>{name}</b></Note>
+                    <Note>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新，转换为系统的内部数据。</Note>
+
                     <Button onClick={(e) => {
-                        e.stopPropagation()
-                        this.props.socket.emit('RESTORE', {path})
-                    }}>现在就复原</Button>
-                </div>;
+                        e.stopPropagation();
+                        this.props.socket.emit('RESTORE', {name})
+                    }}>明白了，那么更新吧</Button>
+                </InputGroup>;
             case "RESTORING":
-                return <div>
+                return <InputGroup>
                     <Note>已经恢复了{this.state.progress} %</Note>
                     <Note>剩余时间 {this.state.remainingTime}</Note>
                     <Note>NOTE: 这个时间有可能不准确，最好在完成后等待几秒再进行后续操作</Note>
-                </div>
+                </InputGroup>
             case "RESTOREDONE":
                 return <Note>
                     已完成数据库的恢复, 正在生成数据，可能要花几秒钟时间。
                 </Note>
             case "FILEPREPARED":
-                return <div>
+                return <InputGroup>
                     <Note>数据文件已就绪。</Note>
-                    <Button onClick={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault();
-                    }}>点此获取数据文件</Button>
-                </div>
+                    <Button onClick={(e) => goto('sheets')}>返回到列表</Button>
+                </InputGroup>
         }
     }
 }

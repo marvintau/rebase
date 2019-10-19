@@ -33,12 +33,9 @@ function SingleSelect (props){
         return <option key={index}>{data.get(displayKey).valueOf()}</option>;
     })
 
-    // 之所以要在这里使用data是因为，事件触发update方法的时候，
-    // 我们可以直接从DOM中得到path。
-
     return <Wrapper>
         <Select
-            data={path.join('->')}
+            data-path={path.join('->')}
             value={data}
             onFocus={update}
             onChange={update}
@@ -77,11 +74,11 @@ export default class SelectPath extends React.Component {
         let {colKey} = this.props;
 
         // this will call the parent method to change Record value
-        
-        this.props.update('self', 'set', [colKey, newPath.split('->')]);
-
+        let splittedNewPath = newPath.split('->');
+        this.props.update('self', 'set', [colKey, splittedNewPath]);
+        console.log(splittedNewPath, 'newPath');
         this.setState({
-            data: newPath.split('->')
+            data: splittedNewPath
         })
     }
 
@@ -122,11 +119,6 @@ export default class SelectPath extends React.Component {
 
 
     render(){
-
-        // NOTE:
-        // 此处使用data[0]是一时权宜，因为在Head中使用了Array来初始化一个Path，
-        // 但Path本身也是Array，所以就造成了Array of Array。未来重新设计persisted
-        // head的时候，对这里要进行相应修改。
 
         let {options, displayKey, isRowEditing} = this.props,
             {data} = this.state;
