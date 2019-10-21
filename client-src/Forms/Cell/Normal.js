@@ -64,11 +64,7 @@ export default class Normal extends React.Component{
             switch(type.name){
                 case 'Number':
                     let parsedNumber = parseFloat(data);
-                    if (Number.isInteger(parsedNumber)){
-                        value = parsedNumber.toFixed(0);
-                    } else {
                         value = parsedNumber.toFixed(2);
-                    }
                     break;
                 case 'String':
                     console.log(value);
@@ -87,7 +83,7 @@ export default class Normal extends React.Component{
                 case 'Number':
 
                     let parsedNumber = parseFloat(data),
-                        value = parsedNumber.toFixed(Number.isInteger(parsedNumber) ? 0 : 2);
+                        value = parsedNumber.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
     
                     return <Digits>{value}</Digits>;
 

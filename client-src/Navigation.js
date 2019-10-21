@@ -176,8 +176,8 @@ export default class Navigation extends React.Component {
 
         if (navPos === 'start'){
             return <Container>
-                <ManuItem onClick={() => this.goto('upload')}>上传一个新项目</ManuItem>
                 <ManuItem onClick={() => this.goto('open')}>打开现有项目</ManuItem>
+                <ManuItem onClick={() => this.goto('upload')}>上传一个新项目</ManuItem>
             </Container>
         }
 

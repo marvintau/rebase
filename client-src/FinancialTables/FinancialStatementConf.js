@@ -33,13 +33,13 @@ let financialConfHead = new Head({
 export default {
     referred: {
         savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
-        CATEGORY: {desc: '科目类别', location:'remote'}
+        BALANCE: {desc: '科目余额', location:'remote'}
     },
-    importProc({CATEGORY, savedFinancialStatementConf}){
+    importProc({BALANCE, savedFinancialStatementConf}){
 
         console.log(savedFinancialStatementConf, 'saved')
 
-        let category = List.from(CATEGORY.data.map(e => categoryHead.createRecord(e)))
+        let category = List.from(BALANCE.data.map(e => categoryHead.createRecord(e)))
         .flat()
         .ordr(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {

@@ -76,7 +76,7 @@ let clientConfigure = {
 		]
 	},
 
-	mode: 'production',
+	mode: 'development',
 
 	optimization: {
 		minimizer: [

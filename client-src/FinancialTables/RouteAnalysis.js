@@ -2,7 +2,7 @@ import {Record, List, Head} from 'persisted';
 
 // voucherHead是凭证的表头，作为科目发生额分析的子表
 let voucherHead = new Head({
-    iperiod:     'Integer',
+    iperiod:     'String',
     ino_id:      'String',
     inid:        'String',
     ccode_name:  'String',
@@ -66,7 +66,15 @@ export default{
         // 这部分我们将对对方科目进行一个处理，使得我们可以看到对方科目的路径。
         // 我们先通过科目层级得到科目的路径，然后再建立一个科目的叶子结点对于其
         // 路径的dict
-        let catePathDict = List.from(BALANCE.data)
+
+        // 特别需要注意，当我们获取对方科目的时候会遇到两种情况，一种是客户导出
+        // 给我们科目编码，通常是末级科目，然而我们需要知道末级科目所属的一级科目。
+        // 然而通过鼎信诺导出的对方科目，则直接是对方科目所属一级科目的名称。以下方法
+        // 能够兼容both科目编码和名称，同时兼容both末级科目和一级科目。
+
+        // 又及，BALANCE.data并没有被转变为List of Records。因为没有必要。
+        console.time('cascade');
+        let cascaded = List.from(BALANCE.data)
             .ordr(rec => rec.ccode)
             .cascade(rec=>rec.ccode.length,
                 (desc, ances) => {
@@ -74,31 +82,57 @@ export default{
                         ancesCode = ances.ccode;
                     return descCode.startsWith(ancesCode);
                 },
-                (ances, desc) => {
+                (desc, ances) => {
                     if (!ances._children){
                         ances._children = new List(0);
                     }
                     ances._children.push(desc);
                 }
             )
-            .flattenPath((e) => e._children, (e)=>e._children === undefined)
-            .map(path => {
-                if (path.length === 1){
-                    return [path[0].ccode, path[0].ccode_name]
-                } else {
-                    let truncated = path.slice(1, -1).map(e => truncName(e.ccode_name)),
-                        joined = [path[0].ccode_name, ...truncated, path.last().ccode_name].reverse().join('→');
-                    return [path[0].ccode, joined]
-                }
-            })
-            .toObject()
+        console.timeEnd('cascade');
+        // 这一步，我们获取所有的末级科目的代码和名称，与其所在路径的对应关系
 
+        console.time('catePath1');
+        let paths = cascaded.flattenPath((e) => e._children, (e)=>e._children === undefined);
+        let catePathDict = {};
+        for (let i = 0; i < paths.length; i++){
+            let path = paths[i];
+            if (path.length === 1){
+                let {ccode, ccode_name} = path[0];
+                catePathDict[ccode] = ccode_name;
+                catePathDict[ccode_name] = ccode_name;
+            } else {
+                let leaf = path[0],
+                    root = path.last(),
+                    joined = `${root.ccode_name}→${leaf.ccode_name}`;
+                catePathDict[leaf.ccode] = joined;
+                catePathDict[leaf.ccode_name] = joined;
+            }
+        }
+        console.timeEnd('catePath1');
+
+        // 这一步我们获取一级科目的代码和名称。
+        for (let i = 0; i < cascaded.length; i++){
+            let {ccode, ccode_name} = cascaded[i];
+            catePathDict[ccode] = ccode_name;
+            catePathDict[ccode_name] = ccode_name;
+        }
+
+        console.time('LoR');
         let voucherData = List.from(JOURNAL.data)
             .map(e => voucherHead.createRecord(e));
+        console.timeEnd('LoR');
 
+        // console.log(voucherData);
+
+        console.time('setLine');
         for (let i = 0; i < voucherData.length; i++){
-            voucherData[i].get('ccode_equal').setLines((e)=>catePathDict[e])
+            let ccode_equal = voucherData[i].get('ccode_equal');
+            if (ccode_equal !== undefined){
+                ccode_equal.setLines((e)=>catePathDict[e])
+            }
         }
+        console.timeEnd('setLine');
 
         // 这部分所要实现的是：先按照"年-月-记账凭证编号"的方式为
         // vouchers分组。这样就得到了按期间-凭证编号划分的分录。

@@ -18,8 +18,10 @@ export default class MultiLine extends React.Component{
     constructor(props){
         super(props);
 
+        let {data} = props;
+
         this.state = {
-            collapsed: props.data.lines.length > 1
+            collapsed: data ? data.lines.length > 1 : true
         }
     }
 
@@ -34,7 +36,11 @@ export default class MultiLine extends React.Component{
     render(){
         let {type, data} = this.props;
 
-        // console.log(data, 'multiline');
+        console.log(data, 'multiline');
+
+        if (data === undefined) {
+            return <div />
+        }
 
         let lines = data.lines.map((datum, index) => {
 
