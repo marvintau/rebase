@@ -32,7 +32,7 @@ let head = new Head({
 
 export default {
     referred: {
-        savedCashFlowConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
+        savedCashFlowConf: {desc:'已保存的现流表配置表', location: 'remote', type: 'CONF'},
         BALANCE: {desc: '科目余额', location:'remote'}
     },
     importProc({BALANCE, savedCashFlowConf}){

@@ -93,6 +93,7 @@ export default{
             let headContentRec = Object.entries(headContent).map(([title, content]) => {
 
                 let accrual = 0;
+                console.log(content, 'beforemap');
                 let entries = content.map(entry => {
 
                     let [_, ...path] = entry.category;
