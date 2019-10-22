@@ -126,7 +126,7 @@ export default class BookManagerComp extends React.Component{
         // initTable checks if the dependency is satisfied. If the required data
         // is not retrieved yet, then send request to server.
 
-        if(this.sheets[sheetName] && this.sheets[sheetName].status === 'ready'){
+        if(this.sheets[sheetName] && (this.sheets[sheetName].status === 'ready')){
 
             let {type, desc} = sheetSpec;
 
@@ -178,6 +178,7 @@ export default class BookManagerComp extends React.Component{
             // be only one table to wait.
 
             this.temp = {projName, sheetName, sheetSpec};
+            this.proceedExecuteProcedure();
         }
     }
 
@@ -193,9 +194,11 @@ export default class BookManagerComp extends React.Component{
         }
 
         let {projName, sheetName, sheetSpec} = this.temp,
-            {importProc, exportProc, desc, type='DATA'} = sheetSpec;
+            {importProc, exportProc, desc, type='DATA', isSavable} = sheetSpec;
 
-        this.sheets[sheetName] = {status: 'ready', importProc, exportProc, desc, type, ...importProc(this.sheets)};
+        this.sheets[sheetName] = {status: 'ready', importProc, exportProc, desc, type, isSavable, sections:importProc(this.sheets)};
+
+        console.log(projName, sheetName, type, 'proceed');
 
         this.setState({
             currProjectName: projName,
@@ -215,12 +218,13 @@ export default class BookManagerComp extends React.Component{
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
-                sheet = this.sheets[sheetName];
+                {desc, sections, exportProc, isSavable} = this.sheets[sheetName];
 
             displayedContent = <WorkAreaContainer>
-                <Title>{sheet.desc}</Title>
+                <Title>{desc}</Title>
                 <Formwell
-                    saveRemote={this.save} {...sheet}
+                    saveRemote={this.save} sections={sections} exportProc={exportProc}
+                    isSavable={isSavable}
                 />
             </WorkAreaContainer>;
         }
@@ -232,7 +236,7 @@ export default class BookManagerComp extends React.Component{
                 initTable={this.initTable}
                 clearCurrentProject={this.clearCurrentProject}/>
             {displayedContent}
-            <Note />
+            {/* <Note /> */}
         </FlexBox>)
 
     }

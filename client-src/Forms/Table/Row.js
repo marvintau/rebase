@@ -24,6 +24,10 @@ const Indicator = styled.td`
     background-color : ${({hasTable, hasChild})=> hasTable ? 'skyBlue' : hasChild ? 'salmon' : 'transparent'} 
 `
 
+const TR = styled.tr`
+    width: auto;
+`
+
 export default class Row extends React.Component {
     constructor(props){
         super(props);
@@ -177,17 +181,17 @@ export default class Row extends React.Component {
                 ]
             } else if (data.hasTable()){
 
-                subs = <tr key={'rest'}>
+                subs = <TR key={'rest'}>
                     <TDTab colSpan={colSpan+1} ><Formwell {...data.subs} /></TDTab>
-                </tr>
+                </TR>
             }
         }
 
-        let tr = <tr key={'first'}
+        let tr = <TR key={'first'}
             onDoubleClick={this.toggleExpand}
             onMouseEnter={this.onMouseEnter}
             onMouseLeave={this.onMouseLeave}
-        >{cols}</tr>
+        >{cols}</TR>
         return [tr, subs]
 
     }

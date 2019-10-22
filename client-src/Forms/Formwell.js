@@ -11,7 +11,7 @@ const Table = styled.table`
 `
 
 const TableWrapper = styled.div`
-    height: 90vh;
+    height: 100vh;
     width: auto;
     box-sizing:border-box;
     overflow-y: scroll !important;
@@ -36,21 +36,48 @@ const SaveButton = styled.div`
     }
 `
 
-export default function Formwell ({saveRemote, data, head, tableAttr, exportProc}) {
+export default function Formwell ({saveRemote, sections, exportProc, isSavable=false}) {
 
     let save = () => {
-        saveRemote(exportProc(data));
+        saveRemote(exportProc(sections));
     }
 
-    let saveButton = [];
-    if(tableAttr.savable){
-        saveButton = <SaveButton onClick={save}>保存</SaveButton>
+    let reset = () => {
+
+    }
+
+    console.log(sections, 'formwell');
+
+    let tab;
+    if(Array.isArray(sections)){
+        tab = [];
+        for (let i = 0; i < sections.length; i++){
+            let tabSpec = sections[i];
+            if (('head' in tabSpec) && ('data' in tabSpec)){
+                tab.push(<Table key={i}><tbody><Tabs {...tabSpec} /></tbody></Table>)
+            }
+        }
+    } else if (('head' in sections) && ('data' in sections)){
+        tab = <Table><tbody><Tabs {...sections} /></tbody></Table>
+    } else {
+        return <div>
+            收到了解释不了的数据格式。如果您看到这个信息请联系开发人员。
+            <pre style={{height: '400px', overflowY: 'scroll'}}>
+                {JSON.stringify(sections, null, 2)}    
+            </pre>
+        </div>
+    }
+
+    let saveUtils = [];
+    if (isSavable){
+        saveUtils = [       
+            <SaveButton key={0} onClick={save}>保存</SaveButton>,
+            <SaveButton key={1} onClick={reset}>重置</SaveButton>
+        ]
     }
 
     return <TableWrapper>
-        <Table>
-            <tbody><Tabs data={data} head={head} tableAttr={tableAttr}/></tbody>
-        </Table>
-        {saveButton}
+        {tab}
+        {saveUtils}
     </TableWrapper>
 }

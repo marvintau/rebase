@@ -6,7 +6,7 @@ import styled from 'styled-components';
 const TD = styled.td`
     padding: 6px 5px 4px;
     min-width: 25px;
-    max-width: 100%;
+    ${({isControlCell})=> isControlCell ? 'width : 75px;' : '' }
     height: 25px;
     white-space: nowrap;
     ${({border=true}) => border ? 'border-top: 1px solid black; border-bottom: 1px solid black;' : ''};
@@ -36,7 +36,7 @@ export default function Cell(props){
         let {EditControl} = CellComponent,
             {isRowExpanded, isRowEditing, isHovered, rowIndex, update, toggleEdit} = props;
 
-        return <TD border={false}>
+        return <TD isControlCell={isControlCell} border={false}>
             <EditControl
                 isHovered={isHovered}
                 isRowEditing={isRowEditing}

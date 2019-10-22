@@ -25,8 +25,6 @@ const TH = styled.th`
     min-width: 25px;
     height: 28px;
     text-align: center;
-    // line-height: 1.5em;
-    border-bottom: 1px solid black;
     background-color: #555555;
     color: #FEFEFE;
     font-family: 'Pingfang SC', 'Microsoft Yahei';

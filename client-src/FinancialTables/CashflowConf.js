@@ -30,6 +30,11 @@ let head = new Head({
     method:      "Path",
 })
 
+let dateHead = new Head({
+    year: 'String',
+    endPeriod: 'String'
+})
+
 export default {
     referred: {
         savedCashFlowConf: {desc:'已保存的现流表配置表', location: 'remote', type: 'CONF'},
@@ -41,24 +46,27 @@ export default {
         .map(e => categoryHead.createRecord(e))
         .flat()
         .ordr(e => e.get('ccode'))
+        .uniq(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
             let descCode = desc.get('ccode'),
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
         });
 
-        console.log(cashflowStatementDirectDetails, 'detailes');
         head.setColProp({colDesc: '项目', isTitle: true, isExpandToggler: true}, 'title')
         head.setColProp({colDesc: '对应的科目类别', options: category, displayKey: 'ccode_name'}, 'category')
         head.setColProp({colDesc: '取值方式', options: sideOptions, displayKey: 'methodName'}, 'side')
         head.setColProp({colDesc: '计入方式', options: methodOptions, displayKey: 'methodName'}, 'method')
 
-        let data = cashflowStatementDirectDetails;
+        let confData = cashflowStatementDirectDetails,
+            date = {year:0, endPeriod: 0};
         if (savedCashFlowConf.data.length > 0 || Object.keys(savedCashFlowConf.data).length > 0){
-            data = savedCashFlowConf.data;
+            let [savedSec1, savedSec2] = savedCashFlowConf.data;
+            confData = savedSec2;
+            date = savedSec1;
         }
 
-        data = List.from(Object.entries(data))
+        confData = List.from(Object.entries(confData))
             .map(([title, content]) => {
                 let rec = head.createRecord({title});
 
@@ -70,20 +78,32 @@ export default {
 
                 return rec
             })
-            .flat(2)
+            .flat(2);
 
-        console.log(data, 'cashflowconf');
 
-        return {data, head, tableAttr:{
+        let sec2 = {data: confData, head, tableAttr:{
                 expandable: true,
                 editable: true,
-                savable: true
             }
         }
 
+        dateHead.setColProp({colDesc: '起始年'}, 'year');
+        dateHead.setColProp({colDesc: '截止期间'}, 'endPeriod');
+
+        let sec1 = {
+            head: dateHead,
+            data: List.from([dateHead.createRecord(date)]),
+            tableAttr: {
+                editable: true
+            }
+        };
+
+        return [sec1, sec2]
     },
-    exportProc(data){
-        let entries = data.slice().map(e => {
+    exportProc(sections){
+        let [sec1, sec2] = sections;
+
+        let entries = sec2.data.slice().map(e => {
             let entries = e.heir.map (sub => {
                 let entryList = sub.heir.map(entry => {
                     return entry.cols
@@ -95,11 +115,12 @@ export default {
             return [e.cols.title, Object.fromEntries(entries)]
         })
 
+        let date = sec1.data[0].cols;
 
         let result =  Object.fromEntries(entries);
-        console.log(result, 'exported');
-        return result;
+        return [date, result];
     },
     desc: '现金流量表配置表',
-    type: 'CONF'
+    type: 'CONF',
+    isSavable: true
 }

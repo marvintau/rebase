@@ -43,15 +43,30 @@ export default{
         BALANCE: {desc:'科目余额', location:'remote'}
     },
     importProc({BALANCE, savedFinancialStatementConf}){
-        
+
+        // 首先我们获取报表模版。如果有保存的配置表，我们就load保存的配置表，
+        // 如果没有，那么FinancialStatementDetails是一份原始的配置表。此处获
+        // 得的savedDate和savedContent，分别是报表日期和内容。我们首先需要限
+        // 定。报表的年份和截止期间。因此需要用savedDate来筛选余额数据。
+
+        let data = FinancialStatementDetails,
+            date = {year: 2014, endPeriod: 12};
+
+        if (savedFinancialStatementConf.data.length > 0 || Object.keys(savedFinancialStatementConf.data).length > 0){
+            let [savedDate, savedContent] = savedFinancialStatementConf.data;
+            data = savedContent;
+            date = savedDate;
+            console.log(data, date);
+        }
+
         // 先获取期间范围内的余额数据
         let balanceData = List.from(BALANCE.data)
         .map(e => balanceHead.createRecord(e))
-        // .filter(e => {
-        //     console.log(e.cols,'cols');
-        //     let {iyear, iperiod} = e.cols;
-        //     return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
-        // })
+        .grip(e => e.get('iyear')).get(date.year)
+        .filter(e => {
+            let {iperiod} = e.cols;
+            return iperiod <= date.endPeriod
+        })
 
         // 先将数据按照科目分类，然后在每个科目内对所有期间的数据
         // （包括期初/期末，借方/贷方）进行累加求和
@@ -72,10 +87,6 @@ export default{
         // a cascaded list of records, that containing the beginning, accumulated
         // credit and debit accrual.
         console.log(balanceData);
-        let data = FinancialStatementDetails;
-        if (savedFinancialStatementConf.data.length > 0 || Object.keys(savedFinancialStatementConf.data).length > 0){
-            data = savedFinancialStatementConf.data;
-        }
 
         // 现在来计算报表项目中所对应的金额
         data = List.from(Object.entries(data))
@@ -101,7 +112,7 @@ export default{
 
                 return {...entry, ...rec.valueOf()}
             }).filter(rec => rec !== undefined)
-            console.log(entries, 'entries');
+
             // 由于我们的默认值是由会计人员给出，在实际的帐套中并不存在对应的名字，因此
             // 我们需要处理undefined，也就是帐套中没有找到对应记录的情形。
             
@@ -112,7 +123,6 @@ export default{
                 side = side[1];
                 method = method[1];
 
-                console.log({method, side, category}, 'recs')
                 let key = {
                     '借方' : 'md',
                     '贷方' : 'mc',
