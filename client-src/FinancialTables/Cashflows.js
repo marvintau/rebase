@@ -127,7 +127,8 @@ export default{
                         '' : '+'
                     }[method];
 
-                    let finalValue = eval(`${sign}${rec[key]}`);
+                    console.log('finalValue', `${sign}(${rec[key]})`);
+                    let finalValue = eval(`${sign}(${rec[key]})`);
 
                     let [_, ...path] = category;
                     heir.push(new Record({

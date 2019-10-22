@@ -37,7 +37,8 @@ export default {
     },
     importProc({BALANCE, savedCashFlowConf}){
 
-        let category = new List(BALANCE.data.map(e => categoryHead.createRecord(e)))
+        let category = List.from(BALANCE.data)
+        .map(e => categoryHead.createRecord(e))
         .flat()
         .ordr(e => e.get('ccode'))
         .cascade(rec=>rec.get('ccode').length, (desc, ances) => {

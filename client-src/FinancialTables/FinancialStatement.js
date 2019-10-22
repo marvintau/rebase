@@ -44,17 +44,14 @@ export default{
     },
     importProc({BALANCE, savedFinancialStatementConf}){
         
-        let headYear = 0,
-            tailYear = 0,
-            headPeriod = 1,
-            tailPeriod = 10;
-
         // 先获取期间范围内的余额数据
-        let balanceData = new List(BALANCE.data.map(e => balanceHead.createRecord(e)))
-        .filter(e => {
-            let {iyear, iperiod} = e.cols;
-            return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
-        })
+        let balanceData = List.from(BALANCE.data)
+        .map(e => balanceHead.createRecord(e))
+        // .filter(e => {
+        //     console.log(e.cols,'cols');
+        //     let {iyear, iperiod} = e.cols;
+        //     return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
+        // })
 
         // 先将数据按照科目分类，然后在每个科目内对所有期间的数据
         // （包括期初/期末，借方/贷方）进行累加求和
@@ -81,7 +78,7 @@ export default{
         }
 
         // 现在来计算报表项目中所对应的金额
-        data = new List(Object.entries(data))
+        data = List.from(Object.entries(data))
         .map(([title, content]) => {
 
             let mb = 0, me = 0;
@@ -108,7 +105,7 @@ export default{
             // 由于我们的默认值是由会计人员给出，在实际的帐套中并不存在对应的名字，因此
             // 我们需要处理undefined，也就是帐套中没有找到对应记录的情形。
             
-            let heir = new List();
+            let heir = new List(0);
             for (let rec of entries){
                 let {method, side, category} = rec;
 
@@ -128,8 +125,7 @@ export default{
                     '' : '+'
                 }[method];
 
-                console.log('eval', `${sign}${rec[key]}`);
-                let finalValue = eval(`${sign}${rec[key]}`);
+                let finalValue = eval(`${sign}(${rec[key]})`);
 
                 let [_, ...path] = category;
                 let newRec = {

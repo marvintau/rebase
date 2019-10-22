@@ -75,11 +75,11 @@ export default {
     },
     exportProc(data){
 
-        let vanilla = data.slice().map(e => [
+        let plainObject = data.slice().map(e => [
             e.cols.title,
-            e.heir.map(entry => entry.valueOf())
+            e.heir.map(r => r.cols)
         ]);
-        return Object.fromEntries(vanilla)
+        return Object.fromEntries(plainObject)
    },
     desc: '资产负债表配置表',
     type: 'CONF'
