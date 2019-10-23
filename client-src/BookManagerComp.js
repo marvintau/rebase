@@ -104,8 +104,8 @@ export default class BookManagerComp extends React.Component{
         })
     }
 
-    // when calling this function, we have process the table data with exportProc.
-    // thus save would receive the data in plain Array & Object form.
+    // save接受的是从exportFunc返回的用于在服务器端保存的数据。具体的返回值需要参考
+    // FinancialTables中各文件的exportFunc是如何实现的。
     save = (data) => {
         let {currProjectName, currSheet, currType} = this.state;
 
@@ -119,12 +119,17 @@ export default class BookManagerComp extends React.Component{
         })
     }
 
+    // initTable是由Navigation中的selectSheet调用。首次调用的时候，initTable将会检查
+    // 表之间的依赖关系是否满足。如果没有下载到本地的数据会先进行下载。
+    
+    // 对于首次打开的本地表，每下载完一个引用的服务器端的数据表都会触发一次检查。而最
+    // 后一次检查则应当满足所有的条件，然后调用UI进行render。
+
+    // 然而有这样一种情况，就是若干个本地表之间存在共享的远程数据表，这种情况下检查无
+    // 法通过下载表的路径触发，因此也不会进行rendering。所以在检查表是否保存在本地时，
+    // 应当立即触发一次检查。
+
     initTable = ({projName, sheetName, sheetSpec}) => {
-
-        // called by selectSheet from Navigation.
-
-        // initTable checks if the dependency is satisfied. If the required data
-        // is not retrieved yet, then send request to server.
 
         if(this.sheets[sheetName] && (this.sheets[sheetName].status === 'ready')){
 

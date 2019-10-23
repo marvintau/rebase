@@ -181,8 +181,10 @@ export default class Row extends React.Component {
                 ]
             } else if (data.hasTable()){
 
+                console.log(data, 'before subtable');
+
                 subs = <TR key={'rest'}>
-                    <TDTab colSpan={colSpan+1} ><Formwell {...data.subs} /></TDTab>
+                    <TDTab colSpan={colSpan+1} ><Formwell sections={data.subs} /></TDTab>
                 </TR>
             }
         }
