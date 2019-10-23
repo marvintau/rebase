@@ -241,7 +241,7 @@ export default class BookManagerComp extends React.Component{
                 initTable={this.initTable}
                 clearCurrentProject={this.clearCurrentProject}/>
             {displayedContent}
-            {/* <Note /> */}
+            <Note />
         </FlexBox>)
 
     }
