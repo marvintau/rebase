@@ -55,7 +55,26 @@ export default{
 
 
         // 打开之前获取的发生额分析数据，获取配置表中对应年份
-        let routeData = RouteAnalysis.sections.data.get(date.year)
+        let routeData = RouteAnalysis.sections.data;
+        
+        // 先获取期间范围内的余额数据。前提是年份存在的情况下。在我们遇到的数据中，存在
+        // 导出的.BAK文件中没有iyear字段的情况。以下是一个workaround，如果发现原始数据
+        // 中没有会计年的字段，就不对期间进行筛选了。
+
+        // 和FinancialStatement类似，但是发生额变动是一个本地的数据表，格式和远程的原始
+        // 数据不一样。通常序时账中会包含全部的信息，但我们在此处也同样做一个处理。如果
+        // 发生额变动是一个List而非Group，说明在形成发生额变动的时候并没有按年分组，那
+        // 么就略过年份选择。但是在序时账中期间通常是（而且必须是）存在的，因此在这里就不对
+        // iperiod做更多分析了。
+
+        if (routeData.keys()[0] != 0){
+            routeData = routeData.get(date.year);
+        } else {
+            routeData = routeData.get(0);
+        }
+
+        console.log(routeData, 'beforeFlatten');
+        routeData = routeData
         .flatten()
 
         // 然后获取我们想要的区间

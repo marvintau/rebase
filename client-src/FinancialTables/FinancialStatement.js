@@ -59,18 +59,29 @@ export default{
             console.log(conf, date, 'initialLoaded');
         }
 
-        // 先获取期间范围内的余额数据
+
         let balanceData = List.from(BALANCE.data)
-        .map(e => balanceHead.createRecord(e))
-        .grip(e => e.get('iyear')).get(date.year)
-        .filter(e => {
-            let {iperiod} = e.cols;
-            return iperiod <= date.endPeriod
-        })
+        .map(e => balanceHead.createRecord(e));
+
+        // 先获取期间范围内的余额数据。前提是年份存在的情况下。在我们遇到的数据中，存在
+        // 导出的.BAK文件中没有iyear字段的情况。以下是一个workaround，如果发现原始数据
+        // 中没有会计年的字段，就不对期间进行筛选了。
+        let {iyear: testYear, iperiod: testPeriod} = BALANCE.data[0];
+        if ((testYear !== undefined) && (testYear != 0)){
+            console.log(balanceData, 'year');
+            balanceData = balanceData.grip(e => e.get('iyear')).get(date.year)
+        }
+        if (testPeriod !== undefined){
+            balanceData = balanceData.filter(e => {
+                let {iperiod} = e.cols;
+                return iperiod <= date.endPeriod
+            })
+            console.log(balanceData, 'period');
+        }
 
         // 先将数据按照科目分类，然后在每个科目内对所有期间的数据
         // （包括期初/期末，借方/贷方）进行累加求和
-        .grip(e => e.get('ccode'))
+        balanceData = balanceData.grip(e => e.get('ccode'))
         .iter((key, val) => {
             let sorted = val.ordr(e => `${e.get('iyear')-e.get('iperiod')}`).reverse();
             return balanceHead.sum(sorted);
@@ -86,7 +97,7 @@ export default{
         // What we get so far:
         // a cascaded list of records, that containing the beginning, accumulated
         // credit and debit accrual.
-        console.log(balanceData);
+        console.log(balanceData, 'cascaded');
 
         // 现在来计算报表项目中所对应的金额
         conf = List.from(Object.entries(conf))
@@ -158,7 +169,7 @@ export default{
             return new Record({title, mb, me}, {head, heir});
         })
 
-        console.log(data, 'financialStatemenet items')
+        console.log(conf, 'financialStatemenet items')
 
         return {
             head,
