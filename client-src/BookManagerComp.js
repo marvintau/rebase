@@ -50,14 +50,20 @@ export default class BookManagerComp extends React.Component{
 
         this.socket.on('TRANS', ({progress, type, data, projName, sheetName})=>{
 
+            let transReadyMessage = {
+                projName,
+                sheetName,
+                type: this.sheets[sheetName].type
+            }
+
             switch(type){
                 case 'FIRST':
                     this.sheets[sheetName].blobs = [];
-                    this.socket.emit('READY', {projName, sheetName, type: this.sheets[sheetName].type});
+                    this.socket.emit('READY', transReadyMessage);
                     break;
                 case 'REST':
                     this.sheets[sheetName].blobs.push(data);
-                    this.socket.emit('READY', {projName, sheetName, type: this.sheets[sheetName].type});
+                    this.socket.emit('READY', transReadyMessage);
                     this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已下载${(progress*100).toFixed(2)}%`, true)
                     break;
             }

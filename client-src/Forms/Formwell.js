@@ -36,6 +36,19 @@ const SaveButton = styled.div`
     }
 `
 
+/**
+ * Formwell组件
+ * ============
+ * Formwell组件是表单区域的根本结构，也是当前表单结构的代称。
+ * 
+ * Formwell组件本身是一个无状态的结构，它的子组件包含一个<table>列表和若干<button>
+ * 其中<table>列表是渲染的主要列表，而<button>则实现了保存/重置等的交互。
+ * 
+ * Formwell应当对传入的表格数据进行判断，即sections。sections可能是一个包含data, head
+ * 两个属性的Object，也可能是一个List。在未来传入Formwell的可能是更复杂的数据结构。作
+ * 为传入数据的入口，Formwell应该做好准确判断的工作。
+ */
+
 export default function Formwell ({saveRemote, sections, exportProc, isSavable=false}) {
 
     let save = () => {

@@ -172,6 +172,7 @@ export default class Row extends React.Component {
                 subs = [
                     <TRBar key={'barT'} />, 
                     <Rows key={'rest'}
+                        colSpan={colSpan+1}
                         level={level+1}
                         data={data.heir}
                         head={head}

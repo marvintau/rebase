@@ -12,7 +12,7 @@ const PaginatorTR = styled.tr`
 
 const PaginatorTD = styled.div`
     border-top: 1px solid black !important;
-
+    width: 100%;
     display: flex;
     justify-content: space-between;
 
@@ -128,8 +128,9 @@ export default class Rows extends React.PureComponent {
 
         if (expanded === -1){
 
+            console.log(colSpan, 'colSpan');
             let paginator = <PaginatorTR key={'tab'}>
-                <td colSpan={colSpan}><PaginatorTD>
+                <td colSpan={colSpan} style={{position: 'fixed', bottom: '0px'}}><PaginatorTD>
                     <Button onClick={() => this.turnPage(-1)}>前一页</Button>
                     <div>当前第{page+1}页，共{Math.ceil(data.length/ENTRIES_PER_PAGE)}页，{data.length}个条目</div>
                     <Button onClick={() => this.turnPage(1)}>后一页</Button>
