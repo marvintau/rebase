@@ -44,18 +44,25 @@ export default{
     },
     importProc({RouteAnalysis, savedCashflowConf}){
         
-        // let headYear = 0,
-        //     tailYear = 0,
-        //     headPeriod = 1,
-        //     tailPeriod = 10;
+        let conf = CashflowStatementDirectDetails,
+            date = {year: 2014, endPeriod: 12};
+        if (savedCashflowConf.data.length > 0 || Object.keys(savedCashflowConf.data).length > 0){
+            let [savedDate, savedConf] = savedCashflowConf.data;
+            conf = savedConf;
+            date = savedDate;
+        }
+        console.log(date, conf, 'initialLoaded')
 
-        // 首先将之前的发生额分析完全展开
-        let routeData = RouteAnalysis.data.grap().flatten()
-        // // 然后获取我们想要的区间
-        // // .filter(e => {
-        // //     let {iyear, iperiod} = e.cols;
-        // //     return (iyear >= headYear) && (iyear <= tailYear) && (iperiod >= headPeriod) && (iperiod <= tailPeriod)
-        // // })
+
+        // 打开之前获取的发生额分析数据，获取配置表中对应年份
+        let routeData = RouteAnalysis.sections.data.get(date.year)
+        .flatten()
+
+        // 然后获取我们想要的区间
+        .filter(e => {
+            let {iperiod} = e.cols;
+            return iperiod <= date.endPeriod
+        })
 
         // 将条目按科目分类，并在想要的时间区间内求和
         .grip(e => e.get('ccode'), '科目')
@@ -72,20 +79,10 @@ export default{
                 ancesCode = ances.get('ccode');
             return descCode.slice(0, ancesCode.length).includes(ancesCode)
         });
-        // What we get so far:
-        // similar to financial statement.
-        // a cascaded list of records, that containing the beginning, accumulated
-        // credit and debit accrual.
         console.log(routeData, 'routes')
         
-        let data = CashflowStatementDirectDetails;
-        if (savedCashflowConf.data.length > 0 || Object.keys(savedCashflowConf.data).length > 0){
-            data = savedCashflowConf.data;
-        }
-        console.log(data, 'here')
-
         // 现在计算发生额
-        data = List.from(Object.entries(data))
+        conf = List.from(Object.entries(conf))
         .map(([mainTitle, headContent]) => {
 
             let headRec = new Record({mainTitle, title: '', accrual: 0}, {head});
@@ -149,7 +146,11 @@ export default{
             return [headRec, ...headContentRec, new Record({title: '小计', accrual: sum}, {head})]
         }).flat(2);
 
-        return {head, data, tableAttr: {expandable: true}}
+        return {
+            head,
+            data: conf,
+            tableAttr: {expandable: true}
+        }
     },
     desc: "现金流量表",
 }

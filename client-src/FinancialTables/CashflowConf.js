@@ -59,7 +59,7 @@ export default {
         head.setColProp({colDesc: '计入方式', options: methodOptions, displayKey: 'methodName'}, 'method')
 
         let confData = cashflowStatementDirectDetails,
-            date = {year:0, endPeriod: 0};
+            date = {year:2014, endPeriod: 12};
         if (savedCashFlowConf.data.length > 0 || Object.keys(savedCashFlowConf.data).length > 0){
             let [savedSec1, savedSec2] = savedCashFlowConf.data;
             confData = savedSec2;

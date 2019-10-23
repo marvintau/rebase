@@ -46,17 +46,17 @@ export default{
 
         // 首先我们获取报表模版。如果有保存的配置表，我们就load保存的配置表，
         // 如果没有，那么FinancialStatementDetails是一份原始的配置表。此处获
-        // 得的savedDate和savedContent，分别是报表日期和内容。我们首先需要限
+        // 得的savedDate和savedConf，分别是报表日期和配置内容。我们首先需要限
         // 定。报表的年份和截止期间。因此需要用savedDate来筛选余额数据。
 
-        let data = FinancialStatementDetails,
+        let conf = FinancialStatementDetails,
             date = {year: 2014, endPeriod: 12};
 
         if (savedFinancialStatementConf.data.length > 0 || Object.keys(savedFinancialStatementConf.data).length > 0){
-            let [savedDate, savedContent] = savedFinancialStatementConf.data;
-            data = savedContent;
+            let [savedDate, savedConf] = savedFinancialStatementConf.data;
+            conf = savedConf;
             date = savedDate;
-            console.log(data, date);
+            console.log(conf, date, 'initialLoaded');
         }
 
         // 先获取期间范围内的余额数据
@@ -89,7 +89,7 @@ export default{
         console.log(balanceData);
 
         // 现在来计算报表项目中所对应的金额
-        data = List.from(Object.entries(data))
+        conf = List.from(Object.entries(conf))
         .map(([title, content]) => {
 
             let mb = 0, me = 0;
@@ -160,7 +160,11 @@ export default{
 
         console.log(data, 'financialStatemenet items')
 
-        return {head, data, tableAttr: {expandable: true}}
+        return {
+            head,
+            data: conf,
+            tableAttr: {expandable: true}
+        }
     },
     desc: "资产负债表",
 }
