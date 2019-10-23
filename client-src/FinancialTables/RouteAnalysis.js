@@ -35,8 +35,8 @@ let analyzeHead = new Head({
     cclass:      'String',
     ccode :      'String',
     mb :         'Float',
-    mc :         'Float',
     md :         'Float',
+    mc :         'Float',
     me :         'Float',
     iyear:       'Integer',
 })
@@ -104,7 +104,7 @@ export default{
             } else {
                 let leaf = path[0],
                     root = path.last(),
-                    joined = `${root.ccode_name}→${leaf.ccode_name}`;
+                    joined = `${root.ccode_name}→d s d f s d f s f${leaf.ccode_name}`;
                 catePathDict[leaf.ccode] = joined;
                 catePathDict[leaf.ccode_name] = joined;
             }
