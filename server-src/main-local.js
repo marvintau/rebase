@@ -132,27 +132,25 @@ tableServer.on('connection', function (socket) {
 
     socket.on('SAVE', function({projName, sheetName, type, data}){
 
-        console.log(data);
+        let dataBuffer;
+        switch(typeof data){
+            case "string" :
+                console.log('received data as string');
+                dataBuffer = Buffer.from(data);
+                break;
+            case 'object' :
+                console.log('received data as object, whoa');
+                dataBuffer = Buffer.from(JSON.stringify(data));
+                break;
+        }
 
-        // let dataBuffer;
-        // if (typeof data === 'string'){
-        //     dataBuffer = Buffer.from(data)
-        // }
-
-        // let fileName = getRestoredFileName(projName, sheetName, type);
+        let fileName = getRestoredFileName(projName, `saved${sheetName}`, type),
+            filePath = path.resolve(BACKUP_PATH, fileName);
         
-        // if (Files[fileName] !== undefined){
-
-        // }
+        fs.writeFile(filePath, dataBuffer);
     })
 
     socket.on('RESTORE', function(data){
-
-        const initialTables = [
-            'BALANCE',
-            'JOURNAL',
-            'CATEGORY',
-        ];
     
         fs.readdir(BACKUP_PATH)
         .then(res => {

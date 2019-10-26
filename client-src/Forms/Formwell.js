@@ -3,8 +3,7 @@ import Tabs from './Group/Tabs'
 import styled from 'styled-components';
 
 const Table = styled.table`
-    min-width: 600px;
-    width: auto;
+    width: 750px;
     box-sizing:border-box;
     border-collapse: collapse;
     position: relative;
