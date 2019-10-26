@@ -57,6 +57,8 @@ const Select = styled.select`
     padding: 5px 10px;
 `
 
+const BLOCK_SIZE = 524288;
+
 export default class UploadBackup extends React.Component{
     constructor(props){
         super(props);
@@ -67,18 +69,8 @@ export default class UploadBackup extends React.Component{
             progress : 0,
         }
 
-        this.blockSize = 524288;
         this.fileObj = undefined;
         this.fileRef = React.createRef();
-        this.fileReader = new FileReader();
-
-        this.fileReader.onload = (event) => {
-            this.socket.emit('SEND', {
-                name: this.fileObj.name,
-                segment: event.target.result
-            });
-            this.setState({uploadState: "MORE"})
-        };
  
         this.nameRef = React.createRef();
         this.yearRef = React.createRef();
@@ -92,28 +84,29 @@ export default class UploadBackup extends React.Component{
 
         this.socket = io(`${address}/UPLOAD`);
 
-        this.socket.on('MORE', (data)=>{
+        this.socket.on('SEND', ({name, progress, position})=>{
             this.setState({
-                progress : data.percent,
+                progress,
                 uploadState: 'MORE',
             });
-
-            if(this.blockSize === undefined)
-                throw new TypeError('readblock: Blocksize not specified');
             
-            var position = data.position * this.blockSize,
-                sliceEnd = position + Math.min(this.blockSize, this.fileObj.size - position),
-                fileSlice = null;
+            let sliceEnd = Math.min(position + BLOCK_SIZE, this.fileObj.size);
 
-            for (let method of ["slice", "webkitSlice", "mozSlice"]) if (this.fileObj[method]){
-                fileSlice = this.fileObj[method](position, sliceEnd);
+            for (let sliceMethod of ["slice", "webkitSlice", "mozSlice"]) if (this.fileObj[sliceMethod]){
+                this.fileObj[sliceMethod](position, sliceEnd)
+                    .arrayBuffer()
+                    .then(buffer => {
+                        console.log(position, sliceEnd, buffer, 'arrayBuffer');
+                        this.socket.emit('RECV', {
+                            name,
+                            data: buffer
+                        });
+                    })
                 break;
+            } else {
+                throw new Error('上传文件：浏览器的版本比较旧，不支持Blob.slice方法。')
             }
 
-            if (fileSlice)
-                this.fileReader.readAsBinaryString(fileSlice);
-                // Note: the function readAsBinaryString will trigger the onLoad handler
-                // of the fileReader.
         });
 
         this.socket.on('DONE', () => {
@@ -133,20 +126,20 @@ export default class UploadBackup extends React.Component{
             year = this.yearRef.current.value;
 
         let payload = {
-            name: this.fileObj.name,
-            path: `SOURCE.${destName}.${bookType}.${year}.${fileType}`,
+            name: `SOURCE.${destName}.${bookType}.${year}.${fileType}`,
             size: this.fileObj.size,
-            fileType,
-            bookType
         }
 
-        console.log(payload);
-        this.socket.emit('START', payload);
+        this.socket.emit('PREP', payload);
+
+        this.setState({
+            uploadState: 'MORE'
+        })
     }
 
     updateFile = () => {
-        console.log('updated', this.fileRef);
         this.fileObj = this.fileRef.current.files[0];
+        console.log('updated file. Size: ', this.fileObj.size);
 
         this.setState({
             fileName: this.fileObj ? this.fileObj.name : undefined

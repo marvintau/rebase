@@ -10,7 +10,7 @@ import XLSX from 'xlsx';
 
 const fs = require('fs').promises;
 
-import FileRecv from './file-recv.js';
+import FileServ from './file-serv.js';
 const Files = {};
 
 import colRemap from './parseTypeDictionary';
@@ -34,55 +34,44 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
+
+// 上传文件的handler响应两种message：
+// 
+// PREP：接受一个包含文件名和文件尺寸的信息，创建文件并返回SEND指令，
+//       包含文件名和起始位置。
+// RECV：接受文件名和buffer的信息。返回新的百分比，和下次读取的位置。
+//       客户端如果使用file position其实可以不需要这个位置。
+
 uploadServer.on('connection', function (socket) {
 
-    socket.on('START', function (data) { 
+    socket.on('PREP', function ({name, size}) { 
 
-        console.log('begin receiving file');
+        Files[name] = new FileServ(path.join(BACKUP_PATH, name), size);
+        socket.emit('SEND', {name, percent: 0, position: 0});
 
-        var fileStub;
-        Files[data.name] = fileStub = new FileRecv(data.size, path.join(BACKUP_PATH, data.path));
-
-        fileStub.open('a').then(function(fd){
-            console.log("[start] file " + data.name + " desc created, ready to receive more.");
-            fileStub.handler = fd;
-            socket.emit('MORE', { 'position': 0, 'percent': 0 });
-        }).catch(function(err){
-            console.error('[start] file open error: ' + err.toString());
-        });
     });
 
-    socket.on('SEND', function (data) {
-
-        var fileStub = Files[data.name];
-    
-        fileStub.updateLen(data.segment);
-
-        if (fileStub.isFinished()) {
-
-            fileStub.write().then(function(){
-                return fileStub.close();
-            }).then(function(){
-                return fs.readdir(BACKUP_PATH)
-            }).then(res => {
-                socket.emit('DONE', {list: res})
-            })
+    socket.on('RECV', function ({name, data}) {
         
-        } else if (fileStub.data.length > 10485760) { //buffer >= 10MB
-            fileStub.write().then(function(){
-                fileStub.data = ''; //reset the buffer
-                socket.emit('MORE', fileStub.progress());
-            }).catch(function(err){
-                console.error(err);
-            });
-            // socket.emit('MORE', fileStub.progress());
-        } else {
-            socket.emit('MORE', fileStub.progress());
+        let afterWrite = ({part, percent, position}) => {
+
+            let label = {
+                LAST: 'DONE',
+                MOST: 'SEND',
+            }[part]
+
+            socket.emit(label, {name, percent, position})
         }
+
+        Files[name].writeChunk(data, afterWrite);
     });
 
 })
 
+
+function getRestoredFileName(projName, sheetName, type){
+    return `RESTORED.${projName}.${sheetName}${type === undefined ? "" : "."+type}.JSON`
+}
 
 tableServer.on('connection', function (socket) {
 
@@ -95,65 +84,66 @@ tableServer.on('connection', function (socket) {
         })    
     })
 
-    socket.on('START', function({projName, sheetName, type}){
-        console.log(projName, sheetName, type);
-        let fileName = `RESTORED.${projName}.${sheetName}${type === undefined ? "" : "."+type}.JSON`,
-        filePath = path.resolve(BACKUP_PATH, fileName);
-        console.log('opening file', filePath);
-        fs.open(filePath).then((fileHandle) => {
-            Files[fileName] = {fileHandle, buffer: Buffer.alloc(524288), blockSize: 524288, currPosition: 0};
-            socket.emit('TRANS', {projName, sheetName, progress: 0, data: undefined, type: 'FIRST'})
-        }).catch(err => {
-            console.log('opening file failed', err);
-            if(err.code ==='ENOENT' && type ==="CONF"){
-                console.log('CONF file not created yet. Now create it.');
-                fs.writeFile(filePath, '[]')
-                .then((res) => {
-                    return fs.open(filePath)
-                })
-                .then((fileHandle) => {
-                    Files[fileName] = {fileHandle, buffer: Buffer.alloc(524288), blockSize: 524288, currPosition: 0};
-                    console.log('opening file', fileName);
-                    socket.emit('TRANS', {projName, sheetName, progress: 0, data: undefined, type: 'FIRST'})
-                })
-                .catch(err => {
-                    console.log('opening file failed, even just the newly touched one', err);
-                })
+    socket.on('SEND', function({projName, sheetName, type, position}){
+
+        console.log(`SENDING ${projName}-${sheetName} FROM@ ${position}`, );
+        
+        let fileName = getRestoredFileName(projName, sheetName, type);
+    
+        // 以下是读取一个块之后的操作。块的大小是固定的，并封装在了FileServ中，不难
+        // 理解，如果buffer读取的字节数小于一个块的长度，它肯定会是最后一个块（当然
+        // 也可能是第一个）。我们没有设计额外的用于通知客户端已发送完的消息，当发送
+        // 最后一个块时，标签为"DONE"，否则为"RECV"，其余信息都一样。
+
+
+        let afterRead = ({part, percent, position, buffer}) => {
+
+            let label = {
+                LAST: 'DONE',
+                MOST: 'RECV',
+            }[part];
+
+            console.log(`SENDING ${projName}-${sheetName} ENDS@ ${position} ${label}`);
+            socket.emit(label, {projName, sheetName, percent, position, data: buffer})
+        }
+
+        // 以下是在打开文件时执行的后续操作，当文件打开之后，就会直接读取文件
+        // 并发送。特别注意这里的position，在afterOpen中的position总是0，尽管
+        // 从client这边传来的position也一定是0，但是我们仍然强制它是0.
+
+        // ifNotExist是当文件没找到时采取的操作。
+
+        let notExisted = (err) => {
+            if(err.code === 'ENOENT' && type === 'CONF'){
+                console.log('CONF not created yet.');
+                socket.emit('DONE', {projName, sheetName, data: Buffer.from('[]')})
             }
-        })
+        }
+
+        // 如果FileServ不存在，则创建一个。由于是已经存在于本地并待发送的文件，
+        // 初始化的时候不需要指明size。会在open的时候获取。打开文件的后续操作即
+        // 上面所述的发送第一个块。如果FileServ存在，则只需要完成后续的读取-发送
+        // 操作，当然也是根据客户端发送来的position来读取。
+        if(Files[fileName] === undefined){
+            Files[fileName] = new FileServ(path.resolve(BACKUP_PATH, fileName));
+        }
+        Files[fileName].readChunk(position, afterRead, notExisted)
     })
 
-    socket.on('READY', function({projName, sheetName, type}){
-        let fileName = `RESTORED.${projName}.${sheetName}${type === undefined ? "" : "."+type}.JSON`;
-        let {fileHandle, buffer, blockSize, currPosition} = Files[fileName];
+    socket.on('SAVE', function({projName, sheetName, type, data}){
 
-        let size;
+        console.log(data);
 
-        fileHandle.stat().then(res => {
+        // let dataBuffer;
+        // if (typeof data === 'string'){
+        //     dataBuffer = Buffer.from(data)
+        // }
+
+        // let fileName = getRestoredFileName(projName, sheetName, type);
         
-            size = res.size;
-            return fileHandle.read(buffer, 0, blockSize) 
-        
-        }).then(({bytesRead, buffer}) => {
-            if(currPosition === size){
-                socket.emit('DONE', {projName, sheetName})
-                fileHandle.close();
-            } else {
-                Files[fileName].currPosition += bytesRead;
-                let res = {type: 'REST', data : buffer.buffer.slice(0, bytesRead)};
-                socket.emit('TRANS', {projName, sheetName, progress: currPosition/size, ...res})
-            }
-        }).catch(err=>{
-            console.log(err, 'file')
-        })
-    })
+        // if (Files[fileName] !== undefined){
 
-    socket.on('SAVE', function({project, sheet, type, data}){
-        let filePath = `RESTORED.${project}.saved${sheet}${type===undefined ? "" : "."+type}.JSON`;
-
-        fs.writeFile(path.join(BACKUP_PATH, filePath), JSON.stringify(data, null, 4)).then(res => {
-            socket.emit('SAVED');
-        })
+        // }
     })
 
     socket.on('RESTORE', function(data){

@@ -48,33 +48,32 @@ export default class BookManagerComp extends React.Component{
 
         this.socket = io(`${address}/TABLES`);
 
-        this.socket.on('TRANS', ({progress, type, data, projName, sheetName})=>{
+        this.socket.on('RECV', ({position, percent, projName, sheetName, data})=>{
 
-            let transReadyMessage = {
+            let readyMsg = {
                 projName,
                 sheetName,
+                position,
                 type: this.sheets[sheetName].type
             }
 
-            switch(type){
-                case 'FIRST':
-                    this.sheets[sheetName].blobs = [];
-                    this.socket.emit('READY', transReadyMessage);
-                    break;
-                case 'REST':
-                    this.sheets[sheetName].blobs.push(data);
-                    this.socket.emit('READY', transReadyMessage);
-                    this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已下载${(progress*100).toFixed(2)}%`, true)
-                    break;
+            if (this.sheets[sheetName].blobs === undefined){
+                this.sheets[sheetName].blobs = [];
             }
+            this.sheets[sheetName].blobs.push(data);
+            this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已下载${(percent*100).toFixed(2)}%`, true)
+            this.socket.emit('SEND', readyMsg);
 
-        }).on('DONE', ({projName, sheetName}) => {
+        }).on('DONE', ({projName, sheetName, data}) => {
 
-            this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 下载完毕`)
-
+            if (this.sheets[sheetName].blobs === undefined){
+                this.sheets[sheetName].blobs = [];
+            }
+            this.sheets[sheetName].blobs.push(data);
             let blob = new Blob(this.sheets[sheetName].blobs);
             let reader = new FileReader();
-            this.sheets[sheetName].blobs = undefined;
+
+            this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 下载完毕`)
 
             reader.onload = (e) => {
                 this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 正在解析JSON`, true);
@@ -118,8 +117,8 @@ export default class BookManagerComp extends React.Component{
         console.log(data, 'to be saved');
 
         this.socket.emit('SAVE', {
-            project: currProjectName,
-            sheet: currSheet,
+            projName: currProjectName,
+            sheetName: currSheet,
             type: currType,
             data
         })
@@ -168,7 +167,7 @@ export default class BookManagerComp extends React.Component{
             for (let sheet in referred){
                 console.log(sheet, this.sheets[sheet], 'listing sheet');
                 if( this.sheets[sheet] === undefined && referred[sheet].location === 'local'){
-                    this.log(`[${desc}] 所依赖的本地表 [${referred[sheet].desc}] 并不存在，\n请您先点一下左边对应的按钮，获取到表格之后再回到这里` );
+                    this.log(`[${desc}] 请您先点一下左边对应的按钮，[${referred[sheet].desc}]，获取到表格之后再回到这里` );
                     return;
                 }
             }    
@@ -178,9 +177,20 @@ export default class BookManagerComp extends React.Component{
             for (let sheet in referred){
                 this.log(`${referred[sheet].location === 'remote' ? '远程' : '本地'}表 ${referred[sheet].desc}，${sheet in this.sheets ? '存在' : '不存在'}`);
                 if(!(sheet in this.sheets) && referred[sheet].location === 'remote'){
+                    
                     let {type, desc} = referred[sheet];
-                    this.sheets[sheet] = {status: 'pending', desc, type};
-                    this.socket.emit('START', {projName, sheetName: sheet, type})
+                    this.sheets[sheet] = {
+                        desc, type,
+                        status: 'pending',
+                        blobs:[]
+                    };
+                    this.socket.emit('SEND', {
+                        projName, 
+                        sheetName: sheet,
+                        type, 
+                        position: 0
+                    })
+
                 }
             }
     
