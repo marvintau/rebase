@@ -48,48 +48,55 @@ const SaveButton = styled.div`
  * 为传入数据的入口，Formwell应该做好准确判断的工作。
  */
 
-export default function Formwell ({saveRemote, sections, exportProc, isSavable=false}) {
+export default class Formwell extends React.Component {
 
-    let save = () => {
-        saveRemote(exportProc(sections));
-    }
+    static getDerivedState
 
-    let reset = () => {
+    render () {
 
-    }
+        let {sheetName, saveRemote, sections, exportProc, isSavable=false} = this.props;
 
-    console.log(sections, 'formwell');
-
-    let tab;
-    if(Array.isArray(sections)){
-        tab = [];
-        for (let i = 0; i < sections.length; i++){
-            let tabSpec = sections[i];
-            if (('head' in tabSpec) && ('data' in tabSpec)){
-                tab.push(<Table key={i}><tbody><Tabs {...tabSpec} /></tbody></Table>)
-            }
+        let save = () => {
+            saveRemote(exportProc(sections));
         }
-    } else if (('head' in sections) && ('data' in sections)){
-        tab = <Table><tbody><Tabs {...sections} /></tbody></Table>
-    } else {
-        return <div>
-            收到了解释不了的数据格式。如果您看到这个信息请联系开发人员。
-            <pre style={{height: '400px', overflowY: 'scroll'}}>
-                {JSON.stringify(sections, null, 2)}    
-            </pre>
-        </div>
-    }
 
-    let saveUtils = [];
-    if (isSavable){
-        saveUtils = [       
-            <SaveButton key={0} onClick={save}>保存</SaveButton>,
-            <SaveButton key={1} onClick={reset}>重置</SaveButton>
-        ]
-    }
+        let reset = () => {
 
-    return <TableWrapper>
-        {tab}
-        {saveUtils}
-    </TableWrapper>
+        }
+
+        console.log(sections, 'formwell');
+
+        let tab;
+        if(Array.isArray(sections)){
+            tab = [];
+            for (let i = 0; i < sections.length; i++){
+                let tabSpec = sections[i];
+                if (('head' in tabSpec) && ('data' in tabSpec)){
+                    tab.push(<Table key={`${sheetName}${i}`}><tbody><Tabs {...tabSpec} /></tbody></Table>)
+                }
+            }
+        } else if (('head' in sections) && ('data' in sections)){
+            tab = <Table key={`${sheetName}`}><tbody><Tabs {...sections} /></tbody></Table>
+        } else {
+            return <div>
+                遇到了无法形容的数据格式。如果您看到这个信息请联系开发人员。
+                <pre style={{height: '400px', overflowY: 'scroll'}}>
+                    {JSON.stringify(sections, null, 2)}    
+                </pre>
+            </div>
+        }
+
+        let saveUtils = [];
+        if (isSavable){
+            saveUtils = [       
+                <SaveButton key={0} onClick={save}>保存</SaveButton>,
+                <SaveButton key={1} onClick={reset}>重置</SaveButton>
+            ]
+        }
+
+        return <TableWrapper>
+            {tab}
+            {saveUtils}
+        </TableWrapper>
+    }
 }

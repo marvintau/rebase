@@ -4,7 +4,9 @@ import io from 'socket.io-client';
 
 import Formwell from './Forms/Formwell';
 import Navigation from './Navigation';
-import Note from './Note'
+
+import FinancialTables from './FinancialTables';
+import Sheet from './FinancialTables/sheet';
 
 const Log = styled.div`
     white-space: pre-wrap;
@@ -42,7 +44,9 @@ export default class BookManagerComp extends React.Component{
             currSheet: undefined,
         }
 
-        this.sheets = {};
+        this.sheets = Object.assign({}, FinancialTables);
+        
+        this.fetchStack = [];
 
         let {address} = props;
 
@@ -57,38 +61,16 @@ export default class BookManagerComp extends React.Component{
                 type: this.sheets[sheetName].type
             }
 
-            if (this.sheets[sheetName].blobs === undefined){
-                this.sheets[sheetName].blobs = [];
-            }
-            this.sheets[sheetName].blobs.push(data);
+            console.log('nextpos', position);
             this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已下载${(percent*100).toFixed(2)}%`, true)
             this.socket.emit('SEND', readyMsg);
 
+            this.sheets[sheetName].receive(data)
+
         }).on('DONE', ({projName, sheetName, data}) => {
-
-            if (this.sheets[sheetName].blobs === undefined){
-                this.sheets[sheetName].blobs = [];
-            }
-            this.sheets[sheetName].blobs.push(data);
-            let blob = new Blob(this.sheets[sheetName].blobs);
-            let reader = new FileReader();
-
-            this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 下载完毕`)
-
-            reader.onload = (e) => {
-                this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 正在解析JSON`, true);
-                let data = JSON.parse(e.target.result);
-                this.sheets[sheetName].data = data;
-                this.sheets[sheetName].status = 'ready';
-                this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 解析完毕, 共${this.sheets[sheetName].data.length}行数据`, true);
-
-                this.proceedExecuteProcedure();
-            }
-            reader.onprogress = (e) => {
-                this.log(`${projName.split('-')[0]} 项目 ${sheetName} 表: 已读取${(e.loaded/e.total*100).toFixed(2)}%`, true);
-            }
-            reader.readAsText(blob);
-
+            this.sheets[sheetName].receive(data, 'LAST', () => {
+                this.fetchTableWorker();
+            })
         }).on("SAVED", () => {
             console.log('receipt.')
         })
@@ -112,120 +94,114 @@ export default class BookManagerComp extends React.Component{
     // save接受的是从exportFunc返回的用于在服务器端保存的数据。具体的返回值需要参考
     // FinancialTables中各文件的exportFunc是如何实现的。
     save = (data) => {
-        let {currProjectName, currSheet, currType} = this.state;
+        let {currProjectName, currSheet} = this.state;
+        let sheet = this.sheets[currSheet];
 
         console.log(data, 'to be saved');
 
         this.socket.emit('SAVE', {
             projName: currProjectName,
             sheetName: currSheet,
-            type: currType,
+            type: sheet.type,
             data
         })
     }
 
-    // initTable是由Navigation中的selectSheet调用。首次调用的时候，initTable将会检查
-    // 表之间的依赖关系是否满足。如果没有下载到本地的数据会先进行下载。
-    
-    // 对于首次打开的本地表，每下载完一个引用的服务器端的数据表都会触发一次检查。而最
-    // 后一次检查则应当满足所有的条件，然后调用UI进行render。
+    /**
+     * 表的递归查找过程
+     * ================
+     * 
+     * 我们的系统中存在两种表，分别是remote表和local表。其中remote表基本是纯粹的数据，
+     * 通过用户上传的XLS恢复而成，而local表则是FinancialTables定义的一系列表，在数据
+     * 的基础上进行运算，并承担与用户的交互。
+     * 
+     * 当我们要打开一个表，也就是由Navigation触发了fetchTable的时候，我们知道它只做两
+     * 件事，第一是找到所有的表，也就是使得所有被引用到的表的状态都是ready。第二件是
+     * 将状态设为要打开的表。
+     * 
+     * 1. 检查栈顶元素
+     * 
+     *    a. 如果栈顶元素为remote表且不ready，那么向服务器请求数据（等待）
+     *       取回的时候将栈顶表设为ready，并重新回到1。
+     * 
+     *    b. 如果栈顶元素为local且不ready，那么检查referred表
+     *       如果所有referred元素都已ready那么调用import，local表也会设为ready，回到1.
+     *       如果存在不ready的referred元素，那么将这些元素压入栈，回到1.
+     * 
+     *    c. 如果栈顶元素为ready，出栈，回到1。
+     * 
+     * 2. 如果 1.c 弹出了最后一个元素，那么setState。
+     * 
+     * 理论上这个过程应该通过一个递归或者while循环实现，但在实际中由于remote表涉及到
+     * 前后端交互，因此在向服务器发送信息之后就不会再调用自己，而在收到信息的callback
+     * 中再调用自己。
+     * 
+     * 需要注意的一些约束：
+     * 1. fetchTable肯定是准备查找一个local表。
+     */
 
-    // 然而有这样一种情况，就是若干个本地表之间存在共享的远程数据表，这种情况下检查无
-    // 法通过下载表的路径触发，因此也不会进行rendering。所以在检查表是否保存在本地时，
-    // 应当立即触发一次检查。
+    fetchTableWorker(){
 
-    initTable = ({projName, sheetName, sheetSpec}) => {
+        console.log('fetchtableworks')
 
-        if(this.sheets[sheetName] && (this.sheets[sheetName].status === 'ready')){
+        if (this.fetchStack.length === 0){
+            console.log('handling racing.')
+            return;
+        }
 
-            let {type, desc} = sheetSpec;
-
-            this.log(`表 ${desc} 已经就绪，直接切换`);
-            this.setState({
-                currProjectName: projName,
-                currSheet: sheetName,
-                currType: type
-            })
-
-        } else {
-
-            let {referred, desc} = sheetSpec;
-
-            this.setState({
-                currSheet: undefined,
-            })
+        let {projName, sheetName, sheetSpec} = this.fetchStack[this.fetchStack.length - 1];
+        
+        if (sheetSpec.status === 'ready'){
+            this.fetchStack.pop();
             
-            this.log(`准备获取 [${desc}]，检查引用的数据是否存在。`);
-
-            if(referred === undefined){
-                this.log(`${desc} 里referred表未定义`)
+            if(this.fetchStack.length === 0){
+                this.setState({
+                    currProjectName: projName,
+                    currSheet: sheetName
+                })
+            } else {
+                console.log(projName, sheetName, 'fetched.')
+                this.fetchTableWorker();
             }
 
-            // check if there is any local table that not defined.
-            // if there is, stop, otherwise proceed.
+        } else if (sheetSpec.location === 'remote'){
+            console.log('handling remote');
+            this.socket.emit('SEND', { projName, sheetName, type: sheetSpec.type, position: 0});
+            // now leave the remaining check to socket.on('DONE');
 
-            for (let sheet in referred){
-                console.log(sheet, this.sheets[sheet], 'listing sheet');
-                if( this.sheets[sheet] === undefined && referred[sheet].location === 'local'){
-                    this.log(`[${desc}] 请您先点一下左边对应的按钮，[${referred[sheet].desc}]，获取到表格之后再回到这里` );
-                    return;
+        } else if (sheetSpec.location === 'local'){
+            console.log('handling local');
+            let {referred} = sheetSpec,
+                allReferredReady = true;
+
+            for (let refName in referred){
+                
+                let ref = referred[refName];
+                if (ref.location === 'remote' && this.sheets[refName] === undefined){
+                    this.sheets[refName] = new Sheet(ref);
                 }
-            }    
 
-            // retrieve the remote tables.
+                if(this.sheets[refName].status != 'ready'){
+                    console.log('push remote')
+                    this.fetchStack.push({projName, sheetName: refName, sheetSpec: this.sheets[refName]});
+                } 
 
-            for (let sheet in referred){
-                this.log(`${referred[sheet].location === 'remote' ? '远程' : '本地'}表 ${referred[sheet].desc}，${sheet in this.sheets ? '存在' : '不存在'}`);
-                if(!(sheet in this.sheets) && referred[sheet].location === 'remote'){
-                    
-                    let {type, desc} = referred[sheet];
-                    this.sheets[sheet] = {
-                        desc, type,
-                        status: 'pending',
-                        blobs:[]
-                    };
-                    this.socket.emit('SEND', {
-                        projName, 
-                        sheetName: sheet,
-                        type, 
-                        position: 0
-                    })
-
-                }
+                allReferredReady = allReferredReady && (this.sheets[refName].status === 'ready');
             }
-    
-            // temp stores current table that waiting for remote tables.
-            // Notice that temp only stores one single table, because there could 
-            // be only one table to wait.
 
-            this.temp = {projName, sheetName, sheetSpec};
-            this.proceedExecuteProcedure();
+            if(allReferredReady){
+                this.sheets[sheetName].import(this.sheets);
+            }
+            this.fetchTableWorker();
+        } else {
+            this.log('遇到了一个表没有定义location，是写代码的人的锅，请打电话联系他。')
         }
     }
 
-    proceedExecuteProcedure = () => {
+    fetchTable = ({projName, sheetName}) => {
 
-        for (let sheet in this.sheets){
-            if(this.sheets[sheet].status !== 'ready'){
-                this.log(`表 ${sheet}(${this.sheets[sheet].desc}) 尚未就绪，等待下一次检查`);
-                return;
-            } else {
-                this.log(`表 ${sheet}(${this.sheets[sheet].desc}) 已就绪`);
-            }
-        }
-
-        let {projName, sheetName, sheetSpec} = this.temp,
-            {importProc, exportProc, desc, type='DATA', isSavable} = sheetSpec;
-
-        this.sheets[sheetName] = {status: 'ready', importProc, exportProc, desc, type, isSavable, sections:importProc(this.sheets)};
-
-        console.log(projName, sheetName, type, 'proceed');
-
-        this.setState({
-            currProjectName: projName,
-            currSheet: sheetName,
-            currType: type
-        })
+        this.fetchStack.push({projName, sheetName, sheetSpec: this.sheets[sheetName]});
+        this.fetchTableWorker()
     }
 
     render(){
@@ -243,7 +219,7 @@ export default class BookManagerComp extends React.Component{
 
             displayedContent = <WorkAreaContainer>
                 <Title>{desc}</Title>
-                <Formwell
+                <Formwell sheetName={sheetName}
                     saveRemote={this.save} sections={sections} exportProc={exportProc}
                     isSavable={isSavable}
                 />
@@ -252,9 +228,10 @@ export default class BookManagerComp extends React.Component{
 
         return (<FlexBox>
             <Navigation
+                sheetList={this.sheets}
                 address={address}
                 socket={this.socket}
-                initTable={this.initTable}
+                fetchTable={this.fetchTable}
                 clearCurrentProject={this.clearCurrentProject}/>
             {displayedContent}
         </FlexBox>)

@@ -6,16 +6,14 @@ import path from 'path';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 
-import XLSX from 'xlsx';
-
 const fs = require('fs').promises;
 
 import FileServ from './file-serv.js';
 const Files = {};
 
-import colRemap from './parseTypeDictionary';
-
 import {operate, retrieveAndStore} from './database.js';
+
+import bookRestore from './book-restore';
 
 var app = express();
 
@@ -86,7 +84,7 @@ tableServer.on('connection', function (socket) {
 
     socket.on('SEND', function({projName, sheetName, type, position}){
 
-        console.log(`SENDING ${projName}-${sheetName} FROM@ ${position}`, );
+        console.log(`SENDING ${projName}-${sheetName}-${type} FROM@ ${position}`, );
         
         let fileName = getRestoredFileName(projName, sheetName, type);
     
@@ -96,15 +94,15 @@ tableServer.on('connection', function (socket) {
         // 最后一个块时，标签为"DONE"，否则为"RECV"，其余信息都一样。
 
 
-        let afterRead = ({part, percent, position, buffer}) => {
+        let afterRead = ({part, percent, nextPos, buffer}) => {
 
             let label = {
                 LAST: 'DONE',
                 MOST: 'RECV',
             }[part];
 
-            console.log(`SENDING ${projName}-${sheetName} ENDS@ ${position} ${label}`);
-            socket.emit(label, {projName, sheetName, percent, position, data: buffer})
+            console.log(`SENDING ${projName}-${sheetName} ENDS@ ${nextPos} ${part} ${label}`);
+            socket.emit(label, {projName, sheetName, percent, position: nextPos, data: buffer})
         }
 
         // 以下是在打开文件时执行的后续操作，当文件打开之后，就会直接读取文件
@@ -127,6 +125,7 @@ tableServer.on('connection', function (socket) {
         if(Files[fileName] === undefined){
             Files[fileName] = new FileServ(path.resolve(BACKUP_PATH, fileName));
         }
+        console.log(fileName);
         Files[fileName].readChunk(position, afterRead, notExisted)
     })
 
@@ -150,84 +149,15 @@ tableServer.on('connection', function (socket) {
         fs.writeFile(filePath, dataBuffer);
     })
 
-    socket.on('RESTORE', function(data){
-    
-        fs.readdir(BACKUP_PATH)
-        .then(res => {
-            let {name} = data;
-            let fileNames = res.filter(path => path.includes(name) && path.includes('SOURCE'));
-            
-            console.log('ready to handle', fileNames);
-            
-            if (fileNames.every(e => e.includes('xls'))){
-                socket.emit('RESTORE_MSG', '按Excel来还原数据');
-                
-                let balancesPath = fileNames.filter(e => e.includes('BALANCE')),
-                    journalsPath = fileNames.filter(e => e.includes('JOURNAL')),
-                    assistedsPath = fileNames.filter(e => e.includes('ASSISTED'));
+    socket.on('RESTORE', function({name, path}){
 
-                if((balancesPath.length !== journalsPath.length) || (journalsPath.length !== assistedsPath.length)){
-                    socket.emit('RESTORE_MSG', '缺少某些期间/年份的数据表，对应期间的查询也无法生成，不过没有大碍。')
-                }
-
-                let data = {
-                    BALANCE: [],
-                    JOURNAL: [],
-                    ASSISTED: []
-                };
-
-                Promise.all(fileNames.map(e => {
-                    console.log('begin reading file', e);
-                    return fs.readFile(path.resolve(BACKUP_PATH, e))
-                    .then(fileBuffer => {
-                        return XLSX.read(fileBuffer, {type: 'buffer'})
-                    })
-                    .catch(err => {
-                        console.error(err, 'err in reading.')
-                    })
-                }))
-                .then(result => {
-
-                    for (let i = 0; i < fileNames.length; i++){
-
-                        let [_S, _N, type, year, _FT] = fileNames[i].split('.');
-                        let recRemap = colRemap[type];
-
-                        let book = result[i],
-                            sheet = book.Sheets[book.SheetNames[0]],
-                            parsed = XLSX.utils.sheet_to_json(sheet);
-
-                        for (let p = 0; p < parsed.length; p++){
-                            let rec = parsed[p],
-                                newRec = {};
-                            for (let ent = 0; ent < recRemap.length; ent++){
-                                let [oldKey, newKey] = recRemap[ent];
-                                newRec[newKey] = rec[oldKey];
-                            }
-
-                            if (newRec.iyear === undefined){
-                                newRec.iyear = year;
-                            }
-
-                            parsed[p] = newRec;
-                        }
-
-                        data[type].push(parsed);
-                    }
-
-                    return Promise.all(Object.keys(data).map(key => {
-                        data[key] = data[key].flat();
-                        return fs.writeFile(path.resolve(BACKUP_PATH, `RESTORED.${name}.${key}.JSON`), JSON.stringify(data[key]));
-                    }))                    
-                })
-                .then(result => {
-                    socket.emit('FILEPREPARED', {});
-                })
-                .catch(err => {
-                    console.log('error during restoring xls files', err);
-                })
-            }
-        });
+        bookRestore(name)
+        .then(result => {
+            socket.emit('FILEPREPARED', {});
+        })
+        .catch(err => {
+            console.log('error during restoring xls files', err);
+        })
 
         // console.log('begin restoring', data);
         // operate('RESTORE', path.join(BACKUP_PATH, `${data.path}.BAK`)).then(res => {

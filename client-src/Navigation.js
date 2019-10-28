@@ -32,8 +32,6 @@ import styled from 'styled-components';
 import UploadManager from './UploadManager';
 import RestoreBackup from './RestoreBackup';
 
-import FinancialTables from './FinancialTables';
-
 const Container = styled.div`
     width: 250px;
     margin-top: 10px;
@@ -140,24 +138,21 @@ export default class Navigation extends React.Component {
 
     selectProject(index){
 
-        let sheetList = Object.assign({}, FinancialTables);
-
         this.setState({
             navPos: 'sheets',
-            proj: {...this.state.projList[index], sheetList}
+            proj: {...this.state.projList[index]}
         });
     }
 
     selectSheet = (e) => {
         
-        let {initTable} = this.props;
+        let {fetchTable} = this.props;
 
         let sheetName = e.target.dataset.key,
-            sheetSpec = this.state.proj.sheetList[sheetName],
             {projName} = this.state.proj;
 
-        console.log(e.target, sheetName, sheetSpec, 'before calling initTable')
-        initTable({projName, sheetName, sheetSpec});
+        console.log(e.target, sheetName, 'triggers fetching table')
+        fetchTable({projName, sheetName});
     }
 
     backToList = (e) => {
@@ -170,7 +165,7 @@ export default class Navigation extends React.Component {
 
     render(){
 
-        let {socket, address, clearCurrentProject} = this.props;
+        let {socket, sheetList, address, clearCurrentProject} = this.props;
 
         let {navPos} = this.state;
 
@@ -205,15 +200,12 @@ export default class Navigation extends React.Component {
         }
 
         if (navPos === 'sheets'){
-            let {proj} = this.state;
-            let name = proj.projName;
-
             let elemDisplay = [];
-            for (let sheetName in proj.sheetList){
-                let {desc} = proj.sheetList[sheetName];
-                elemDisplay.push(<Button key={sheetName} data-key={sheetName} onClick={this.selectSheet}>
-                    {desc}
-                </Button>)
+            for (let sheetName in sheetList){
+                let {desc, location} = sheetList[sheetName];
+                if (location === 'local'){
+                    elemDisplay.push(<Button key={sheetName} data-key={sheetName} onClick={this.selectSheet}>{desc}</Button>)
+                }
             }
 
             let displayed = <ManuItem>

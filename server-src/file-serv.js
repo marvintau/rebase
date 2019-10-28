@@ -71,13 +71,13 @@ export default class FileServ {
             return fileHandle.read(this.buffer, 0, BLOCK_SIZE, position)
             .then(({bytesRead, buffer}) => {
 
-                position += bytesRead;
+                let nextPos = position + bytesRead;
                 buffer = buffer.slice(0, bytesRead);
 
-                let progress = position / this.fileSize,
-                    part = (position === this.fileSize) ? 'LAST' : 'MOST';
-
-                let message = { part, position, progress, buffer}
+                let progress = nextPos / this.fileSize,
+                    part = (nextPos === this.fileSize) ? 'LAST' : 'MOST';
+                let message = { part, nextPos, progress, buffer}
+                console.log(message);
                 return afterRead(message);
             })
             .catch(err => console.error(`Read@ReadChunk: ${err}`))
