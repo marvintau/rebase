@@ -96,21 +96,17 @@ export default class UploadBackup extends React.Component{
                 this.fileObj[sliceMethod](position, sliceEnd)
                     .arrayBuffer()
                     .then(buffer => {
-                        console.log(position, sliceEnd, buffer, 'arrayBuffer');
-                        this.socket.emit('RECV', {
-                            name,
-                            data: buffer
-                        });
+                        this.socket.emit('RECV', { position, name, data: buffer });
                     })
                 break;
             } else {
                 throw new Error('上传文件：浏览器的版本比较旧，不支持Blob.slice方法。')
             }
 
-        });
-
-        this.socket.on('DONE', () => {
+        }).on('DONE', () => {
             this.setState({uploadState : "DONE"});
+        }).on('ERROR', ({msg}) => {
+            this.setState({uploadState: 'ERROR', errMsg: msg})
         });
     }
 
@@ -166,7 +162,8 @@ export default class UploadBackup extends React.Component{
             bookType = {
                 '序时账' : 'JOURNAL',
                 '科目余额表' : 'BALANCE',
-                '辅助核算明细表' : 'ASSISTED'
+                '辅助核算明细表' : 'ASSISTED',
+                '现金流编制明细' : 'CASHFLOW_WORKSHEET'
             }[bookType]
     
             this.nameRef.current.value = projName
@@ -205,11 +202,12 @@ export default class UploadBackup extends React.Component{
                             <option value='bak2019'>.BAK（SQLServer2008以上）</option>
                         </Select>
 
-                        <Label>帐套类别</Label>
+                        <Label>数据类别</Label>
                         <Select id="file-type" ref={this.bookTypeRef}>
                             <option value='BALANCE'>科目余额</option>
                             <option value='JOURNAL'>序时账</option>
                             <option value='ASSISTED'>辅助核算</option>
+                            <option value='CASHFLOW_WORKSHEET'>现金流编制明细</option>
                         </Select>
                         {(fileName !== undefined) ?
                             <Button id="upload" onClick={this.upload}>上传</Button> :
@@ -221,6 +219,8 @@ export default class UploadBackup extends React.Component{
                     <InputGroup>
                         已上传 {this.state.progress} %
                     </InputGroup>)
+            case 'ERROR':
+                return <InputGroup><Label>{this.state.errMsg}</Label></InputGroup>
         }
     }
 }

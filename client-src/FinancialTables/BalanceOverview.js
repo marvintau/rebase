@@ -1,7 +1,4 @@
-import {Head, Record, List} from 'persisted';
-
-import Sheet from './sheet';
-import Table from './table';
+import {Head, Record, List, Sheet, Table} from 'persisted';
 
 let head = new Head({
     ccode_name: 'String',
@@ -58,11 +55,13 @@ function importProc({BALANCE}){
 
 
 
-export default new Sheet ({
-    referred: {
-        BALANCE: {desc:'科目余额', location:'remote'}
-    },
-    importProc,
-    desc: '每期间科目余额',
-    type: 'DATA',
-})
+export default function(){
+    return new Sheet ({
+        referred: {
+            BALANCE: {desc:'科目余额', location:'remote'}
+        },
+        importProc,
+        desc: '每期间科目余额',
+        type: 'DATA',
+    })
+}

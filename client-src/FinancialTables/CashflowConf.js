@@ -1,8 +1,6 @@
-import {Record, List, Head} from 'persisted';
+import {Record, List, Head, Sheet, Table} from 'persisted';
 
 import cashflowStatementDirectDetails from './local/cashflowStatementDirectDetails.txt.json';
-import Table from './table.js';
-import Sheet from './sheet.js'
 
 let categoryHead = new Head({
     ccode: 'String',
@@ -114,14 +112,16 @@ function exportProc(sections){
     return [date, result];
 }
 
-export default new Sheet({
-    referred: {
-        savedCashFlowConf: {desc:'已保存的现流表配置表', location: 'remote', type: 'CONF'},
-        BALANCE: {desc: '科目余额', location:'remote'}
-    },
-    importProc,
-    exportProc,
-    desc: '现金流量表配置表',
-    type: 'CONF',
-    isSavable: true
-})
+export default function(){ 
+    return new Sheet({
+        referred: {
+            savedCashFlowConf: {desc:'已保存的现流表配置表', location: 'remote', type: 'CONF'},
+            BALANCE: {desc: '科目余额', location:'remote'}
+        },
+        importProc,
+        exportProc,
+        desc: '现金流量表配置表',
+        type: 'CONF',
+        isSavable: true
+    })
+}

@@ -44,14 +44,25 @@ uploadServer.on('connection', function (socket) {
 
     socket.on('PREP', function ({name, size}) { 
 
-        Files[name] = new FileServ(path.join(BACKUP_PATH, name), size);
-        socket.emit('SEND', {name, percent: 0, position: 0});
+        let filePath = path.join(BACKUP_PATH, name);
 
+        fs.access(filePath)
+        .then(() => {
+            return fs.unlink(filePath)
+        })
+        .then(() => {
+            console.log('File with same name has been removed.');
+        })
+        .finally(() => {
+            Files[name] = new FileServ(path.join(BACKUP_PATH, name), size);
+            socket.emit('SEND', {name, percent: 0, position: 0});    
+        })
     });
 
-    socket.on('RECV', function ({name, data}) {
+    socket.on('RECV', function ({position, name, data}) {
         
         let afterWrite = ({part, percent, position}) => {
+            console.log('afterWrite', part, percent, position);
 
             let label = {
                 LAST: 'DONE',
@@ -61,7 +72,7 @@ uploadServer.on('connection', function (socket) {
             socket.emit(label, {name, percent, position})
         }
 
-        Files[name].writeChunk(data, afterWrite);
+        Files[name].writeChunk(position, data, afterWrite);
     });
 
 })
@@ -74,7 +85,7 @@ function getRestoredFileName(projName, sheetName, type){
 tableServer.on('connection', function (socket) {
 
     socket.on('REQUIRE_LIST', function(){
-        console.log('received inquiring');
+        console.log('Received requiring list of projects');
         fs.readdir(BACKUP_PATH).then(res => {
             socket.emit('LIST', {list: res});
         }).catch(err => {

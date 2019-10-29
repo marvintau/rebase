@@ -1,8 +1,6 @@
-import {Record, List, Head} from 'persisted';
+import {Record, List, Head, Table, Sheet} from 'persisted';
 
 import FinancialStatementDetails from './local/financialStatementDetails.txt.json';
-import Sheet from './sheet.js';
-import Table from './table.js';
 
 let categoryHead = new Head({
     ccode: 'String',
@@ -105,11 +103,13 @@ function exportProc(data){
     return [savedDate, savedContent];
 }
 
-export default new Sheet({
-    referred,
-    importProc,
-    exportProc,  
-    desc: '资产负债表配置表',
-    type: 'CONF',
-    isSavable: true
-})
+export default function(){
+    return new Sheet({
+        referred,
+        importProc,
+        exportProc,  
+        desc: '资产负债表配置表',
+        type: 'CONF',
+        isSavable: true
+    })
+}

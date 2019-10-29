@@ -43,8 +43,14 @@ let BALANCE = [
     ['账面期末数' , 'me'],
 ]
 
+let CASHFLOW_WORKSHEET = [
+    ['项目', 'item'],
+    ['值', 'value']
+]
+
 export default {
     BALANCE,
     JOURNAL,
-    ASSISTED
+    ASSISTED,
+    CASHFLOW_WORKSHEET
 }

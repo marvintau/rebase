@@ -26,7 +26,9 @@ export default class FileServ {
     }
 
     writeChunk(position, chunkBuffer, afterWrite){
-        // returns a promise
+    
+        console.log('writeChunk', position, chunkBuffer);
+
         return fs.open(this.filePath, 'a', 0o755)
         .then(fileHandle => {
             return fileHandle.write(chunkBuffer)
@@ -39,6 +41,8 @@ export default class FileServ {
 
                 let message = {position, part, progress};
 
+                // afterWrite receives the updated position for requesting
+                // next chunk of file.
                 return afterWrite(message);
             })
             .catch(err => console.error(`Write@WriteChunk: ${err}`))

@@ -1,8 +1,6 @@
-import {Record, List, Head} from 'persisted';
+import {Record, List, Head, Table, Sheet} from 'persisted';
 
 import FinancialStatementDetails from './local/financialStatementDetails.txt.json';
-import Sheet from './sheet.js';
-import Table from './table.js';
 
 let balanceHead = new Head({
     'ccode_name' : 'String',
@@ -170,12 +168,14 @@ function importProc({BALANCE, savedFinancialStatementConf}){
     return new Table(head, conf, {expandable: true})
 }
 
-export default new Sheet({
-    referred: {
-        savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
-        BALANCE: {desc:'科目余额', location:'remote'}
-    },
-    importProc,
-    desc: "资产负债表",
-    type: 'DATA'
-})
+export default function(){
+    return new Sheet({
+        referred: {
+            savedFinancialStatementConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
+            BALANCE: {desc:'科目余额', location:'remote'}
+        },
+        importProc,
+        desc: "资产负债表",
+        type: 'DATA'
+    })
+}

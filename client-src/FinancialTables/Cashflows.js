@@ -1,6 +1,4 @@
-import {Record, List, Head} from 'persisted';
-import Sheet from './sheet';
-import Table from './table';
+import {Record, List, Head, Sheet, Table} from 'persisted';
 
 import CashflowStatementDirectDetails from './local/cashflowStatementDirectDetails.txt.json';
 
@@ -173,9 +171,11 @@ function importProc({RouteAnalysis, savedCashflowConf}){
     }
 }
 
-export default new Sheet({
-    desc: "现金流量表",
-    referred,
-    importProc,
-    type: 'DATA'
-})
+export default function(){
+    return new Sheet({
+        desc: "现金流量表",
+        referred,
+        importProc,
+        type: 'DATA'
+    })
+}

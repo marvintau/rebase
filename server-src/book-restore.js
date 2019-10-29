@@ -14,6 +14,7 @@ function parseRemap(type, book, year){
         // 尽管名字叫做sheet_to_json，但其实它指的是Plain Object
         parsed = XLSX.utils.sheet_to_json(sheet);
 
+    // console.log(parsed);
     for (let p = 0; p < parsed.length; p++){
         let rec = parsed[p],
             newRec = {};
@@ -40,18 +41,20 @@ export default function bookRestore(name, postProcess=(x) => x){
         
         console.log('ready to handle', fileNames);
                 
-        let balancesPath = fileNames.filter(e => e.includes('BALANCE')),
-            journalsPath = fileNames.filter(e => e.includes('JOURNAL')),
-            assistedsPath = fileNames.filter(e => e.includes('ASSISTED'));
+        // let balancesPath = fileNames.filter(e => e.includes('BALANCE')),
+        //     journalsPath = fileNames.filter(e => e.includes('JOURNAL')),
+        //     assistedsPath = fileNames.filter(e => e.includes('ASSISTED')),
+        //     cashflowWorksheetPath = fileNames.filter(e => e.includes('CASHFLOW_WORKSHEET'));
 
-        if((balancesPath.length !== journalsPath.length) || (journalsPath.length !== assistedsPath.length)){
-            console.log('RESTORE_MSG', '缺少某些期间/年份的数据表，对应期间的查询也无法生成，不过没有大碍。')
-        }
+        // if((balancesPath.length !== journalsPath.length) || (journalsPath.length !== assistedsPath.length)){
+        //     console.log('RESTORE_MSG', '缺少某些期间/年份的数据表，对应期间的查询也无法生成，不过没有大碍。')
+        // }
 
         let data = {
             BALANCE: [],
             JOURNAL: [],
-            ASSISTED: []
+            ASSISTED: [],
+            CASHFLOW_WORKSHEET: [],
         };
 
         return Promise.all(fileNames.map(e => {

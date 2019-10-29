@@ -1,6 +1,4 @@
-import {Record, List, Head} from 'persisted';
-import Table from './table';
-import Sheet from './sheet';
+import {Record, List, Head, Table, Sheet} from 'persisted';
 
 // voucherHead是凭证的表头，作为科目发生额分析的子表
 let voucherHead = new Head({
@@ -208,12 +206,14 @@ function importProc({BALANCE, JOURNAL}){
     return new Table(analyzeHead, balanceData, {expandable: true, editable: true});
 }
 
-export default new Sheet({
-    referred: {
-        BALANCE: {desc: '科目余额', location: 'remote'},
-        JOURNAL: {desc: '明细分录', location: 'remote'},
-    },
-    importProc,
-    desc: '发生额变动分析',
-    type: 'DATA'
-})
+export default function(){
+    return new Sheet({
+        referred: {
+            BALANCE: {desc: '科目余额', location: 'remote'},
+            JOURNAL: {desc: '明细分录', location: 'remote'},
+        },
+        importProc,
+        desc: '发生额变动分析',
+        type: 'DATA'
+    })
+}
