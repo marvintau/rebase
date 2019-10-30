@@ -14,7 +14,7 @@ const Digits = styled.div`
 
 const String = styled.div`
     line-height: 25px;
-    font-family: 'Helvetica Neue', 'Pingfang SC', sans-serif;
+    font-family: 'Helvetica Neue', 'Pingfang SC', 'Microsoft Yahei', sans-serif;
     ${({isTitle}) => isTitle ? 'font-size: 100%; font-weight: 700;' : 'font-weight: 300;'}
 `
 
@@ -80,6 +80,7 @@ export default class Normal extends React.Component{
             ]
         } else {
             switch(type.name){
+
                 case 'Number':
 
                     let parsedNumber = parseFloat(data),
@@ -92,8 +93,14 @@ export default class Normal extends React.Component{
                 default:
                     if (data === undefined){
                         console.log(this.props.colKey, 'undefined');
-                        // data = new Number('123');
+                        data = '';
                     }
+                    
+                    if (data.startsWith('#') && !data.startsWith('###')){
+                        isTitle = true;
+                    }
+                    data = data.replace(/#*/, '');
+
                     return <String isTitle={isTitle}>{data}</String>;
             }
         }

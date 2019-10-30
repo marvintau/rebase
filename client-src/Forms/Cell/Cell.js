@@ -58,6 +58,9 @@ export default function Cell(props){
         case 'Path':
             CellComp = CellComponent.SelectPath;
             break;
+        case 'RefString':
+            CellComp = CellComponent.RefString;
+            break;
         case 'MultiLine':
             CellComp = CellComponent.MultiLine;
             break;

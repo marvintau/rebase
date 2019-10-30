@@ -58,11 +58,15 @@ export default class Formwell extends React.Component {
 
         let save = () => {
             saveRemote(exportProc(sections));
-        }
+        };
 
         let reset = () => {
 
-        }
+        };
+
+        let exportDocument = () => {
+
+        };
 
         console.log(sections, 'formwell');
 
@@ -90,7 +94,8 @@ export default class Formwell extends React.Component {
         if (isSavable){
             saveUtils = [       
                 <SaveButton key={0} onClick={save}>保存</SaveButton>,
-                <SaveButton key={1} onClick={reset}>重置</SaveButton>
+                <SaveButton key={1} onClick={reset}>重置</SaveButton>,
+                <SaveButton key={2} onClick={exportDocument}>导出</SaveButton>
             ]
         }
 

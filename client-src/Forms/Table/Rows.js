@@ -117,6 +117,8 @@ export default class Rows extends React.PureComponent {
         let {head, colSpan, tableAttr, level=0} = this.props;
         let {data, page, expanded} = this.state;
 
+        let {autoExpanded} = tableAttr;
+
         let rowProps = {
             head,
             level,
@@ -126,9 +128,8 @@ export default class Rows extends React.PureComponent {
             updateRowsExpanded: this.updateRowsExpanded,
         }
 
-        if (expanded === -1){
+        if (expanded === -1 || autoExpanded){
 
-            console.log(colSpan, 'colSpan');
             let paginator = <PaginatorTR key={'tab'}>
                 <td colSpan={colSpan} style={{bottom: '0px'}}><PaginatorTD>
                     <Button onClick={() => this.turnPage(-1)}>前一页</Button>

@@ -8,6 +8,8 @@ import SelectPath from './SelectPath';
 
 import EditControl from './EditControl';
 
+import RefString from './RefString';
+
 export default {
     Normal,
     MultiLine,
@@ -15,5 +17,6 @@ export default {
     MultiRotateDisplay,
     SingleSelect,
     SelectPath,
-    EditControl
+    EditControl,
+    RefString
 }

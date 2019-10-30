@@ -31,10 +31,10 @@ const TR = styled.tr`
 export default class Row extends React.Component {
     constructor(props){
         super(props);
+
         this.state = {
             data: this.props.data,
             isHovered: false,
-            isRowExpanded: false,
         };
     }
 
@@ -45,7 +45,6 @@ export default class Row extends React.Component {
                     data: props.data,
                     editing: false,
                     isHovered: false,
-                    isRowExpanded: false,        
                     fromInside : false,
                 }
             }
@@ -98,8 +97,8 @@ export default class Row extends React.Component {
         let {rowIndex, level, head, tableAttr={}, rowsExpanded} = this.props;
         
         let {data, editing, isHovered} = this.state,
-            {expandable, editable} = tableAttr,
-            isRowExpanded = rowIndex === rowsExpanded;
+            {expandable, autoExpanded, editable} = tableAttr,
+            isRowExpanded = autoExpanded || (rowIndex === rowsExpanded);
 
         expandable = expandable && (data.hasChild() || data.hasTable());
 
@@ -180,6 +179,9 @@ export default class Row extends React.Component {
                     />,
                     <TRBar key={'barB'} />, 
                 ]
+                if(autoExpanded){
+                    subs = subs[1];
+                }
             } else if (data.hasTable()){
 
                 console.log(data, 'before subtable');
