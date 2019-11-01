@@ -139,7 +139,7 @@ export default class Rows extends React.PureComponent {
             </PaginatorTR>
 
             let elems;
-            if(data.length <= ENTRIES_PER_PAGE){
+            if((data.length <= ENTRIES_PER_PAGE) || autoExpanded){
                 elems = data.map((entry, rowIndex) => {
                     return <Row
                         key={rowIndex}

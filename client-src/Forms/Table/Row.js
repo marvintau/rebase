@@ -102,6 +102,8 @@ export default class Row extends React.Component {
 
         expandable = expandable && (data.hasChild() || data.hasTable());
 
+        editable = editable && (data.attr.title === undefined)
+
         let sharedCellProps = {
             level,
             update: this.updateRow,
@@ -129,20 +131,21 @@ export default class Row extends React.Component {
                 data: data.get(colKey),
             }
 
+            cellProps.isTitle = cellProps.isTitle || (data.attr.title === colKey);
             if (cellProps.isTitle){
 
                 // 如果是title，那么cols将只包含一个cell，同时占满整个表格行。需要注意的是，
                 // 如果head中包含的title字段，在data中并不包含，或者data中包含的内容（即
                 // 字符串）是空的，那么都不会作为title来处理。
+                cols.push(<Cell key={colKey} colSpan={colSpan} {...cellProps}/>)
+                break;    
 
-                let title = data.get(colKey);
-                if (title && title.length > 0 && title != 'undefined'){
-                    cols.push(<Cell key={colKey} colSpan={colSpan} {...cellProps}/>)
-                    break;    
-                } else {
-                    // 如果title是空的，那么会直接被跳过去。
-                    continue;                    
-                }
+                // let title = data.get(colKey);
+                // if (title && title.length > 0 && title != 'undefined'){
+                // } else {
+                //     // 如果title是空的，那么会直接被跳过去。
+                //     continue;                    
+                // }
             }
 
             if(!(cellProps.hidden)){

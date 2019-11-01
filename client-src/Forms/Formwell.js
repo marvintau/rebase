@@ -2,15 +2,19 @@ import React from 'react';
 import Tabs from './Group/Tabs'
 import styled from 'styled-components';
 
+import XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+
 const Table = styled.table`
     width: 750px;
+    padding-bottom: 50px;
     box-sizing:border-box;
     border-collapse: collapse;
     position: relative;
 `
 
 const TableWrapper = styled.div`
-    height: 100vh;
+    height: 90vh;
     width: auto;
     box-sizing:border-box;
     overflow-y: scroll !important;
@@ -50,25 +54,41 @@ const SaveButton = styled.div`
 
 export default class Formwell extends React.Component {
 
-    static getDerivedState
-
     render () {
 
-        let {sheetName, saveRemote, sections, exportProc, isSavable=false} = this.props;
+        let {sheetName, saveRemote, sections, exportProc, isSavable=false, isExportable=false} = this.props;
 
         let save = () => {
             saveRemote(exportProc(sections));
         };
 
         let reset = () => {
-
+            alert('还没实现，赶紧催催程序员');
         };
 
         let exportDocument = () => {
 
-        };
+            let exported = exportProc(sections);
 
-        console.log(sections, 'formwell');
+            let xlsSheet = XLSX.utils.json_to_sheet(exported),
+                xlsBook = XLSX.utils.book_new();
+
+            xlsBook.SheetNames.push('sheet1');
+            xlsBook.Sheets['sheet1'] = xlsSheet;
+
+            let xlsOutput = XLSX.write(xlsBook, {bookType:'xlsx', type: 'binary'});
+
+            function s2ab(s) { 
+                var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+                var view = new Uint8Array(buf);  //create uint8array as viewer
+                for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+                return buf;    
+            }
+
+            let outputArrayBuffed = s2ab(xlsOutput);
+
+            saveAs(new Blob([outputArrayBuffed],{type:"application/octet-stream"}), 'exported.xlsx');
+        };
 
         let tab;
         if(Array.isArray(sections)){
@@ -95,13 +115,18 @@ export default class Formwell extends React.Component {
             saveUtils = [       
                 <SaveButton key={0} onClick={save}>保存</SaveButton>,
                 <SaveButton key={1} onClick={reset}>重置</SaveButton>,
-                <SaveButton key={2} onClick={exportDocument}>导出</SaveButton>
             ]
         }
 
-        return <TableWrapper>
+        if(isExportable){
+            saveUtils.push(<SaveButton key={2} onClick={exportDocument}>导出</SaveButton>)
+        }
+
+        return <div>
+        <TableWrapper>
             {tab}
-            {saveUtils}
         </TableWrapper>
+            {saveUtils}
+        </div>
     }
 }

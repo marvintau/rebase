@@ -85,7 +85,7 @@ export default class BookManagerComp extends React.Component{
     // FinancialTables中各文件的exportFunc是如何实现的。
     save = (data) => {
         let {currProjectName, currSheet} = this.state;
-        let sheet = this.sheets[currSheet];
+        let sheet = this.sheetColl.get(currSheet);
 
         console.log(data, 'to be saved');
 
@@ -96,6 +96,8 @@ export default class BookManagerComp extends React.Component{
             data
         })
     }
+
+
 
     render(){
 
@@ -108,13 +110,14 @@ export default class BookManagerComp extends React.Component{
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
-                {desc, sections, exportProc, isSavable} = this.sheetColl.get(sheetName);
+                {desc, sections, exportProc, isSavable, isExportable} = this.sheetColl.get(sheetName);
 
             displayedContent = <WorkAreaContainer>
                 <Title>{desc}</Title>
-                <Formwell sheetName={sheetName}
+                <Formwell key={sheetName} sheetName={sheetName}
                     saveRemote={this.save} sections={sections} exportProc={exportProc}
                     isSavable={isSavable}
+                    isExportable={isExportable}
                 />
             </WorkAreaContainer>;
         }

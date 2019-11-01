@@ -95,7 +95,7 @@ tableServer.on('connection', function (socket) {
 
     socket.on('SEND', function({projName, sheetName, type, position}){
 
-        console.log(`SENDING ${projName}-${sheetName}-${type} FROM@ ${position}`, );
+        console.log(`SENDING ${projName}-${sheetName}${type? `-${type}`:''} FROM@ ${position}`, );
         
         let fileName = getRestoredFileName(projName, sheetName, type);
     

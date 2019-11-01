@@ -2,9 +2,10 @@ import BalanceOverview from './BalanceOverview';
 import RouteAnalysis from './RouteAnalysis';
 import FinancialStatementConf from './FinancialStatementConf';
 import FinancialStatement from './FinancialStatement';
-import CashflowConf from './CashflowConf';
+// import CashflowConf from './deprecated/CashflowConf';
+// import Cashflows from './deprecated/Cashflows';
 import CashflowWorksheet from './CashflowWorksheet';
-import Cashflows from './Cashflows';
+import CashflowStatement from './CashflowStatement';
 
 export default function(){
     return {
@@ -12,8 +13,9 @@ export default function(){
         RouteAnalysis: RouteAnalysis(),
         FinancialStatementConf: FinancialStatementConf(),
         FinancialStatement: FinancialStatement(),
+        // CashflowConf: CashflowConf(),
+        // Cashflows: Cashflows(),
         CashflowWorksheet: CashflowWorksheet(),
-        CashflowConf: CashflowConf(),
-        Cashflows: Cashflows()
+        CashflowStatement: CashflowStatement()
     }
 }

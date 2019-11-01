@@ -8,14 +8,23 @@ const Digits = styled.div`
     font-weight: bold;
     letter-spacing: -0.01em;
     line-height: 25px;
-    font-family: 'Consolas', 'Inconsolata', 'TheSansMono Office', 'Menlo', monospace;
+    font-family: 'Arial Narrow', 'Avenir Next Condensed', monospace;
     width: 100%;
 `
 
 const String = styled.div`
     line-height: 25px;
+    word-wrap: break-word;
     font-family: 'Helvetica Neue', 'Pingfang SC', 'Microsoft Yahei', sans-serif;
     ${({isTitle}) => isTitle ? 'font-size: 100%; font-weight: 700;' : 'font-weight: 300;'}
+`
+
+const Error =styled.div`
+    color: rgb(224, 0, 0);
+    text-align: right;
+    line-height: 25px;
+    font-weight: bold;
+    width: 100%;
 `
 
 const Edit = styled.input`
@@ -27,7 +36,7 @@ const Edit = styled.input`
     height: 25px;
     font-size: 80%;
     font-weight: bold;
-    font-family: 'Consolas', 'Inconsolata', 'TheSansMono Office', 'Menlo', monospace;
+    font-family: 'Arial Narrow', monospace;
     outline: none;
     border: 1px solid black;
     border-radius: 5px;
@@ -79,6 +88,10 @@ export default class Normal extends React.Component{
                 <Edit key={'edit'} defaultValue={value} onChange={this.updateColumn}/>,
             ]
         } else {
+
+            if (data.error){
+                return <Error>{data.error}</Error>
+            }
             switch(type.name){
 
                 case 'Number':
@@ -90,17 +103,18 @@ export default class Normal extends React.Component{
 
                 case 'String':
                     data = data == "undefined" ? "无" : data;
+
+                    if (data.startsWith('#') && !data.startsWith('###')){
+                        isTitle = true;
+                    }
+                    data = data.replace(/#*/, '');
+
                 default:
                     if (data === undefined){
                         console.log(this.props.colKey, 'undefined');
                         data = '';
                     }
                     
-                    if (data.startsWith('#') && !data.startsWith('###')){
-                        isTitle = true;
-                    }
-                    data = data.replace(/#*/, '');
-
                     return <String isTitle={isTitle}>{data}</String>;
             }
         }
