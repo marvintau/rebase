@@ -178,6 +178,8 @@ function importProc({BALANCE, JOURNAL}){
                 }
             }
 
+            console.log(recs.slice(0, 10).map(e => e.cols));
+
             return recs.grip('iperiod', {desc: '期间'})
                 .iter((key, codeRecs) => {
                     return codeRecs.orderBy('ccode').cascade('ccode');;

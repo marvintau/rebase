@@ -116,9 +116,9 @@ export default class Row extends React.Component {
          * 1. 首先显示必要的columns，包括显示是否存在子层数据的indicator，以及按规则
          *    呈现每一列（每一个单元格）的数据。
          */
-        let {head} = this.props;
+        let {head, rowIndex} = this.props;
         let {data, isHovered, isRowEditing} = this.state;
-        let sharedCellProps = {isHovered, isRowEditing, update: this.updateRow}
+        let sharedCellProps = {rowIndex, isHovered, isRowEditing, update: this.updateRow}
 
         let cols = [<Indicator key={'indi'} data={data}/>];
 
@@ -168,7 +168,7 @@ export default class Row extends React.Component {
 
         let subs = [];
 
-        let {autoExpanded, rowIndex, expandedRowIndex, expandable} = this.props,
+        let {autoExpanded, expandedRowIndex, expandable} = this.props,
         isRowExpanded = autoExpanded || (rowIndex === expandedRowIndex);
 
         if(isRowExpanded){

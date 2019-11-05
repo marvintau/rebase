@@ -105,8 +105,6 @@ function importProc({CashflowWorksheet, BalanceOverview, CategoricalAccruals}){
                 if (accrual === undefined){
                     accrual = new Cols({mc: 0, md: 0}, {head: accrualHead});
                 }
-
-                console.log(path, accrual.cols);
                 destRecs.push({
                     path: path.join('/')+":"+refVal,
                     balance: balanceLastPeriod.findBy('ccode_name', path),

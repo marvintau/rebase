@@ -103,7 +103,8 @@ export default class Rows extends React.PureComponent {
     updateRows = (operation, args) => {
         
         if (operation === 'insert') {
-            args.push(this.props.head.createRecord());
+            args.push(this.props.head.createCols());
+            console.log(args, 'yup')
         }
         let data = this.state.data[operation](...args);
 
