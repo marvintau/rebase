@@ -17,6 +17,28 @@ const Wrapper = styled.div`
 
 const Item = ({ entity: name }) => <div style={{margin: '5px'}}>{name}</div>;
 
+function getSuggestion(token, path, paths){
+    let options = paths, found;
+    for (let elem of path){
+        found = paths.find(e => e.get('ccode_name') == elem);
+        if(found === undefined){
+            break;
+        } else {
+            options = found.subs;
+        }
+    }
+    options = options.map(e => e.get('ccode_name'));
+    
+    let filtered = options.filter(e => [...token].some(t=>e.includes(t)));
+
+    if (filtered.length > 0){
+        options = filtered;
+    }
+
+    return options;
+
+}
+
 export default class RefString extends React.Component{
 
     render() {
@@ -70,40 +92,25 @@ export default class RefString extends React.Component{
                     dataProvider: token => {
 
                         // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
-
-                        // 1. 我们先获得当前的字符串，textarea里获得不到，我们要找data.string
-                        //    按/划分后去掉第一个（肯定为空的字符串），就得到了一个路径的array
-                        //    of string，也就是path
                         let path = data.string.replace(/\s/g, '').split('/').slice(1);
-                        console.log(path);
-                        // 2. 现在沿着这个path来寻找。如果path中的第一级出现在一级科目中，
-                        //    那么向path提供的suggestion就应该是path所指的一级科目下属的
-                        //    二级科目。以此类推。
-                        let options = paths, found;
-                        for (let elem of path){
-                            found = paths.find(e => e.get('ccode_name') == elem);
-                            console.log(paths.map(e => e.get('ccode_name')), elem, found, 'found');
-                            if(found === undefined){
-                                break;
-                            } else {
-                                options = found.heir;
-                            }
-                        }
-                        options = options.map(e => e.get('ccode_name'));
-                        
-                        // 3. 当得到了path所指的当前级别的所有科目名称后，如果存在关键字匹配
-                        //    我们只保留匹配的科目，否则提供全部的科目。
-                        let filtered = options.filter(e => [...token].some(t=>e.includes(t)));
 
-                        if (filtered.length > 0){
-                            options = filtered;
-                        }
-
-                        return options;
+                        return getSuggestion(token, path, paths);
                     },
                     component: Item,
                     output: (item, trigger) => `/${item}`
-                }
+                },
+                '&' : {
+                    dataProvider: token => {
+
+                        // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
+                        let path = data.string.replace(/\s/g, '').split('/').slice(1,-1);
+
+                        return getSuggestion(token, path, paths);
+                    },
+                    component: Item,
+                    output: (item, trigger) => `&${item}`
+                },
+
             }}
             ref={(rta) => { this.rta = rta; } }
             onInput={e => {

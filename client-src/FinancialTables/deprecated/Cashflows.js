@@ -38,7 +38,7 @@ head.setColProp({colDesc: '金额'}, 'accrual')
 
 const referred = {
     savedCashflowConf: {desc:'已保存的资产负债表配置表', location: 'remote', type: 'CONF'},
-    RouteAnalysis: {desc:'发生额变动分析' , location:'local', type: 'DATA'}
+    RouteAnalysis: {desc:'发生额分析分析' , location:'local', type: 'DATA'}
 };
 
 function importProc({RouteAnalysis, savedCashflowConf}){
@@ -60,9 +60,9 @@ function importProc({RouteAnalysis, savedCashflowConf}){
     // 导出的.BAK文件中没有iyear字段的情况。以下是一个workaround，如果发现原始数据
     // 中没有会计年的字段，就不对期间进行筛选了。
 
-    // 和FinancialStatement类似，但是发生额变动是一个本地的数据表，格式和远程的原始
+    // 和FinancialStatement类似，但是发生额分析是一个本地的数据表，格式和远程的原始
     // 数据不一样。通常序时账中会包含全部的信息，但我们在此处也同样做一个处理。如果
-    // 发生额变动是一个List而非Group，说明在形成发生额变动的时候并没有按年分组，那
+    // 发生额分析是一个List而非Group，说明在形成发生额分析的时候并没有按年分组，那
     // 么就略过年份选择。但是在序时账中期间通常是（而且必须是）存在的，因此在这里就不对
     // iperiod做更多分析了。
 

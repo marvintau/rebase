@@ -1,17 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import SortAscend from './icons/sort-ascending.png';
-import SortDescend from './icons/sort-descending.png';
-
-const Icon = styled.img`
-    margin-left: 2px;
-    width: 25px;
-    height: 25px;
-`
-
 const Indicator = styled.td`
-    border-bottom: 1px solid black;
     width: 25px;
     min-width: 25px;
     max-width: 25px;
@@ -39,23 +29,6 @@ const TH = styled.th`
     }
 `
 
-class HeadCell extends React.Component{
-
-    constructor(props){
-        super(props);
-    }
-
-    render(){
-        let {colKey, colDesc, isSortedKey, sortOrder, switchSort} = this.props;
-
-        return <TH onClick={(e) => switchSort(colKey)}>
-            <div style={{display: 'flex', justifyContent:'center', alignItems:'center'}}>
-                {colDesc}
-                {(isSortedKey && sortOrder !== 'none') ? <Icon src={sortOrder === 'ascend' ? SortAscend : SortDescend} /> : ''}
-            </div>
-        </TH>
-    }
-}
 
 const THControl = styled.th`
     position:sticky;
@@ -67,29 +40,10 @@ export default class Head extends React.Component{
 
     constructor(props){
         super(props);
-
-        this.state = {
-            sortKey : undefined,
-            sortOrder : 'none'
-        }
-    }
-
-    switchSort = (colKey) => {
-        let {sortData} = this.props,
-            {sortOrder} = this.state;
-
-        let nextSortOrder = sortOrder !== 'ascend' ? 'ascend' : 'descend';
-        sortData(colKey, nextSortOrder);
-
-        this.setState({
-            sortKey : colKey,
-            sortOrder : nextSortOrder
-        })
     }
 
     render(){
-        let {head, tableAttr, sortData} = this.props,
-            {sortKey, sortOrder} = this.state;
+        let {head, editable} = this.props;
 
         let headElem = [<Indicator key={'indicator'} />];
 
@@ -97,22 +51,15 @@ export default class Head extends React.Component{
             let {colDesc, hidden, isTitle} = head[key];
 
             if(!(hidden || isTitle)){
-                headElem.push(<HeadCell
+                headElem.push(<TH
                     key={key}
                     colKey={key}
-                    colDesc={colDesc}
-
-                    isSortedKey={key === sortKey}
-                    sortOrder={sortOrder}
-
-                    sortData={sortData}
-                    switchSort={this.switchSort}
-                />)
+                >{colDesc}</TH>)
             }
         }
 
         // 如果表格是左侧存在工具栏，那么需要新增一个空表头单元格。
-        if (tableAttr.editable) {
+        if (editable) {
             headElem.push(<THControl key={'ctrl'}/>)
         }
 

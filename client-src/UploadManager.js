@@ -57,6 +57,13 @@ const Select = styled.select`
     padding: 5px 10px;
 `
 
+const Note = styled.div`
+    margin: 10px 10px;
+    font-size: 80%;
+    font-weight: 400;
+`
+
+
 const BLOCK_SIZE = 524288;
 
 export default class UploadBackup extends React.Component{
@@ -102,11 +109,19 @@ export default class UploadBackup extends React.Component{
             } else {
                 throw new Error('上传文件：浏览器的版本比较旧，不支持Blob.slice方法。')
             }
-
+        }).on('CREATE_DONE', () => {
+            console.log('create done');
+            this.setState({uploadState: 'CREATE_DONE'})
+        }).on('DELETE_DONE', () => {
+            console.log('delete done');
+            this.setState({uploadState: 'DELETE_DONE'})
         }).on('DONE', () => {
             this.setState({uploadState : "DONE"});
         }).on('ERROR', ({msg}) => {
-            this.setState({uploadState: 'ERROR', errMsg: msg})
+            let errMsg = {
+                'EEXIST': '已经有一个同名的项目了'
+            }[msg];
+            this.setState({uploadState: 'ERROR', errMsg})
         });
     }
 
@@ -116,13 +131,19 @@ export default class UploadBackup extends React.Component{
 
     upload = () => {
 
-        let destName = this.nameRef.current.value,
-            fileType = this.fileTypeRef.current.value,
+        let {projName} = this.props;
+
+        let fileType = this.fileTypeRef.current.value,
             bookType = this.bookTypeRef.current.value,
             year = this.yearRef.current.value;
 
+        if(bookType === 'CASHFLOW_WORKSHEET'){
+            year = 0;
+        }
+
         let payload = {
-            name: `SOURCE.${destName}.${bookType}.${year}.${fileType}`,
+            projName,
+            name: `SOURCE.${projName}.${bookType}.${year}.${fileType}`,
             size: this.fileObj.size,
         }
 
@@ -130,6 +151,24 @@ export default class UploadBackup extends React.Component{
 
         this.setState({
             uploadState: 'MORE'
+        })
+    }
+
+    create = () => {
+        console.log('creating');
+        let destName = this.nameRef.current.value;
+        this.socket.emit('CREATE', {projName: destName})
+        this.setState({
+            uploadState: 'WAITING'
+        })
+    }
+
+    delete = () => {
+        let {projName} = this.props;
+        console.log("to delete project", projName);
+        this.socket.emit('DELETE', {projName})
+        this.setState({
+            updateState: 'WAITING'
         })
     }
 
@@ -166,7 +205,6 @@ export default class UploadBackup extends React.Component{
                 '现金流编制明细' : 'CASHFLOW_WORKSHEET'
             }[bookType]
     
-            this.nameRef.current.value = projName
             this.fileTypeRef.current.value = fileType
             this.bookTypeRef.current.value = bookType
             this.yearRef.current.value = year
@@ -175,7 +213,36 @@ export default class UploadBackup extends React.Component{
 
     render(){
 
+        let {projName, toDelete} = this.props;
         let {fileName, uploadState} = this.state;
+
+        if (projName == undefined){
+            switch(uploadState){
+                case 'NONE':
+                    return <InputGroup>
+                        <Label>客户名称</Label>
+                        <Input id="company-name" placeholder="项目（客户）名称" ref={this.nameRef} />
+
+                        <Button id="upload" onClick={this.create}>创建</Button>
+                        <Note>项目名称一经创建则不能更改，请再三检查。如果写错名称，您必须先删除整个项目，并重新上传数据文件。</Note>
+                    </InputGroup>
+                case 'WAITING':
+                    return <InputGroup>请稍候…</InputGroup>
+                case 'CREATE_DONE':
+                    return <InputGroup>创建完成，请从项目列表中进入项目，并继续上传文件</InputGroup>                
+                case 'REMOVE_DONE':
+                    return <InputGroup>项目已经清除，请从列表中进入项目，或建立新的项目</InputGroup>                
+                case 'ERROR':
+                    return <InputGroup><Label>{this.state.errMsg}</Label></InputGroup>
+            
+            }
+        } else if (toDelete){
+            return <InputGroup>
+                <Label>确定删除这个项目吗？</Label>
+                <Button id='delete' onClick={this.delete}>我确定了</Button>
+            </InputGroup>
+        }
+
         switch(uploadState){
             case 'DONE':
             case 'NONE':
@@ -186,9 +253,6 @@ export default class UploadBackup extends React.Component{
                         <Input type="file" id="choose-backup-file" ref={this.fileRef} onChange={this.updateFile} />
                         <Button onClick={this.guessFields}>猜名字</Button>
                         <HDiv />
-
-                        <Label>客户名称</Label>
-                        <Input id="company-name" placeholder="项目（客户）名称" ref={this.nameRef} />
 
                         <Label>年度</Label>
                         <Input id="year" placeholder="会计年度" ref={this.yearRef} />

@@ -53,17 +53,20 @@ export default class RestoreBackup extends React.Component{
 
     render(){
 
-        let {path, name, goto} = this.props;
+        let {path, projName, goto} = this.props;
 
         switch(this.state.restoreState){
             case "NONE":
                 return <InputGroup>
-                    <Note><b>{name}</b></Note>
-                    <Note>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新，转换为系统的内部数据。</Note>
+                    <Note><b>{projName}</b></Note>
+                    <Note>
+                        <p>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新。</p>
+                        <p>您每次上传的文件都会保存下来，系统通过您上传的文件转换为内部数据，并通过内部数据进行计算。如果您上传了同名的文件，则会覆盖现有的文件。</p>
+                    </Note>
 
                     <Button onClick={(e) => {
                         e.stopPropagation();
-                        this.props.socket.emit('RESTORE', {name})
+                        this.props.socket.emit('RESTORE', {projName})
                     }}>明白了，那么更新吧</Button>
                 </InputGroup>;
             case "RESTORING":

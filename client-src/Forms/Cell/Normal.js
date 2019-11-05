@@ -4,7 +4,6 @@ import styled from 'styled-components';
 
 const Digits = styled.div`
     text-align: right;
-    font-size: 90%;
     font-weight: bold;
     letter-spacing: -0.01em;
     line-height: 25px;
@@ -65,9 +64,11 @@ export default class Normal extends React.Component{
     }
 
     render(){
-        let {type, isRowEditing, isTitle} = this.props,
+        let {isRowEditing, isTitle} = this.props,
             {data} = this.state;
     
+        let type = data !== undefined ? data.constructor : String;
+
         if (isRowEditing) {
             let value;
             switch(type.name){
@@ -89,8 +90,12 @@ export default class Normal extends React.Component{
             ]
         } else {
 
-            if (data.error){
+            if (data && data.error){
                 return <Error>{data.error}</Error>
+            }
+            if(data && (data.valid !== undefined)){
+                console.log(data.valid, 'normal valid');
+                return <Digits style={{fontWeight: 'bold', color: data.valid ? 'green' : 'red'}}>{data.valid ? '妥了' : '不妥'}</Digits>;
             }
             switch(type.name){
 
@@ -102,6 +107,7 @@ export default class Normal extends React.Component{
                     return <Digits>{value}</Digits>;
 
                 case 'String':
+                    
                     data = data == "undefined" ? "无" : data;
 
                     if (data.startsWith('#') && !data.startsWith('###')){
@@ -111,7 +117,6 @@ export default class Normal extends React.Component{
 
                 default:
                     if (data === undefined){
-                        console.log(this.props.colKey, 'undefined');
                         data = '';
                     }
                     

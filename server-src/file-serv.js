@@ -36,10 +36,10 @@ export default class FileServ {
                 
                 position += bytesWritten;
 
-                let progress = position / this.fileSize,
+                let percent = position / this.fileSize,
                     part = (position === this.fileSize) ? 'LAST' : 'MOST';
 
-                let message = {position, part, progress};
+                let message = {position, part, percent};
 
                 // afterWrite receives the updated position for requesting
                 // next chunk of file.
@@ -78,9 +78,9 @@ export default class FileServ {
                 let nextPos = position + bytesRead;
                 buffer = buffer.slice(0, bytesRead);
 
-                let progress = nextPos / this.fileSize,
+                let percent = nextPos / this.fileSize,
                     part = (nextPos === this.fileSize) ? 'LAST' : 'MOST';
-                let message = { part, nextPos, progress, buffer}
+                let message = { part, nextPos, percent, buffer}
                 console.log(message);
                 return afterRead(message);
             })

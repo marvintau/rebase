@@ -1,6 +1,11 @@
+import {Body} from 'persisted';
+
 import React from 'react';
 import Row from './Row';
 import styled from 'styled-components';
+
+import FilterIcon from './icons/filter.png';
+import SortIcon from './icons/sort-ascending.png';
 
 const ENTRIES_PER_PAGE = 15;
 
@@ -32,6 +37,29 @@ const Button = styled.div`
     }
 `
 
+const Icon = styled.img`
+    width: 25px;
+    height: 25px;
+    padding: 3px;
+    cursor: pointer;
+
+    & {
+        opacity: 0.5;
+    }
+
+    &:hover {
+        background-color: lightsalmon;
+        opacity: 1;
+    }
+`
+
+const Ctrl = styled.div`
+    display: flex;
+    justify-content: space-around;
+    &:hover{
+        background-color: moccasin;
+    }
+`
 
 export default class Rows extends React.PureComponent {
     constructor(props){
@@ -39,14 +67,14 @@ export default class Rows extends React.PureComponent {
 
         this.state = {
             data : props.data,
+            shownData : Body.from(props.data),
             page : 0,
-            expanded: -1
+            expandedRowIndex: -1
         }
     }
 
     static getDerivedStateFromProps(props, state){
         if(!state.fromInside){
-            // console.log(props.data.map(e => e.cols.me.valueOf()), state.data.map(e => e.cols.me.valueOf()), 'list');
             if (props.data !== state.data){
                 return {
                     data: props.data,
@@ -87,10 +115,12 @@ export default class Rows extends React.PureComponent {
 
     updateRowsExpanded = (rowIndex) => {
 
-        let {expanded} = this.state;
+        let {expandedRowIndex} = this.state;
+
+        expandedRowIndex = expandedRowIndex === rowIndex ? -1 : rowIndex;
 
         this.setState({
-            expanded: expanded === rowIndex ? -1 : rowIndex,
+            expandedRowIndex, 
             fromInside: true
         });
     }
@@ -114,29 +144,42 @@ export default class Rows extends React.PureComponent {
     }
 
     render(){
-        let {head, colSpan, tableAttr, level=0} = this.props;
-        let {data, page, expanded} = this.state;
+        let {head, autoExpanded, editable, expandable} = this.props;
+        let {data, page, expandedRowIndex} = this.state;
 
-        let {autoExpanded} = tableAttr;
+        console.log(expandable, 'expandable rows');
+        // console.log(autoExpanded, 'auto', editable, 'edi', 'rows')
 
         let rowProps = {
             head,
-            level,
-            tableAttr,
-            rowsExpanded: expanded,
+            editable,
+            expandable,
+            autoExpanded,
+            expandedRowIndex,
             updateRows: this.updateRows,
             updateRowsExpanded: this.updateRowsExpanded,
         }
 
-        if (expanded === -1 || autoExpanded){
+        if (expandedRowIndex === -1 || autoExpanded){
 
             let paginator = <PaginatorTR key={'tab'}>
-                <td colSpan={colSpan} style={{bottom: '0px'}}><PaginatorTD>
+                <td colSpan={head.lenDisplayed()+1} style={{bottom: '0px'}}><PaginatorTD>
                     <Button onClick={() => this.turnPage(-1)}>前一页</Button>
                     <div>当前第{page+1}页，共{Math.ceil(data.length/ENTRIES_PER_PAGE)}页，{data.length}个条目</div>
                     <Button onClick={() => this.turnPage(1)}>后一页</Button>
                 </PaginatorTD></td>
             </PaginatorTR>
+
+            let sorter = [<td key={'indi'}></td>];
+            for (let colKey in head) if (!head[colKey].hidden) if(head[colKey].isSortable) {
+                sorter.push(<td key={colKey}><Ctrl>
+                    <Icon src={SortIcon}/>
+                    <Icon src={FilterIcon}/>
+                </Ctrl></td>)
+            } else {
+                sorter.push(<td key={colKey} />)
+            }
+            let sorterRow = <tr key={'sort'}>{sorter}</tr>
 
             let elems;
             if((data.length <= ENTRIES_PER_PAGE) || autoExpanded){
@@ -148,7 +191,7 @@ export default class Rows extends React.PureComponent {
                         {...rowProps}
                     />
                 })
-                return elems;
+                return [sorterRow, elems];
             } else {
                 let {page} = this.state;
                 elems = data.slice(page*ENTRIES_PER_PAGE, (page+1)*ENTRIES_PER_PAGE).map((entry, rowIndex) => {
@@ -159,14 +202,14 @@ export default class Rows extends React.PureComponent {
                         {...rowProps}
                     />
                 })
-                return [elems, paginator];
+                return [sorterRow, elems, paginator];
             }
             
         } else {
             return [<Row
-                key={expanded}
-                rowIndex={expanded}
-                data={data[expanded]}
+                key={expandedRowIndex}
+                rowIndex={expandedRowIndex}
+                data={data[expandedRowIndex]}
                 {...rowProps}
             />]
         }

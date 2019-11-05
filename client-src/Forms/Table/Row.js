@@ -14,19 +14,29 @@ const TDTab = styled.td`
     width: auto;
 `
 
-const Indicator = styled.td`
-    border-top: 1px solid black;
-    border-bottom: 1px solid black;
-    width: 25px;
-    min-width: 25px;
-    max-width: 25px;
-    padding: 5px;
-    background-color : ${({hasTable, hasChild})=> hasTable ? 'skyBlue' : hasChild ? 'salmon' : 'transparent'} 
-`
-
 const TR = styled.tr`
     width: auto;
 `
+
+function Indicator(props){
+
+    const style = {
+        borderTop: '1px solid black',
+        borderBottom: '1px solid black',
+        width: '25px',
+        minWidth: '25px',
+        maxWidth: '25px',
+        padding: '5px',
+    }
+
+    let {data} = props;
+
+    let type = data.subsType();
+
+    style.backgroundColor = (type === 'Body' && data.subs.length > 0) ? 'salmon' : (type === 'Table') ? 'skyBlue' : 'white';
+
+    return <td style={style} />
+}
 
 export default class Row extends React.Component {
     constructor(props){
@@ -34,6 +44,7 @@ export default class Row extends React.Component {
 
         this.state = {
             data: this.props.data,
+            isRowEditing: false,
             isHovered: false,
         };
     }
@@ -43,7 +54,7 @@ export default class Row extends React.Component {
             if (props.data !== state.data){
                 return {
                     data: props.data,
-                    editing: false,
+                    isRowEditing: false,
                     isHovered: false,
                     fromInside : false,
                 }
@@ -56,7 +67,6 @@ export default class Row extends React.Component {
 
     updateRow = (type, method, args) => {
 
-        
         if (type === 'list') {
             console.log(type, method, args, 'updateRow');
             this.props.updateRows(method, args);
@@ -66,14 +76,23 @@ export default class Row extends React.Component {
     }
 
     toggleExpand = () => {
-        let {updateRowsExpanded, rowIndex} = this.props;
-        updateRowsExpanded(rowIndex);
+
+        let {expandable} = this.props,
+            {data} = this.state;
+
+        expandable = expandable && !(data.subs.length && data.subs.length === 0);
+        console.log(expandable, 'expandable row');
+        if (expandable){
+            let {updateRowsExpanded, rowIndex} = this.props;
+            updateRowsExpanded(rowIndex);
+        }
+
     }
 
     toggleEdit = () => {
         console.log('togglededit')
         this.setState({
-            editing: !this.state.editing,
+            isRowEditing: !this.state.isRowEditing,
             fromInside: true
         })
     }
@@ -93,104 +112,82 @@ export default class Row extends React.Component {
     }
 
     render(){
+        /**
+         * 1. 首先显示必要的columns，包括显示是否存在子层数据的indicator，以及按规则
+         *    呈现每一列（每一个单元格）的数据。
+         */
+        let {head} = this.props;
+        let {data, isHovered, isRowEditing} = this.state;
+        let sharedCellProps = {isHovered, isRowEditing, update: this.updateRow}
 
-        let {rowIndex, level, head, tableAttr={}, rowsExpanded} = this.props;
-        
-        let {data, editing, isHovered} = this.state,
-            {expandable, autoExpanded, editable} = tableAttr,
-            isRowExpanded = autoExpanded || (rowIndex === rowsExpanded);
-
-        expandable = expandable && (data.hasChild() || data.hasTable());
-
-        editable = editable && (data.attr.title === undefined)
-
-        let sharedCellProps = {
-            level,
-            update: this.updateRow,
-            toggleExpand: this.toggleExpand,
-            ...tableAttr, 
-            expandable
-        }
-
-        let colSpan = head.lenDisplayed();
-
-        let cols = [
-            <Indicator key={'indicator'}
-                hasTable={data.hasTable()}
-                hasChild={data.hasChild()}
-            />];
+        let cols = [<Indicator key={'indi'} data={data}/>];
 
         for (let colKey in head){
 
-            let cellProps = {
-                ...sharedCellProps,
-                ...head[colKey],
-                isHovered, rowsExpanded,
-                isRowEditing: editing,
-                colKey: colKey,
-                data: data.get(colKey),
-            }
+            let {hidden} = head[colKey];
 
-            cellProps.isTitle = cellProps.isTitle || (data.attr.title === colKey);
-            if (cellProps.isTitle){
+            let cellProps = { colKey, data: data.get(colKey), ...sharedCellProps, ...head[colKey]}
 
-                // 如果是title，那么cols将只包含一个cell，同时占满整个表格行。需要注意的是，
-                // 如果head中包含的title字段，在data中并不包含，或者data中包含的内容（即
-                // 字符串）是空的，那么都不会作为title来处理。
-                cols.push(<Cell key={colKey} colSpan={colSpan} {...cellProps}/>)
+            // 如果单元格是title（Cols的attr中包含title属性，且其值为colKey），那么
+            // cols将只包含一个cell，同时占满整个表格行。注意这是一个Cols-wise的属性，
+            // 而且它将忽略下面的hidden判断。也就是说你可以将一个可能会包含title的列
+            // 设为hidden，在不包含title的记录中这列将不显示，但是包含title的记录中
+            // 则会只显示title。
+
+            if (data.attr.title === colKey){
+                cols.push(<Cell key={colKey} colSpan={head.lenDisplayed()} {...cellProps}/>)
                 break;    
-
-                // let title = data.get(colKey);
-                // if (title && title.length > 0 && title != 'undefined'){
-                // } else {
-                //     // 如果title是空的，那么会直接被跳过去。
-                //     continue;                    
-                // }
             }
 
-            if(!(cellProps.hidden)){
-                cols.push(<Cell key={colKey}{...cellProps}/>)
+            // 如果Head中列的属性被设为hidden（其值为true），那么不显示这一列。否则照
+            // 常显示。
+            if(!hidden){
+                cols.push(<Cell key={colKey} {...cellProps}/>)
             }
         }
 
-        if (editable){
+        /**
+         * 2. 如果当前行是可以编辑的，那么就允许显示右侧的控制和编辑按钮。
+         */
 
-            let {editing} = this.state;
+        let {editable} = this.props;
 
+        if (editable && (data.attr.title === undefined)){
+            // console.log
             cols.push(<Cell
                 key={'ctrl'}
-                rowIndex={rowIndex}
-                isControlCell={true}
-                isHovered={isHovered}
-                isRowEditing={editing}
-                update={this.updateRow}
                 toggleEdit={this.toggleEdit}
+                isControlCell={true}
+                {...sharedCellProps}
             />)
         }    
 
-        let subs = [];
-        if(isRowExpanded){
-            if(data.hasChild()){
-                subs = [
-                    <TRBar key={'barT'} />, 
-                    <Rows key={'rest'}
-                        colSpan={colSpan+1}
-                        level={level+1}
-                        data={data.heir}
-                        head={head}
-                        tableAttr={tableAttr}
-                    />,
-                    <TRBar key={'barB'} />, 
-                ]
-                if(autoExpanded){
-                    subs = subs[1];
-                }
-            } else if (data.hasTable()){
+        /**
+         * 3. 如果当前行是需要展开显示其子层数据的，那么把子层数据列在下方。
+         */
 
-                console.log(data, 'before subtable');
+        let subs = [];
+
+        let {autoExpanded, rowIndex, expandedRowIndex, expandable} = this.props,
+        isRowExpanded = autoExpanded || (rowIndex === expandedRowIndex);
+
+        if(isRowExpanded){
+
+            let subsType = data.subsType();
+            
+            if(subsType === 'Body' && data.subs.length > 0){
+                subs = <Rows key={'rest'}
+                    head={head}
+                    data={data.subs}
+                    editable={editable}
+                    expandable={expandable}
+                    autoExpanded={autoExpanded}
+                />
+            
+            } else if (subsType === 'Table'){
 
                 subs = <TR key={'rest'}>
-                    <TDTab colSpan={colSpan+1} ><Formwell sections={data.subs} /></TDTab>
+                    <TDTab colSpan={head.lenDisplayed()+1} ><Formwell tables={data.subs} /></TDTab>
                 </TR>
             }
         }

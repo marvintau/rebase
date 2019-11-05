@@ -1,13 +1,13 @@
-import {Head, Record, List, Sheet, Table} from 'persisted';
+import {Head, Cols, Body, List, Sheet, Table} from 'persisted';
 
 let head = new Head({
     ccode_name: 'String',
     ccode:      'String',
     cclass:     'String',
-    mb:         'Float',
-    md:         'Float',
-    mc:         'Float',
-    me:         'Float',
+    mb:         'Number',
+    md:         'Number',
+    mc:         'Number',
+    me:         'Number',
     iperiod:    'String',
     iyear:      'String'
 })
@@ -30,6 +30,7 @@ function toNum(currencyString){
     }
 }
 
+// 我们目前还不会涉及到通过journal来推算每一月份的期初期末余额。但是未来可能会用到。
 function processJournal(journalOriginal){
     let journalData = List.from(journalOriginal)
     .grip(rec => rec.iyear, {desc: '年'})
@@ -165,36 +166,27 @@ function importProc({BALANCE, JOURNAL}){
     // console.log(periodicalBalances);
     // let data = periodicalBalances.flat().grip(e => `${e.get('iyear')}-${e.get('iperiod')}`, {desc: '期间'})
 
-    let balanceData = List.from(BALANCE.data)
-        .map(entry => head.createRecord(entry))
+    let balanceData = head.createBody(BALANCE.data)
         .uniq(entry => `${entry.get('ccode')}-${entry.get('iperiod')}-${entry.get('iyear')}`);
     let data = balanceData
-        .grip(rec => rec.get('iyear'), {desc:'年'})
+        .grip('iyear', {desc:'年'})
         .iter((key, recs) => {
 
-            let cas = (recs) => recs
-                .ordr(rec=>rec.get('ccode'))
-                .cascade(rec=>rec.get('ccode').length, (desc, ances) => {
-                    let descCode = desc.get('ccode'),
-                        ancesCode = ances.get('ccode');
-                    return descCode.startsWith(ancesCode)
-                });
-
-            if (recs.map(rec => rec.get('iperiod')).every(e => e=== undefined)){
-                return cas(recs);
-            } else {
-                return recs
-                    .grip((rec) => rec.get('iperiod'), {desc: '期间'})
-                    .iter((key, codeRecs) => {
-                        return cas(codeRecs);
-                    })
+            if (recs.isColSame('iperiod')){
+                for (let i = 0; i < recs.length; i++){
+                    recs[i].set('iperiod', 0);
+                }
             }
 
+            return recs.grip('iperiod', {desc: '期间'})
+                .iter((key, codeRecs) => {
+                    return codeRecs.orderBy('ccode').cascade('ccode');;
+                })
         });
 
     console.log(data, 'balance');
 
-    return new Table(head, data, {expandable: true, editable:true});
+    return new Table(head, data, {expandable: true, editable:false});
 }
 
 

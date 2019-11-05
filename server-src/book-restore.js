@@ -33,11 +33,11 @@ function parseRemap(type, book, year){
     return parsed
 }
 
-export default function bookRestore(name, postProcess=(x) => x){
+export default function bookRestore(projName, postProcess=(x) => x){
 
-    return fs.readdir(BACKUP_PATH)
+    return fs.readdir(path.resolve(BACKUP_PATH, projName))
     .then(res => {
-        let fileNames = res.filter(path => path.includes(name) && path.includes('SOURCE'));
+        let fileNames = res.filter(path => path.includes(projName) && path.includes('SOURCE'));
         
         console.log('ready to handle', fileNames);
                 
@@ -58,8 +58,7 @@ export default function bookRestore(name, postProcess=(x) => x){
         };
 
         return Promise.all(fileNames.map(e => {
-            console.log('begin reading file', e);
-            return fs.readFile(path.resolve(BACKUP_PATH, e))
+            return fs.readFile(path.resolve(BACKUP_PATH, projName, e))
             .then(fileBuffer => {
                 return XLSX.read(fileBuffer, {type: 'buffer'})
             })
@@ -78,13 +77,17 @@ export default function bookRestore(name, postProcess=(x) => x){
                 let parsed = parseRemap(type, book, year)
 
                 // 因为data中汇总了所有期间的数据，因此需要flatten，或者按记录push进来。
-                data[type].push(...parsed);
+                if(type === 'CASHFLOW_WORKSHEET'){
+                    data[type] = parsed;
+                } else {
+                    data[type].push(...parsed);
+                }
             }
 
             data = postProcess(data);
             console.log(Object.values(data).map(e => e.length), 'restoring');
             return Promise.all(Object.keys(data).map(type => {
-                return fs.writeFile(path.resolve(BACKUP_PATH, `RESTORED.${name}.${type}.JSON`), JSON.stringify(data[type]));
+                return fs.writeFile(path.resolve(BACKUP_PATH, projName, `RESTORED.${projName}.${type}.JSON`), JSON.stringify(data[type]));
             }))                    
         })
     })

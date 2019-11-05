@@ -44,10 +44,9 @@ export default class BookManagerComp extends React.Component{
             currSheet: undefined,
         }
 
-        
         this.socket = io(`${props.address}/TABLES`);
         console.log(this.socket);
-        this.sheetColl = new SheetCollection(this.socket);
+        this.sheetColl = new SheetCollection(this.socket, this.log);
         this.sheetColl.addSheets(getFinancialTables());
     }
 
@@ -110,14 +109,19 @@ export default class BookManagerComp extends React.Component{
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
-                {desc, sections, exportProc, isSavable, isExportable} = this.sheetColl.get(sheetName);
+                {desc, tables, exportProc, isSavable, isExportable} = this.sheetColl.get(sheetName);
 
             displayedContent = <WorkAreaContainer>
                 <Title>{desc}</Title>
-                <Formwell key={sheetName} sheetName={sheetName}
-                    saveRemote={this.save} sections={sections} exportProc={exportProc}
-                    isSavable={isSavable}
+                <Formwell
+                    key={sheetName}
+                    sheetName={sheetName}
+                    tables={tables}
+
                     isExportable={isExportable}
+                    isSavable={isSavable}
+                    exportProc={exportProc}
+                    saveRemote={this.save}
                 />
             </WorkAreaContainer>;
         }

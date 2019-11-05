@@ -130,14 +130,19 @@ export default class Navigation extends React.Component {
         let {socket} = this.props;
 
         socket.on('LIST', ({list}) => {
-            let projList = handleRawList(list);
-            this.setState({projList});
+            let projList = list.map(e => ({projName: e}));
+            console.log(projList);
+            this.setState({
+                projList,
+                navPos: 'start'
+            });
         })
         .emit('REQUIRE_LIST', {});
     }
 
     selectProject(index){
 
+        console.log('selected', this.state.projList[index]);
         this.setState({
             navPos: 'sheets',
             proj: {...this.state.projList[index]}
@@ -160,6 +165,9 @@ export default class Navigation extends React.Component {
     }
 
     goto = (navPos) => {
+        if(navPos === 'start'){
+            this.props.socket.emit('REQUIRE_LIST', {});
+        }
         this.setState({navPos})
     }
 
@@ -172,7 +180,7 @@ export default class Navigation extends React.Component {
         if (navPos === 'start'){
             return <Container>
                 <ManuItem onClick={() => this.goto('open')}>打开现有项目</ManuItem>
-                <ManuItem onClick={() => this.goto('upload')}>上传数据文件</ManuItem>
+                <ManuItem onClick={() => this.goto('create')}>创建新的项目</ManuItem>
             </Container>
         }
 
@@ -181,7 +189,7 @@ export default class Navigation extends React.Component {
 
             let projElems = projList.map((e, i) => {
                 return <ManuItem key={`project-${i}`} onClick={(e) => this.selectProject(i)}>
-                    {e.projName.split('-')[0]}
+                    {e.projName}
                 </ManuItem>
             })
     
@@ -192,9 +200,25 @@ export default class Navigation extends React.Component {
             </Container>
         }
 
-        if (navPos === 'upload'){
+        if(navPos === 'create'){
             return <Container>
-                <UploadManager key='upload' socket={socket} address={address}/>
+                <UploadManager key='create' socket={socket} address={address}/>
+                <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
+            </Container>
+        }
+
+        if(navPos === 'upload'){
+            let {projName} = this.state.proj;
+            return <Container>
+                <UploadManager key='upload' projName={projName} socket={socket} address={address}/>
+                <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
+            </Container>
+        }
+
+        if(navPos === 'delete'){
+            let {projName} = this.state.proj
+            return <Container>
+                <UploadManager projName={projName} toDelete={true} key='delete' socket={socket} address={address}/>
                 <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
             </Container>
         }
@@ -209,12 +233,18 @@ export default class Navigation extends React.Component {
             }
 
             let displayed = <ManuItem>
-                <Title>{name.split('-')[0]}</Title>
+                <Title>{this.state.proj.projName}</Title>
                 {elemDisplay}
                 <Note>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新，转换为系统的内部数据。</Note>
                 <BottomButton onClick={(e) => {
+                    this.goto('upload');
+                }}>上传数据</BottomButton>
+                <BottomButton onClick={(e) => {
                     this.goto('restore');
                 }}>更新数据</BottomButton>
+                <BottomButton onClick={(e) => {
+                    this.goto('delete');
+                }}><span style={{color:'red'}}>{'>>>删除项目<<<'}</span></BottomButton>
                 <BottomButton onClick={(e) => {
                     clearCurrentProject();
                     this.goto('start');
@@ -229,9 +259,9 @@ export default class Navigation extends React.Component {
         if (navPos === 'restore'){
 
             let {projName, path} = this.state.proj;
-            console.log(projName, path, 'restoer');
+            console.log(projName, path, 'restoring');
             return <Container>
-                <RestoreBackup path={path} name={projName} socket={socket} goto={this.goto} />
+                <RestoreBackup path={path} projName={projName} socket={socket} goto={this.goto} />
             </Container>
         }
 

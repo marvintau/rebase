@@ -4,6 +4,7 @@ import CellComponent from './CellComponent';
 import styled from 'styled-components';
 
 const TD = styled.td`
+    border-right: 1px dotted gray;
     padding: 6px 5px 4px;
     min-width: 25px;
     ${({isControlCell})=> isControlCell ? 'width : 75px;' : '' }
@@ -16,31 +17,23 @@ const TD = styled.td`
     }}
 `
 
-const Indenter = styled.div`
-    height: 25px;
-    width: ${({isExpandToggler, level}) => {
-        return isExpandToggler ? `${5+level*8}px` : '5px'
-    }};
-`
-
 const TDWrapper = styled.div`
     display: flex;
 `
 
 export default function Cell(props){
 
-    let {isControlCell, isExpandToggler} = props;
+    let {isControlCell} = props;
 
     if (isControlCell){
 
         let {EditControl} = CellComponent,
-            {isRowExpanded, isRowEditing, isHovered, rowIndex, update, toggleEdit} = props;
+            {isRowEditing, isHovered, rowIndex, update, toggleEdit} = props;
 
         return <TD isControlCell={isControlCell} border={false}>
             <EditControl
                 isHovered={isHovered}
                 isRowEditing={isRowEditing}
-                isRowExpanded={isRowExpanded}
                 rowIndex={rowIndex}
                 update={update}
                 toggleEdit={toggleEdit}
@@ -48,10 +41,10 @@ export default function Cell(props){
         </TD>
     }
 
-    let {isHovered, style, colSpan} = props,
-        domStyle = {isHovered, style, colSpan};
+    let {isHovered, colSpan} = props,
+        domStyle = {isHovered, colSpan};
 
-    let {level, type} = props,
+    let {type} = props,
         CellComp;
 
     switch(type.name){
@@ -72,7 +65,6 @@ export default function Cell(props){
 
     return <TD {...domStyle}>
         <TDWrapper>
-            <Indenter isExpandToggler={isExpandToggler} level={level} />
             <CellComp {...props}/>
         </TDWrapper>
     </TD>

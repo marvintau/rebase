@@ -47,7 +47,7 @@ const SaveButton = styled.div`
  * Formwell组件本身是一个无状态的结构，它的子组件包含一个<table>列表和若干<button>
  * 其中<table>列表是渲染的主要列表，而<button>则实现了保存/重置等的交互。
  * 
- * Formwell应当对传入的表格数据进行判断，即sections。sections可能是一个包含data, head
+ * Formwell应当对传入的表格数据进行判断，即tables。tables可能是一个包含data, head
  * 两个属性的Object，也可能是一个List。在未来传入Formwell的可能是更复杂的数据结构。作
  * 为传入数据的入口，Formwell应该做好准确判断的工作。
  */
@@ -56,10 +56,10 @@ export default class Formwell extends React.Component {
 
     render () {
 
-        let {sheetName, saveRemote, sections, exportProc, isSavable=false, isExportable=false} = this.props;
+        let {tables, isSavable=false, isExportable=false, sheetName, saveRemote, exportProc} = this.props;
 
         let save = () => {
-            saveRemote(exportProc(sections));
+            saveRemote(exportProc(tables));
         };
 
         let reset = () => {
@@ -68,7 +68,7 @@ export default class Formwell extends React.Component {
 
         let exportDocument = () => {
 
-            let exported = exportProc(sections);
+            let exported = exportProc(tables);
 
             let xlsSheet = XLSX.utils.json_to_sheet(exported),
                 xlsBook = XLSX.utils.book_new();
@@ -91,21 +91,23 @@ export default class Formwell extends React.Component {
         };
 
         let tab;
-        if(Array.isArray(sections)){
+        if(Array.isArray(tables)){
             tab = [];
-            for (let i = 0; i < sections.length; i++){
-                let tabSpec = sections[i];
+            for (let i = 0; i < tables.length; i++){
+                let tabSpec = tables[i];
                 if (('head' in tabSpec) && ('data' in tabSpec)){
                     tab.push(<Table key={`${sheetName}${i}`}><tbody><Tabs {...tabSpec} /></tbody></Table>)
                 }
             }
-        } else if (('head' in sections) && ('data' in sections)){
-            tab = <Table key={`${sheetName}`}><tbody><Tabs {...sections} /></tbody></Table>
+
+        } else if (tables.constructor.name === 'Table'){
+            tab = <Table key={`${sheetName}`}><tbody><Tabs {...tables} /></tbody></Table>
+
         } else {
             return <div>
-                遇到了无法形容的数据格式。如果您看到这个信息请联系开发人员。
+                遇到了无法形容的数据格式。如果您看到这个信息请召唤程序员。
                 <pre style={{height: '400px', overflowY: 'scroll'}}>
-                    {JSON.stringify(sections, null, 2)}    
+                    {JSON.stringify(tables, null, 2)}    
                 </pre>
             </div>
         }

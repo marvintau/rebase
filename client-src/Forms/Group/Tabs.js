@@ -1,8 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import {Group} from 'persisted';
-
 import Rows from '../Table/Rows';
 import Head from '../Table/Head';
 
@@ -47,26 +45,10 @@ export default class Tabs extends React.Component {
         }
     }
 
-    static getDerivedStateFromProps(props, state){
-        if(!state.fromInside){
-            if (props.data !== state.data){
-                return {
-                    currKey: props.data.keys ? props.data.keys()[0] : undefined,
-                    fromInside : false,
-                    sorted: false,
-                }
-            }
-        } else {
-            return {...state, fromInside: false, sorted: false}
-        }
-        return state;
-    }
-
     setCurrKey = (currKey) => {
         console.log(currKey, 'setCurrKey')
         this.setState({
             currKey,
-            fromInside: true
         })
     }
 
@@ -78,7 +60,6 @@ export default class Tabs extends React.Component {
 
         this.setState({
             currKey: prevKey,
-            fromInside: true
         })
     }
 
@@ -89,50 +70,30 @@ export default class Tabs extends React.Component {
             nextKey = keys[currKeyIndex === keys.length - 1 ? keys.length - 1 : currKeyIndex + 1];
         this.setState({
             currKey: nextKey,
-            fromInside: true
         })
-    }
-
-    sortData = (key, direction) => {
-
-        let {data, currKey} = this.state;
-        
-        if(data.constructor.name==='Group'){
-            data.set(currKey, data.get(currKey).ordr(e => e.get(key), direction == 'ascend' ? 1 : -1));
-            console.log('sortdata called', data.constructor.name, key);
-            this.setState({
-                data : new Group(data),
-                fromInside: true
-            })
-        } else if (data.constructor.name === "List"){
-            this.setState({
-                data: data.ordr(e => e.get(key), direction == 'ascend' ? 1 : -1),
-                fromInside: true
-            })
-        }
     }
 
     render(){
 
-        let {head, tableAttr} = this.props,
-            {data} = this.state,
-            colSpan = head.lenDisplayed()+1;
+        let {head, attr} = this.props,
+            {editable, expandable, autoExpanded} = attr,
+            {data} = this.state;
 
-        if (data.constructor.name === 'List'){
+        if (data.constructor.name === 'Body'){
 
-            let props = {
-                level: 0,
-                data,
-                head,
-                colSpan,
-                tableAttr
-            }
+            let props = { head, data, ...attr}
 
             return [
-                <Head sortData={this.sortData} {...props} key={'head'}/>,
-                <Rows {...props} key={'table'}/>
+                <Head {...props} key={'head'}/>,
+                <Rows key={'table'}
+                    head={head}
+                    data={data}
+                    editable={editable}
+                    expandable={expandable}
+                    autoExpanded={autoExpanded}
+                />
             ]
-        } else {
+        } else if(data.constructor.name === 'Tabs') {
 
             // 如果列表左侧有工具按钮，那么tab的宽度也需要对应增加1
             
@@ -140,11 +101,13 @@ export default class Tabs extends React.Component {
     
             let controller;
             if(tabStyle === 'paginator'){
-                controller = <td colSpan={colSpan}><TabTD>
+                
+                controller = <td colSpan={head.lenDisplayed()+1}><TabTD>
                     <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
                     <div>当前第{this.state.currKey}{data.desc}</div>
                     <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
                 </TabTD></td>
+
             } else if (tabStyle === 'tabs') {
     
                 let keys = data.keys().map((e, i) => {
@@ -152,7 +115,7 @@ export default class Tabs extends React.Component {
                     return <Button key={i} onClick={() => this.setCurrKey(e)}>{displayed}</Button>
                 })
     
-                controller = <td style={{width: '100%'}} colSpan={colSpan}><TabTD>
+                controller = <td style={{width: '100%'}} colSpan={head.lenDisplayed()+1}><TabTD>
                     <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
                     {keys}
                     <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
@@ -160,27 +123,33 @@ export default class Tabs extends React.Component {
             }
 
             let content = data.get(this.state.currKey);
-    
-            let props = {
-                level: 0,
-                data: content,
-                colSpan,
-                head,
-                tableAttr,
-            }
-        
+            
             let subLevel;
-            if (content.constructor.name === 'List'){
+            if (content.constructor.name === 'Body'){
                 subLevel = [
-                    <Head sortData={this.sortData} {...props} key={'head'}/>,
-                    <Rows {...props} key={'table'}/>
+                    <Head key={'head'}
+                        head={head}
+                        data={content}
+                        attr={attr}
+                    />,
+                    <Rows key={'table'}
+                        head={head}
+                        data={content}
+                        editable={editable}
+                        expandable={expandable}
+                        autoExpanded={autoExpanded}
+                    />
                 ]
-            } else if (content.constructor.name === 'Group'){
-                subLevel = <Tabs {...props} key={`group-${content.desc}`}/>
+            } else if (content.constructor.name === 'Tabs'){
+                subLevel = <Tabs key={`group-${this.state.currKey}-${content.desc}`}
+                    head={head}
+                    data={content}
+                    attr={attr}
+                />
             }
     
             return [<TabTR key={`tab-${data.desc}`}>{controller}</TabTR>, subLevel]
-    
+            // return [<TabTR key={`tab-${data.desc}`}>{controller}</TabTR>]
         }
     }
 

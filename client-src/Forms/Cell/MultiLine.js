@@ -36,8 +36,6 @@ export default class MultiLine extends React.Component{
     render(){
         let {type, data} = this.props;
 
-        console.log(data, 'multiline');
-
         if (data === undefined) {
             return <div />
         }

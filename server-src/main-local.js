@@ -5,6 +5,7 @@ import express from 'express';
 import path from 'path';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import del from 'del';
 
 const fs = require('fs').promises;
 
@@ -42,9 +43,37 @@ app.use(cors());
 
 uploadServer.on('connection', function (socket) {
 
-    socket.on('PREP', function ({name, size}) { 
+    socket.on('CREATE', function({projName}) {
 
-        let filePath = path.join(BACKUP_PATH, name);
+        console.log('Creating directory of ', projName);
+
+        let filePath = path.join(BACKUP_PATH, projName);
+
+        fs.mkdir(filePath).then(() => {
+            console.log('create directory done')
+            socket.emit('CREATE_DONE', {});
+        }).catch(({code}) => {
+            socket.emit('ERROR', {msg: code});
+        })
+    })
+
+    socket.on('DELETE', function({projName}) {
+        console.log('received DELETE', projName, path.join(BACKUP_PATH, projName));
+        let projPath = path.join(BACKUP_PATH, projName);
+
+        del([projPath], {force: true}).then(() => {
+            console.log('remove directory done')
+            socket.emit('DELETE_DONE', {});
+        }).catch((err) => {
+            console.log(err)
+            socket.emit('ERROR', {msg: err.code})
+        })
+        // fs
+    })
+
+    socket.on('PREP', function ({projName, name, size}) { 
+
+        let filePath = path.resolve(BACKUP_PATH, projName, name);
 
         fs.access(filePath)
         .then(() => {
@@ -54,7 +83,7 @@ uploadServer.on('connection', function (socket) {
             console.log('File with same name has been removed.');
         })
         .finally(() => {
-            Files[name] = new FileServ(path.join(BACKUP_PATH, name), size);
+            Files[name] = new FileServ(filePath, size);
             socket.emit('SEND', {name, percent: 0, position: 0});    
         })
     });
@@ -86,8 +115,8 @@ tableServer.on('connection', function (socket) {
 
     socket.on('REQUIRE_LIST', function(){
         console.log('Received requiring list of projects');
-        fs.readdir(BACKUP_PATH).then(res => {
-            socket.emit('LIST', {list: res});
+        fs.readdir(BACKUP_PATH, {withFileTypes: true}).then(res => {
+            socket.emit('LIST', {list: res.filter(e => e.isDirectory()).map(e => e.name)});
         }).catch(err => {
             console.log('server reading local file failed', err);
         })    
@@ -123,9 +152,14 @@ tableServer.on('connection', function (socket) {
         // ifNotExist是当文件没找到时采取的操作。
 
         let notExisted = (err) => {
-            if(err.code === 'ENOENT' && type === 'CONF'){
-                console.log('CONF not created yet.');
-                socket.emit('DONE', {projName, sheetName, data: Buffer.from('[]')})
+            if(err.code === 'ENOENT'){
+                if(type === 'CONF'){
+                    console.log('CONF not created yet.');
+                    socket.emit('DONE', {projName, sheetName, data: Buffer.from('[]')})
+                } else {
+                    socket.emit('NOTFOUND', {sheetName, projName})
+                }
+            
             }
         }
 
@@ -134,7 +168,7 @@ tableServer.on('connection', function (socket) {
         // 上面所述的发送第一个块。如果FileServ存在，则只需要完成后续的读取-发送
         // 操作，当然也是根据客户端发送来的position来读取。
         if(Files[fileName] === undefined){
-            Files[fileName] = new FileServ(path.resolve(BACKUP_PATH, fileName));
+            Files[fileName] = new FileServ(path.resolve(BACKUP_PATH, projName, fileName));
         }
         console.log(fileName);
         Files[fileName].readChunk(position, afterRead, notExisted)
@@ -155,14 +189,14 @@ tableServer.on('connection', function (socket) {
         }
 
         let fileName = getRestoredFileName(projName, `saved${sheetName}`, type),
-            filePath = path.resolve(BACKUP_PATH, fileName);
+            filePath = path.resolve(BACKUP_PATH, projName, fileName);
         
         fs.writeFile(filePath, dataBuffer);
     })
 
-    socket.on('RESTORE', function({name, path}){
+    socket.on('RESTORE', function({projName, path}){
 
-        bookRestore(name)
+        bookRestore(projName)
         .then(result => {
             socket.emit('FILEPREPARED', {});
         })
