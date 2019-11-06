@@ -128,7 +128,8 @@ function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
         if(value.startsWith('/')){
             let [refPath, refVal] = value.split(':'),
                 pathSegs = refPath.split('/').slice(1).map(e => e.split('&'));
-            
+            refVal = refVal.trim();
+
             let pathSegsOutered = outer(pathSegs);
             let destRecs = new Body(0);
 
