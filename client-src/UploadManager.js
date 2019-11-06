@@ -230,8 +230,6 @@ export default class UploadBackup extends React.Component{
                     return <InputGroup>请稍候…</InputGroup>
                 case 'CREATE_DONE':
                     return <InputGroup>创建完成，请从项目列表中进入项目，并继续上传文件</InputGroup>                
-                case 'DELETE_DONE':
-                    return <InputGroup>项目已经清除，请从列表中进入项目，或建立新的项目</InputGroup>                
                 case 'ERROR':
                     return <InputGroup><Label>{this.state.errMsg}</Label></InputGroup>
             
@@ -244,6 +242,8 @@ export default class UploadBackup extends React.Component{
         }
 
         switch(uploadState){
+            case 'DELETE_DONE':
+                return <InputGroup>项目已经清除，请从列表中进入项目，或建立新的项目</InputGroup>                
             case 'DONE':
             case 'NONE':
                 return (
