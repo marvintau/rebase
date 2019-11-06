@@ -4,10 +4,9 @@ import CellComponent from './CellComponent';
 import styled from 'styled-components';
 
 const TD = styled.td`
-    border-right: 1px dotted gray;
+    ${({isControlCell})=> isControlCell ? 'width : 75px;' : 'border-right: 1px dotted gray;' }
     padding: 6px 5px 4px;
     min-width: 25px;
-    ${({isControlCell})=> isControlCell ? 'width : 75px;' : '' }
     height: 25px;
     white-space: nowrap;
     ${({border=true}) => border ? 'border-top: 1px solid black; border-bottom: 1px solid black;' : ''};

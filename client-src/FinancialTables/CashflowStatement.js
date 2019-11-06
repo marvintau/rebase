@@ -117,6 +117,8 @@ function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
         return rec;
     })
 
+    console.log(balanceLastPeriod);
+
     let refs = {};
     worksheetContent.backTraverse((rec) => {
         
@@ -132,15 +134,9 @@ function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
 
             for (let path of pathSegsOutered){
                 
-                // 处理本期没有发生额的情况
-                let accrual = accrualWithinPeriod.find(e => e.get('ccode_name').valueOf() == path[path.length - 1].trim());
-                if (accrual === undefined){
-                    accrual = new Cols({mc: 0, md: 0}, {head: accrualHead});
-                }
                 destRecs.push({
                     path: path.join('/')+":"+refVal,
                     balance: balanceLastPeriod.findBy('ccode_name', path),
-                    accrual
                 })
             }
 
@@ -149,10 +145,10 @@ function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
                 res = {error: '未能取数'}
             } else {
                 switch(refVal){
-                    case '借方' : res = destRecs.map(e => e.accrual.get('md')); break;
-                    case '贷方' : res = destRecs.map(e => e.accrual.get('mc')); break;
-                    case '贷方-借方' : res = destRecs.map(e => e.accrual.get('mc') - e.accrual.get('md')); break;
-                    case '借方-贷方' : res = destRecs.map(e => e.accrual.get('md') - e.accrual.get('mc')); break;
+                    case '借方' : res = destRecs.map(e => e.balance.get('md')); break;
+                    case '贷方' : res = destRecs.map(e => e.balance.get('mc')); break;
+                    case '贷方-借方' : res = destRecs.map(e => e.balance.get('mc') - e.balance.get('md')); break;
+                    case '借方-贷方' : res = destRecs.map(e => e.balance.get('md') - e.balance.get('mc')); break;
                     case '期初' : res = destRecs.map(e => e.balance.get('mb')); break;
                     case '期末' : res = destRecs.map(e => e.balance.get('me')); break;
                 }
