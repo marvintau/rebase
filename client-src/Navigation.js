@@ -239,7 +239,7 @@ export default class Navigation extends React.Component {
                 <BottomButton onClick={(e) => {
                     this.goto('upload');
                 }}>上传数据</BottomButton>
-                <Note>无论何时您上传了新的数据，都要回来点一下这里更新。</Note>
+                <Note>无论何时您上传了新的数据，都要回来点一下这里更新。需要注意的是，如果您在更新之前有存档，更新之后的存档都会被清零。所以对于一些配置性的数据表，请在更新之前导出备份。</Note>
                 <BottomButton onClick={(e) => {
                     this.goto('restore');
                 }}>更新数据</BottomButton>

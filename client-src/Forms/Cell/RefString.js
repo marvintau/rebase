@@ -44,7 +44,7 @@ export default class RefString extends React.Component{
     render() {
     
         let {paths, data, isRowEditing} = this.props;
-        console.log(data, 'ref render')
+
         const display = (data) => {
 
             let ast = data.display();

@@ -14,11 +14,12 @@ const Files = {};
 
 import {operate, retrieveAndStore} from './database.js';
 
+import XLSX from 'xlsx';
 import bookRestore from './book-restore';
 
 var app = express();
 
-var server = app.listen(8080, function () {
+var server = app.listen(1337, function () {
   console.log('Server is listening 8080, for HTTPS');
   console.log("run from the " + __dirname);
 });
@@ -32,7 +33,6 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
-
 
 // 上传文件的handler响应两种message：
 // 
@@ -192,6 +192,38 @@ tableServer.on('connection', function (socket) {
             filePath = path.resolve(BACKUP_PATH, projName, fileName);
         
         fs.writeFile(filePath, dataBuffer);
+    })
+
+    socket.on('EXPORT', function({projName, sheetName, data}){
+
+
+        let xlsBook = XLSX.utils.book_new();
+
+        if(Array.isArray(data)){
+            let xlsSheet = XLSX.utils.json_to_sheet(data);
+            xlsBook.SheetNames.push('sheet1');
+            xlsBook.Sheets['sheet1'] = xlsSheet;
+        } else if(Array.isArray(data.content)) {            
+            let xlsSheet = XLSX.utils.json_to_sheet(data.content);
+            xlsBook.SheetNames.push('sheet1');
+            xlsBook.Sheets['sheet1'] = xlsSheet;    
+        } else {
+            socket.emit('ERROR', {msg: '前端生成的数据不能用来导出Excel文件，请联系程序员解决这个问题。'});
+            return
+        }
+
+        let xlsOutput = XLSX.write(xlsBook, {bookType:'xlsx', type: 'binary'});
+
+        function s2ab(s) { 
+            var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+            var view = new Uint8Array(buf);  //create uint8array as viewer
+            for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+            return buf;    
+        }
+
+        let outputArrayBuffed = s2ab(xlsOutput);
+
+        socket.emit('EXPORTED', {outputArrayBuffed, projName, sheetName})
     })
 
     socket.on('RESTORE', function({projName, path}){

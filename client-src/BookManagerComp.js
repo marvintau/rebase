@@ -46,7 +46,11 @@ export default class BookManagerComp extends React.Component{
             currSheet: undefined,
         }
 
-        this.socket = io(`${props.address}/TABLES`);
+        this.socket = io(`${props.address}/TABLES`)
+        .on('ERROR', ({msg}) =>{
+            this.log(msg);
+        });
+        
         console.log(this.socket);
         this.sheetColl = new SheetCollection(this.socket, this.log);
         this.sheetColl.addSheets(getFinancialTables());

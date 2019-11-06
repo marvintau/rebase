@@ -1,6 +1,7 @@
 import XLSX from 'xlsx';
 import path from 'path';
 const fs = require('fs').promises;
+import del from 'del';
 
 import colRemap from './parseTypeDictionary';
 
@@ -35,7 +36,10 @@ function parseRemap(type, book, year){
 
 export default function bookRestore(projName, postProcess=(x) => x){
 
-    return fs.readdir(path.resolve(BACKUP_PATH, projName))
+    return del([path.resolve(BACKUP_PATH, projName, 'RESTORED.*')], {force: true})
+    .then(() => {
+        return fs.readdir(path.resolve(BACKUP_PATH, projName))
+    })
     .then(res => {
         let fileNames = res.filter(path => path.includes(projName) && path.includes('SOURCE'));
         

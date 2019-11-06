@@ -34,7 +34,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
-
 // 上传文件的handler响应两种message：
 // 
 // PREP：接受一个包含文件名和文件尺寸的信息，创建文件并返回SEND指令，
@@ -197,11 +196,21 @@ tableServer.on('connection', function (socket) {
 
     socket.on('EXPORT', function({projName, sheetName, data}){
 
-        let xlsSheet = XLSX.utils.json_to_sheet(data),
-            xlsBook = XLSX.utils.book_new();
 
-        xlsBook.SheetNames.push('sheet1');
-        xlsBook.Sheets['sheet1'] = xlsSheet;
+        let xlsBook = XLSX.utils.book_new();
+
+        if(Array.isArray(data)){
+            let xlsSheet = XLSX.utils.json_to_sheet(data);
+            xlsBook.SheetNames.push('sheet1');
+            xlsBook.Sheets['sheet1'] = xlsSheet;
+        } else if(Array.isArray(data.content)) {            
+            let xlsSheet = XLSX.utils.json_to_sheet(data.content);
+            xlsBook.SheetNames.push('sheet1');
+            xlsBook.Sheets['sheet1'] = xlsSheet;    
+        } else {
+            socket.emit('ERROR', {msg: '前端生成的数据不能用来导出Excel文件，请联系程序员解决这个问题。'});
+            return
+        }
 
         let xlsOutput = XLSX.write(xlsBook, {bookType:'xlsx', type: 'binary'});
 

@@ -108,12 +108,15 @@ function importProc({CASHFLOW_WORKSHEET, BALANCE, savedCashflowWorksheet}){
 
 }
 
-function exportProc(sections){
+function exportProc(tables){
     
-    let [dateSec, contentSec] = sections;
+    let [dateSec, contentSec] = tables;
 
     let savedDate = dateSec.data[0].cols,
-        savedContent = contentSec.data.flatten().map(e => e.cols);
+        savedContent = contentSec.data.flatten().map(e => {
+            let {item, value} = e.cols;
+            return {item, value:value.string}
+        });
 
     return {
         date: savedDate,
