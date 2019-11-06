@@ -14,6 +14,7 @@ const Files = {};
 
 import {operate, retrieveAndStore} from './database.js';
 
+import XLSX from 'xlsx';
 import bookRestore from './book-restore';
 
 var app = express();
@@ -192,6 +193,28 @@ tableServer.on('connection', function (socket) {
             filePath = path.resolve(BACKUP_PATH, projName, fileName);
         
         fs.writeFile(filePath, dataBuffer);
+    })
+
+    socket.on('EXPORT', function({projName, sheetName, data}){
+
+        let xlsSheet = XLSX.utils.json_to_sheet(data),
+            xlsBook = XLSX.utils.book_new();
+
+        xlsBook.SheetNames.push('sheet1');
+        xlsBook.Sheets['sheet1'] = xlsSheet;
+
+        let xlsOutput = XLSX.write(xlsBook, {bookType:'xlsx', type: 'binary'});
+
+        function s2ab(s) { 
+            var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
+            var view = new Uint8Array(buf);  //create uint8array as viewer
+            for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+            return buf;    
+        }
+
+        let outputArrayBuffed = s2ab(xlsOutput);
+
+        socket.emit('EXPORTED', {outputArrayBuffed, projName, sheetName})
     })
 
     socket.on('RESTORE', function({projName, path}){

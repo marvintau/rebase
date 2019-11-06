@@ -8,6 +8,8 @@ import Navigation from './Navigation';
 import getFinancialTables from './FinancialTables';
 import {SheetCollection} from 'persisted';
 
+import { saveAs } from 'file-saver';
+
 const Log = styled.div`
     white-space: pre-wrap;
     margin: 10px;
@@ -96,6 +98,22 @@ export default class BookManagerComp extends React.Component{
         })
     }
 
+    export = (data) => {
+        let {currProjectName, currSheet} = this.state;
+        let sheet = this.sheetColl.get(currSheet);
+
+        console.log(data, 'to be saved');
+
+        this.socket.emit('EXPORT', {
+            projName: currProjectName,
+            sheetName: currSheet,
+            type: sheet.type,
+            data
+        })
+        .on('EXPORTED', ({outputArrayBuffed, projName, sheetName}) => {
+            saveAs(new Blob([outputArrayBuffed],{type:"application/octet-stream"}), `导出-${projName}-${sheetName}.xlsx`);
+        })
+    }
 
 
     render(){
@@ -122,6 +140,7 @@ export default class BookManagerComp extends React.Component{
                     isSavable={isSavable}
                     exportProc={exportProc}
                     saveRemote={this.save}
+                    exportRemote={this.export}
                 />
             </WorkAreaContainer>;
         }

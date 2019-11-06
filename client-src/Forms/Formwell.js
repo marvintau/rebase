@@ -2,9 +2,6 @@ import React from 'react';
 import Tabs from './Group/Tabs'
 import styled from 'styled-components';
 
-import XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-
 const Table = styled.table`
     width: 750px;
     padding-bottom: 50px;
@@ -56,7 +53,7 @@ export default class Formwell extends React.Component {
 
     render () {
 
-        let {tables, isSavable=false, isExportable=false, sheetName, saveRemote, exportProc} = this.props;
+        let {tables, isSavable=false, isExportable=false, sheetName, saveRemote, exportRemote, exportProc} = this.props;
 
         let save = () => {
             saveRemote(exportProc(tables));
@@ -68,26 +65,8 @@ export default class Formwell extends React.Component {
 
         let exportDocument = () => {
 
-            let exported = exportProc(tables);
+            exportRemote(exportProc(tables));
 
-            let xlsSheet = XLSX.utils.json_to_sheet(exported),
-                xlsBook = XLSX.utils.book_new();
-
-            xlsBook.SheetNames.push('sheet1');
-            xlsBook.Sheets['sheet1'] = xlsSheet;
-
-            let xlsOutput = XLSX.write(xlsBook, {bookType:'xlsx', type: 'binary'});
-
-            function s2ab(s) { 
-                var buf = new ArrayBuffer(s.length); //convert s to arrayBuffer
-                var view = new Uint8Array(buf);  //create uint8array as viewer
-                for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
-                return buf;    
-            }
-
-            let outputArrayBuffed = s2ab(xlsOutput);
-
-            saveAs(new Blob([outputArrayBuffed],{type:"application/octet-stream"}), 'exported.xlsx');
         };
 
         let tab;
