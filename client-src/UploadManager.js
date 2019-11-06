@@ -235,15 +235,18 @@ export default class UploadBackup extends React.Component{
             
             }
         } else if (toDelete){
-            return <InputGroup>
-                <Label>确定删除这个项目吗？</Label>
-                <Button id='delete' onClick={this.delete}>我确定了</Button>
-            </InputGroup>
+            switch(uploadState){
+                case 'DELETE_DONE':
+                    return <InputGroup>项目已经清除，请从列表中进入项目，或建立新的项目</InputGroup>                
+                case 'NONE':
+                    return <InputGroup>
+                        <Label>确定删除这个项目吗？</Label>
+                        <Button id='delete' onClick={this.delete}>我确定了</Button>
+                    </InputGroup>
+            }
         }
 
         switch(uploadState){
-            case 'DELETE_DONE':
-                return <InputGroup>项目已经清除，请从列表中进入项目，或建立新的项目</InputGroup>                
             case 'DONE':
             case 'NONE':
                 return (
