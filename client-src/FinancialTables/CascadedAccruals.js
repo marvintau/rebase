@@ -14,7 +14,7 @@ let head = new Head({
 })
 
 head.setColProp({colDesc: "科目名称", isExpandToggler: true}, 'ccode_name');
-head.setColProp({colDesc: "科目编码", hidden: true}, 'ccode');
+head.setColProp({colDesc: "科目编码"}, 'ccode');
 head.setColProp({colDesc: "科目类别"}, 'cclass');
 head.setColProp({colDesc: '期初余额', isSortable: true}, 'mb');
 head.setColProp({colDesc: '期末余额', isSortable: true}, 'me');
