@@ -116,7 +116,6 @@ export default class Formwell extends React.Component {
         if (isSavable){
             saveUtils = [       
                 <SaveButton key={0} onClick={save}>保存</SaveButton>,
-                <SaveButton key={1} onClick={reset}>重置</SaveButton>,
             ]
         }
 
