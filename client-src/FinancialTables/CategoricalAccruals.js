@@ -86,7 +86,7 @@ function importProc({JOURNAL, BALANCE}){
     }
 
     data = data
-    .grip(entry => entry.get('iyear'), {desc: '年'})
+    .grip('iyear', {desc: '年'})
     .iter((key, recs) => {
 
         let voucherList = recs
@@ -108,14 +108,16 @@ function importProc({JOURNAL, BALANCE}){
         .grap();
     }) 
 
+    console.log(data);
+
     return new Table(head, data, {expandable: true});
 }
 
 export default function(){
     return new Sheet({
         referred: {
-            JOURNAL: {desc: '明细分录', location: 'remote'},
-            BALANCE: {desc: '余额', location: 'remote'},
+            JOURNAL: {desc: '序时账', location: 'remote'},
+            BALANCE: {desc: '科目余额', location: 'remote'},
         },
         importProc,
         desc: '按科目重分类的明细',

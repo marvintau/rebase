@@ -87,7 +87,11 @@ export default function bookRestore(projName, postProcess=(x) => x){
             data = postProcess(data);
             console.log(Object.values(data).map(e => e.length), 'restoring');
             return Promise.all(Object.keys(data).map(type => {
-                return fs.writeFile(path.resolve(BACKUP_PATH, projName, `RESTORED.${projName}.${type}.JSON`), JSON.stringify(data[type]));
+                if(data[type].length === 0){
+                    return true;
+                } else {
+                    return fs.writeFile(path.resolve(BACKUP_PATH, projName, `RESTORED.${projName}.${type}.JSON`), JSON.stringify(data[type]));
+                }
             }))                    
         })
     })

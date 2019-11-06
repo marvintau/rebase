@@ -61,6 +61,31 @@ const Ctrl = styled.div`
     }
 `
 
+class SortButton extends React.Component{
+    constructor(props){
+        super(props);
+
+        this.state = {
+            isAscending: true
+        }
+    }
+
+    toggleOrder = () => {
+        let {isAscending} = this.state;
+        this.setState({
+            isAscending : !isAscending
+        })
+    }
+
+    render(){
+        let {orderFunc} = this.props;
+        return <Icon src={SortIcon} onClick={(e) => {
+            orderFunc(this.state.isAscending);
+            this.toggleOrder();
+        }}/>
+    }
+}
+
 export default class Rows extends React.PureComponent {
     constructor(props){
         super(props);
@@ -104,8 +129,9 @@ export default class Rows extends React.PureComponent {
         
         if (operation === 'insert') {
             args.push(this.props.head.createCols());
-            console.log(args, 'yup')
+            console.log(args, 'insert argument')
         }
+
         let data = this.state.data[operation](...args);
 
         this.setState({
@@ -174,8 +200,8 @@ export default class Rows extends React.PureComponent {
             let sorter = [<td key={'indi'}></td>];
             for (let colKey in head) if (!head[colKey].hidden) if(head[colKey].isSortable) {
                 sorter.push(<td key={colKey}><Ctrl>
-                    <Icon src={SortIcon}/>
-                    <Icon src={FilterIcon}/>
+                    <SortButton orderFunc={(isAscending) => this.updateRows('orderBy', [colKey, isAscending])} />
+                    <Icon src={FilterIcon} onClick={(e) => alert('还没实现，再催催程序员。')}/>
                 </Ctrl></td>)
             } else {
                 sorter.push(<td key={colKey} />)

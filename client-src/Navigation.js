@@ -235,10 +235,11 @@ export default class Navigation extends React.Component {
             let displayed = <ManuItem>
                 <Title>{this.state.proj.projName}</Title>
                 {elemDisplay}
-                <Note>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新，转换为系统的内部数据。</Note>
+                <Note>点击以下按钮来上传和追加新的数据。</Note>
                 <BottomButton onClick={(e) => {
                     this.goto('upload');
                 }}>上传数据</BottomButton>
+                <Note>无论何时您上传了新的数据，都要回来点一下这里更新。</Note>
                 <BottomButton onClick={(e) => {
                     this.goto('restore');
                 }}>更新数据</BottomButton>

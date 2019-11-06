@@ -67,14 +67,14 @@ export default class BookManagerComp extends React.Component{
 
     fetchTable = ({projName, sheetName}) => {
 
-        console.log(projName, sheetName, 'before fetch')
+        this.log(`准备获取 [${projName}] 的 [${sheetName}]`)
         this.sheetColl.fetchTable({
             projName,
             sheetName,
-            afterFetched: () => {
+            afterFetched: (isFetched) => {
                 this.setState({
                     currProjectName: projName,
-                    currSheet: sheetName
+                    currSheet: isFetched ? sheetName : undefined
                 })
             }
         })

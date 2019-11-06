@@ -60,7 +60,7 @@ export default function(){
     return new Sheet({
         referred: {
             BALANCE: {desc: '科目余额', location: 'remote'},
-            CategoricalAccruals: {desc: '期间的科目发生额', location: 'local'},
+            CategoricalAccruals: {desc: '按科目分类的发生额', location: 'local'},
         },
         importProc,
         desc: '科目发生额',

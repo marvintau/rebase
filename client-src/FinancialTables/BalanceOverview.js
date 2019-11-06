@@ -178,8 +178,6 @@ function importProc({BALANCE, JOURNAL}){
                 }
             }
 
-            console.log(recs.slice(0, 10).map(e => e.cols));
-
             return recs.grip('iperiod', {desc: '期间'})
                 .iter((key, codeRecs) => {
                     return codeRecs.orderBy('ccode').cascade('ccode');;
@@ -197,7 +195,7 @@ export default function(){
     return new Sheet ({
         referred: {
             BALANCE: {desc:'科目余额', location:'remote'},
-            JOURNAL: {desc: '明细', location:'remote'}
+            // JOURNAL: {desc: '序时账', location:'remote'}
         },
         importProc,
         desc: '每期间科目余额',

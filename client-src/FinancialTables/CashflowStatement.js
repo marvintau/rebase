@@ -1,5 +1,17 @@
 import {Cols, Body, List, Head, Sheet, Table} from 'persisted';
 
+
+let balanceHead = new Head({
+    ccode: 'String',
+    ccode_name: 'String',
+    iyear: 'String',
+    iperiod: 'String',
+    mb: 'Number',
+    md: 'Number',
+    mc: 'Number',
+    me: 'Number',
+})
+
 let head = new Head({
     item:     'String',
     value:    'Number', 
@@ -10,7 +22,7 @@ head.setColProp({colDesc: '金额'}, 'value')
 
 const referred = {
     CashflowWorksheet: {desc: '现金流表底稿', location: 'local'},
-    BalanceOverview: {desc: '科目余额', location: 'local'},
+    BALANCE: {desc: '科目余额', location: 'remote'},
     CategoricalAccruals: {desc: '科目发生额', location: 'local'}
 };
 
@@ -36,42 +48,24 @@ function outer(listOfLists){
     return res;
 }
 
-function endBalance(mb, mc, md, cclass){
-    let dir = {
-        '资产' : '+',
-        '负债' : '-',
-        '权益' : '-',
-        '共同' : '+',
-        '损益' : '+',
-        '成本' : '+'
-    }[cclass];
-
-    return eval(`${mb}${dir}(${md - mc})`)
-}
-
-function importProc({CashflowWorksheet, BalanceOverview, CategoricalAccruals}){
+function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
 
     let [dateSec, contentSec] = CashflowWorksheet.tables,
         worksheetContent = Body.from(contentSec.data).copy(),
         {year, endPeriod} = dateSec.data[0].cols;
 
-    let balanceOfYear = BalanceOverview.tables.data.get(year),
+    let balanceData = balanceHead.createBody(BALANCE.data);
+    
+    if (balanceData.isColSame('iperiod')){
+        for (let i = 0; i < balanceData.length; i++){
+            balanceData[i].set('iperiod', 0);
+        }
+    }
+    
+    let balanceOfYear = balanceData.grip('iyear', {}).get(year).grip('iperiod', {}),
         accrualOfYear = CategoricalAccruals.tables.data.get(year),
         accrualHead = CategoricalAccruals.tables.head;
 
-    console.log(accrualOfYear.map(e => e.cols), 'accrual year')
-    
-    let lastKey = List.from(balanceOfYear.keys()).filter(e => parseInt(e) < endPeriod).last(),
-        balanceLastPeriod = balanceOfYear.get(lastKey);    
-
-    let accrualWithinPeriod = accrualOfYear.map(e => {
-        let {ccode, ccode_name} = e.cols;
-        let vouchersWithinRange = e.subs.filter(e => e.get('iperiod') < parseInt(endPeriod));
-        let sum = accrualHead.sum(vouchersWithinRange);
-        sum.cols.ccode = ccode;
-        sum.cols.ccode_name = ccode_name;
-        return sum;
-    })
 
     /**
      * 在进行取数和计算的过程之前，请特别注意：
@@ -81,9 +75,47 @@ function importProc({CashflowWorksheet, BalanceOverview, CategoricalAccruals}){
      * 没有得到结果，除了我们的科目路径有错，也有可能是因为这个期间内这个科目的发生额
      * 没有变化，因此CategoricalAccruals中没有相关的借贷记录。
      * 
-     * 因此，我们通过BalanceLastPeriod来检查科目路径是否正确。如果科目路径正确，而对应的
-     * CategoricalAccruals为undefined，就只可能是本期间此科目没有发生额。
+     * 然而，虽然CascadedAccruals是一个通过BALANCE对序时账发生额进行汇总的表，但由于
+     * 它是在整个期间范围内求和，无法满足我们这里截止期间的需求，所以我们需要用CategoricalAccruals
+     * 也就是中间结果重新计算一遍。
      */
+
+    let lastKey = new List(...balanceOfYear.keys()).map(e => parseInt(e)).filter(e => e <= endPeriod).max();
+    let balanceLastPeriod = balanceOfYear.get(lastKey);
+        console.log(balanceLastPeriod, 'balanceLastPeriod')
+
+    let accrualWithinPeriod = accrualOfYear.map(e => {
+        let {ccode, ccode_name} = e.cols;
+        let vouchersWithinRange = e.subs.filter(e => e.get('iperiod') <= parseInt(endPeriod));
+        let sum = accrualHead.sum(vouchersWithinRange);
+        sum.cols.ccode = ccode;
+        sum.cols.ccode_name = ccode_name;
+        return sum;
+    })
+
+    while(accrualWithinPeriod.length > 0){
+        let accrualCateSum = accrualWithinPeriod.pop(),
+            {mc, md, ccode} = accrualCateSum.cols,
+            balanceCate = balanceLastPeriod.find(e => e.cols.ccode.valueOf() == ccode.valueOf())//.find(e => e.cols.ccode == ccode);
+        Object.assign(balanceCate.cols, {mc, md});
+    }
+
+    balanceLastPeriod = balanceLastPeriod.cascade('ccode');
+
+    balanceLastPeriod.backTraverse((rec) => {
+        if (rec.subs.length > 0){
+            rec.cols.mc = rec.subs.map(e => e.cols.mc).reduce((acc, e) => acc+e, 0)
+            rec.cols.md = rec.subs.map(e => e.cols.md).reduce((acc, e) => acc+e, 0)
+        } else {
+            if (rec.cols.mc === undefined){
+                rec.cols.mc = 0;
+            }
+            if (rec.cols.md === undefined){
+                rec.cols.md = 0;
+            }
+        }
+        return rec;
+    })
 
     let refs = {};
     worksheetContent.backTraverse((rec) => {
