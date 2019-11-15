@@ -1,9 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
 
-import Cell from '../Cell/Cell';
-import Rows from './Rows';
-import Formwell from '../Formwell';
+import Cell from '../../Cell/Cell';
+import Rows from '../Rows';
+import Formwell from '../../Formwell';
 
 const TRBar = styled.tr`
     height: 5px;

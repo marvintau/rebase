@@ -1,10 +1,8 @@
 import BalanceOverview from './BalanceOverview';
 import CategoricalAccruals from './CategoricalAccruals';
 import CascadedAccruals from './CascadedAccruals';
-// import FinancialStatementConf from './FinancialStatementConf';
-// import FinancialStatement from './FinancialStatement';
-// import CashflowConf from './deprecated/CashflowConf';
-// import Cashflows from './deprecated/Cashflows';
+import FinancialWorksheet from './FinancialWorksheet';
+import FinancialStatement from './FinancialStatement';
 import CashflowWorksheet from './CashflowWorksheet';
 import CashflowStatement from './CashflowStatement';
 
@@ -13,11 +11,9 @@ export default function(){
         BalanceOverview: BalanceOverview(),
         CategoricalAccruals: CategoricalAccruals(),
         CascadedAccruals: CascadedAccruals(),
-        // FinancialStatementConf: FinancialStatementConf(),
-        // FinancialStatement: FinancialStatement(),
-        // CashflowConf: CashflowConf(),
-        // Cashflows: Cashflows(),
         CashflowWorksheet: CashflowWorksheet(),
-        CashflowStatement: CashflowStatement()
+        CashflowStatement: CashflowStatement(),
+        FinancialWorksheet: FinancialWorksheet(),
+        FinancialStatement: FinancialStatement(),
     }
 }

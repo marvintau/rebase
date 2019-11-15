@@ -48,9 +48,15 @@ let CASHFLOW_WORKSHEET = [
     ['值', 'value']
 ]
 
+let FINANCIAL_WORKSHEET = [
+    ['项目', 'item'],
+    ['值', 'value']
+]
+
 export default {
     BALANCE,
     JOURNAL,
     ASSISTED,
-    CASHFLOW_WORKSHEET
+    CASHFLOW_WORKSHEET,
+    FINANCIAL_WORKSHEET
 }

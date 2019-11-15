@@ -137,7 +137,7 @@ export default class UploadBackup extends React.Component{
             bookType = this.bookTypeRef.current.value,
             year = this.yearRef.current.value;
 
-        if(bookType === 'CASHFLOW_WORKSHEET'){
+        if(bookType === 'CASHFLOW_WORKSHEET' || bookType === 'FINANCIAL_WORKSHEET'){
             year = 0;
         }
 
@@ -274,7 +274,8 @@ export default class UploadBackup extends React.Component{
                             <option value='BALANCE'>科目余额</option>
                             <option value='JOURNAL'>序时账</option>
                             <option value='ASSISTED'>辅助核算</option>
-                            <option value='CASHFLOW_WORKSHEET'>现金流编制明细</option>
+                            <option value='CASHFLOW_WORKSHEET'>现金流编制底稿</option>
+                            <option value='FINANCIAL_WORKSHEET'>资产负债表编制底稿</option>
                         </Select>
                         {(fileName !== undefined) ?
                             <Button id="upload" onClick={this.upload}>上传</Button> :

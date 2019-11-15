@@ -15,7 +15,7 @@ function parseRemap(type, book, year){
         // 尽管名字叫做sheet_to_json，但其实它指的是Plain Object
         parsed = XLSX.utils.sheet_to_json(sheet);
 
-    // console.log(parsed);
+    console.log(parsed);
     for (let p = 0; p < parsed.length; p++){
         let rec = parsed[p],
             newRec = {};
@@ -59,6 +59,7 @@ export default function bookRestore(projName, postProcess=(x) => x){
             JOURNAL: [],
             ASSISTED: [],
             CASHFLOW_WORKSHEET: [],
+            FINANCIAL_WORKSHEET: []
         };
 
         return Promise.all(fileNames.map(e => {
@@ -79,9 +80,8 @@ export default function bookRestore(projName, postProcess=(x) => x){
                     [_S, _N, type, year, _FT] = fileName.split('.');
 
                 let parsed = parseRemap(type, book, year)
-
                 // 因为data中汇总了所有期间的数据，因此需要flatten，或者按记录push进来。
-                if(type === 'CASHFLOW_WORKSHEET'){
+                if(type === 'CASHFLOW_WORKSHEET' || type === 'FINANCIAL_WORKSHEET'){
                     data[type] = parsed;
                 } else {
                     data[type].push(...parsed);
