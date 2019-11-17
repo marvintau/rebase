@@ -198,7 +198,7 @@ export default function(){
             // JOURNAL: {desc: '序时账', location:'remote'}
         },
         importProc,
-        desc: '每期间科目余额',
+        desc: '科目余额',
         type: 'DATA',
     })
 }

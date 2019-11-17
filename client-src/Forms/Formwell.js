@@ -1,40 +1,42 @@
 import React from 'react';
 import Tabs from './Group/Tabs'
-import styled from 'styled-components';
 
-const Table = styled.table`
-    width: 750px;
-    padding-bottom: 50px;
-    box-sizing:border-box;
-    border-collapse: collapse;
-    position: relative;
-`
+const tableStyle = {
+    width: '750px',
+    paddingBottom: '50px',
+    boxSizing: 'border-box',
+    borderCollapse: 'collapse',
+    position: 'relative',
+}
 
-const TableWrapper = styled.div`
-    height: 90vh;
-    width: auto;
-    box-sizing:border-box;
-    overflow-y: scroll !important;
-`
+const tableWrapper = {
+    height: '90vh',
+    width: 'auto',
+    boxSizing: 'border-box',
+    overflowY: 'scroll',
+}
 
-const SaveButton = styled.div`
-    text-align: center;
-    float: left;
-    width: 150px;
-    margin: 5px;
-    padding: 5px;
-    border-radius: 5px;
-    border: 1px solid black;
-    
-    &:hover {
-        cursor: pointer;
-        background-color: #D8D8D8;
-    }
+const button = {
+    textAlign: 'center',
+    float: 'left',
+    width: '150px',
+    margin: '5px',
+    padding: '5px',
+    borderRadius: '5px',
+    border: '1px solid black',
+    cursor: 'pointer',
+}
 
-    &: active {
-        background-color: #8D8D8D;
-    }
-`
+const title = {
+    fontSize: '200%',
+    fontWeight: 'black',
+}
+
+const containerStyle = {
+    flexGrow: '1.5',
+    fontSize: '87.5%',
+    margin: '10px',
+}
 
 /**
  * Formwell组件
@@ -53,7 +55,7 @@ export default class Formwell extends React.Component {
 
     render () {
 
-        let {tables, isSavable=false, isExportable=false, sheetName, saveRemote, exportRemote, exportProc} = this.props;
+        let {desc, tables, isSavable=false, isExportable=false, sheetName, saveRemote, exportRemote, exportProc} = this.props;
 
         let save = () => {
             saveRemote(exportProc(tables));
@@ -75,12 +77,12 @@ export default class Formwell extends React.Component {
             for (let i = 0; i < tables.length; i++){
                 let tabSpec = tables[i];
                 if (('head' in tabSpec) && ('data' in tabSpec)){
-                    tab.push(<Table key={`${sheetName}${i}`}><tbody><Tabs {...tabSpec} /></tbody></Table>)
+                    tab.push(<table style={tableStyle} key={`${sheetName}${i}`}><tbody><Tabs {...tabSpec} /></tbody></table>)
                 }
             }
 
         } else if (tables.constructor.name === 'Table'){
-            tab = <Table key={`${sheetName}`}><tbody><Tabs {...tables} /></tbody></Table>
+            tab = <table style={tableStyle} key={`${sheetName}`}><tbody><Tabs {...tables} /></tbody></table>
 
         } else {
             return <div>
@@ -93,19 +95,16 @@ export default class Formwell extends React.Component {
 
         let saveUtils = [];
         if (isSavable){
-            saveUtils = [       
-                <SaveButton key={0} onClick={save}>保存</SaveButton>,
-            ]
+            saveUtils.push(<div style={button} key={0} onClick={save}>保存</div>)
         }
 
         if(isExportable){
-            saveUtils.push(<SaveButton key={2} onClick={exportDocument}>导出</SaveButton>)
+            saveUtils.push(<div style={button} key={2} onClick={exportDocument}>导出</div>)
         }
 
-        return <div>
-        <TableWrapper>
-            {tab}
-        </TableWrapper>
+        return <div style={containerStyle}>
+            <div style={title}>{desc}</div>
+            <div style={tableWrapper}>{tab}</div>
             {saveUtils}
         </div>
     }

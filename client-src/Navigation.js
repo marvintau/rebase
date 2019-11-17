@@ -34,26 +34,8 @@ import RestoreBackup from './RestoreBackup';
 
 const Container = styled.div`
     width: 250px;
-    margin-top: 10px;
-`
-
-const ManuItem = styled.div`
-    list-style:none;
-    border-radius: 5px;
-    border 1px solid #E7E7E7;
-    background: #F0F0F0;
-    padding:10px;
-    margin-bottom: 10px;
-    user-select: none;
-
-    &:hover{
-        background-color: #F0F0F0;
-        cursor: point;
-    }
-
-    &:active{
-        background-color: #AEAEAE;
-    }
+    background: #EEEEEE;
+    padding: 8px;
 `
 
 const Title = styled.div`
@@ -61,7 +43,7 @@ const Title = styled.div`
     margin: 10px 0px;
 `
 
-const Button = styled.button`
+const ManuItem = styled.button`
     display:flex;
     justify-content: space-between;
     width: 100%;
@@ -72,44 +54,11 @@ const Button = styled.button`
     padding: 5px;
 `
 
-const BottomButton = styled.button`
-    display: block;
-    font-weight: bold;
-    width: 100%;
-    border: 1px solid gray;
-    outline: none;
-    border-radius: 5px;
-    margin: 15px 15px 0px 0px;
-    padding: 5px;
-`
-
 const Note = styled.div`
     margin: 10px 10px;
     letter-spacing: -0.8px;
-    font-size: 80%;
+    font-size: 90%;
 `
-
-function handleRawList(rawList){
-
-    let dict = {};
-
-    rawList.map((e) => {
-        return e.split('.')
-    })
-    .filter(e => e.length > 1)
-    .forEach((nameList) => {
-        // 在这里检查服务器所存储的数据只包含新上传的数据，还是已经包含了经过复原的数据
-        let [projStat, projName, ...rest] = nameList,
-            currStat = dict[projName] ? dict[projName].projStat : undefined;
-
-        if (projStat === 'RESTORED' || (projStat === 'SOURCE' && currStat === undefined)){
-            Object.assign(dict, {[projName]: {projName, projStat}});
-        }
-
-    });
-
-    return Object.values(dict);
-}
 
 export default class Navigation extends React.Component {
 
@@ -127,7 +76,8 @@ export default class Navigation extends React.Component {
 
     componentDidMount(){
 
-        let {socket} = this.props;
+        let {sheetColl} = this.props,
+            {socket} = sheetColl;
 
         socket.on('LIST', ({list}) => {
             let projList = list.map(e => ({projName: e}));
@@ -156,7 +106,6 @@ export default class Navigation extends React.Component {
         let sheetName = e.target.dataset.key,
             {projName} = this.state.proj;
 
-        console.log(e.target, sheetName, 'triggers fetching table')
         fetchTable({projName, sheetName});
     }
 
@@ -166,14 +115,15 @@ export default class Navigation extends React.Component {
 
     goto = (navPos) => {
         if(navPos === 'start'){
-            this.props.socket.emit('REQUIRE_LIST', {});
+            this.props.sheetColl.socket.emit('REQUIRE_LIST', {});
         }
         this.setState({navPos})
     }
 
     render(){
 
-        let {socket, sheetList, address, clearCurrentProject} = this.props;
+        let {sheetColl, address, clearCurrentProject} = this.props,
+            {socket, sheets:sheetList} = sheetColl;
 
         let {navPos} = this.state;
 
@@ -211,7 +161,7 @@ export default class Navigation extends React.Component {
             let {projName} = this.state.proj;
             return <Container>
                 <UploadManager key='upload' projName={projName} socket={socket} address={address}/>
-                <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
+                <ManuItem onClick={() => this.goto('sheets')}>返回</ManuItem>
             </Container>
         }
 
@@ -228,32 +178,28 @@ export default class Navigation extends React.Component {
             for (let sheetName in sheetList){
                 let {desc, location} = sheetList[sheetName];
                 if (location === 'local'){
-                    elemDisplay.push(<Button key={sheetName} data-key={sheetName} onClick={this.selectSheet}>{desc}</Button>)
+                    elemDisplay.push(<ManuItem key={sheetName} data-key={sheetName} onClick={this.selectSheet}>{desc}</ManuItem>)
                 }
             }
 
-            let displayed = <ManuItem>
+            return <Container>
                 <Title>{this.state.proj.projName}</Title>
                 {elemDisplay}
                 <Note>点击以下按钮来上传和追加新的数据。</Note>
-                <BottomButton onClick={(e) => {
+                <ManuItem onClick={(e) => {
                     this.goto('upload');
-                }}>上传数据</BottomButton>
+                }}>上传数据</ManuItem>
                 <Note>无论何时您上传了新的数据，都要回来点一下这里更新。需要注意的是，如果您在更新之前有存档，更新之后的存档都会被清零。所以对于一些配置性的数据表，请在更新之前导出备份。</Note>
-                <BottomButton onClick={(e) => {
+                <ManuItem onClick={(e) => {
                     this.goto('restore');
-                }}>更新数据</BottomButton>
-                <BottomButton onClick={(e) => {
+                }}>更新数据</ManuItem>
+                <ManuItem onClick={(e) => {
                     this.goto('delete');
-                }}><span style={{color:'red'}}>{'>>>删除项目<<<'}</span></BottomButton>
-                <BottomButton onClick={(e) => {
+                }}><span style={{color:'red', fontWeight: 'bold'}}>{'删除项目'}</span></ManuItem>
+                <ManuItem onClick={(e) => {
                     clearCurrentProject();
                     this.goto('start');
-                }}>返回</BottomButton>
-            </ManuItem>
-
-            return <Container>
-                {displayed}
+                }}>返回</ManuItem>
             </Container>
         }
 
@@ -263,6 +209,9 @@ export default class Navigation extends React.Component {
             console.log(projName, path, 'restoring');
             return <Container>
                 <RestoreBackup path={path} projName={projName} socket={socket} goto={this.goto} />
+                <ManuItem onClick={(e) => {
+                    this.goto('sheets');
+                }}>返回</ManuItem>
             </Container>
         }
 

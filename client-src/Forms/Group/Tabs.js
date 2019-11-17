@@ -1,36 +1,26 @@
 import React from 'react';
-import styled from 'styled-components';
 
 import Rows from '../Table/Rows';
 import Head from '../Table/Head';
 
-const TabTR = styled.tr`
-    width: 100%;
-    font-family: 'Optima';
-    font-weight: 300;
-`
+const tabRowStyle = {
+    width: "100%",
+    borderTop: '1px solid black',
+    fontFamily: "'Optima'",
+    fontWeight: "300",
+}
 
-const TabTD = styled.div`
-    border-top: 1px solid black !important;
+const tabCellStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+}
 
-    display: flex;
-    justify-content: space-between;
-
-    & div {
-        text-align: center;
-        padding: 10px;
-    }
-`
-
-const Button = styled.div`
-
-    user-select: none;
-
-    &:hover {
-        background-color: #DEF9F3;
-        cursor: pointer;
-    }
-`
+const tabElemStyle = {
+    textAlign: 'center',
+    padding: '10px',
+    userSelect: 'none',
+    cursor: 'pointer',
+}
 
 export default class Tabs extends React.Component {
 
@@ -102,24 +92,28 @@ export default class Tabs extends React.Component {
             let controller;
             if(tabStyle === 'paginator'){
                 
-                controller = <td colSpan={head.lenDisplayed()+1}><TabTD>
-                    <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
-                    <div>当前第{this.state.currKey}{data.desc}</div>
-                    <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
-                </TabTD></td>
+                controller = <td colSpan={head.lenDisplayed()+1}>
+                    <div style={tabCellStyle}>
+                        <div style={tabElemStyle}  onClick={() => this.prevKey()}>前一{data.desc}</div>
+                        <div style={tabElemStyle} >当前第{this.state.currKey}{data.desc}</div>
+                        <div style={tabElemStyle}  onClick={() => this.nextKey()}>后一{data.desc}</div>
+                    </div>
+                </td>
 
             } else if (tabStyle === 'tabs') {
     
                 let keys = data.keys().map((e, i) => {
                     let displayed = e === this.state.currKey ? <b>{e}</b> : e;
-                    return <Button key={i} onClick={() => this.setCurrKey(e)}>{displayed}</Button>
+                    return <div key={i} onClick={() => this.setCurrKey(e)}>{displayed}</div>
                 })
     
-                controller = <td style={{width: '100%'}} colSpan={head.lenDisplayed()+1}><TabTD>
-                    <Button onClick={() => this.prevKey()}>前一{data.desc}</Button>
-                    {keys}
-                    <Button onClick={() => this.nextKey()}>后一{data.desc}</Button>
-                </TabTD></td> 
+                controller = <td style={{width: '100%'}} colSpan={head.lenDisplayed()+1}>
+                    <div style={tabCellStyle}>
+                        <div style={tabElemStyle} onClick={() => this.prevKey()}>前一{data.desc}</div>
+                        {keys}
+                        <div style={tabElemStyle} onClick={() => this.nextKey()}>后一{data.desc}</div>
+                    </div>
+                </td> 
             }
 
             let content = data.get(this.state.currKey);
@@ -148,8 +142,7 @@ export default class Tabs extends React.Component {
                 />
             }
     
-            return [<TabTR key={`tab-${data.desc}`}>{controller}</TabTR>, subLevel]
-            // return [<TabTR key={`tab-${data.desc}`}>{controller}</TabTR>]
+            return [<tr style={tabRowStyle} key={`tab-${data.desc}`}>{controller}</tr>, subLevel]
         }
     }
 

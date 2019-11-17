@@ -11,7 +11,9 @@ let serverConfigure = {
 		extensions: ['.js', '.json'],
 	},
 
-	entry: {},
+	entry: {
+		filename: './server-src/main.js'
+	},
 
 	output: {
 		path: path.resolve(__dirname),
@@ -48,7 +50,9 @@ let clientConfigure = {
 		extensions: ['.js', '.json'],
 	},
 
-	entry: {},
+	entry: {
+		filename: './client-src/main.js'
+	},
 
 	output: {
 		path: path.resolve(__dirname),
@@ -101,17 +105,4 @@ let clientConfigure = {
 	},
 };
 
-module.exports = (env, argv) => {
-	if (argv.deploy === 'remote') {
-		serverConfigure.entry.filename = './server-src/main-remote.js';
-		clientConfigure.entry.filename = './client-src/main-remote.js';
-		return [serverConfigure, clientConfigure];
-	} else if (argv.deploy === 'local'){
-		serverConfigure.entry.filename = './server-src/main-local.js';
-		clientConfigure.entry.filename = './client-src/main-local.js';
-		return [serverConfigure, clientConfigure];
-	} else {
-		console.log('<b>您必须得指明部署的位置，即在使用webpack时添加 "--deploy=<site>"，其中site可以是"local"或"remote"');
-		return []
-	}
-}
+module.exports = [serverConfigure, clientConfigure]

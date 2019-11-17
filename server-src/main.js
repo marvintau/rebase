@@ -9,6 +9,10 @@ import del from 'del';
 
 const fs = require('fs').promises;
 
+const DataStore = require('nedb'),
+      db = new DataStore({filename: path.resolve(__dirname, '../passwords'), autoload: true});
+db.ensureIndex({fieldName: 'username', unique: true});
+
 import FileServ from './file-serv.js';
 const Files = {};
 
@@ -19,20 +23,24 @@ import bookRestore from './book-restore';
 
 var app = express();
 
-var server = app.listen(1337, function () {
-  console.log('Server is listening 1337, for HTTPS');
+var server = app.listen(8080, function () {
+  console.log('Server is listening 8080, for HTTPS');
   console.log("run from the " + __dirname);
 });
 
 const io = require('socket.io').listen(server);
 const tableServer = io.of('/TABLES');
 const uploadServer = io.of('/UPLOAD');
-
+const authServer = io.of('/AUTH');
 
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
+
+app.get('*', function(req, res){
+    res.redirect('/');
+})
 
 // 上传文件的handler响应两种message：
 // 
@@ -281,3 +289,28 @@ tableServer.on('connection', function (socket) {
 });
 
 
+authServer.on('connection', (socket) => {
+
+    socket.on('LOGIN', ({username, password}) => {
+        console.log(username, password, 'recved')
+        db.find({username, password}, function(err, docs) {
+            if (docs.length === 0) {
+                socket.emit('LOG_DONE', `${username} ${password}`)
+            } else {
+                socket.emit('LOG_NOT_FOUND')
+            }
+        })
+    })
+
+    socket.on('REGISTER', ({username, password}) => {
+        db.insert({username, password}, (err, newDoc) => {
+            if(!err){
+                socket.emit('REG_DONE');
+            } else if (err.errorType === 'uniqueViolated'){
+                socket.emit('REG_DUP_NAME');
+            } else {
+                socket.emit('ERROR', JSON.stringify(err));
+            }
+        })
+    })
+})

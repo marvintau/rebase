@@ -83,10 +83,19 @@ export default class Rows extends React.PureComponent {
     addFilter = (colKey, filterText) => {
         let {filters} = this.state;
 
+        // A very simple parser that checks the filter grammar.
+        // only the two types below are permitted:
+        // 1. a boolean expression that compares the current column and 
+        //    a given number. (comparing operator and arbitrary real number)
+        // 2. random selector, expression begins with "rand" and various integer.
+        
         if (filterText.match(/^\s*(>=?|<=?|=)\s*[0-9]+(.[0-9]+)?\s*$/) !== null){
             filters = {...filters, [colKey]: filterText};
             this.setState({filters, fromInside: true})
-        } else {
+        } else if(filterText.match(/^\s*rand\s*[0-9]+\s*$/)) {
+            filters = {...filters, [colKey]: filterText};
+            this.setState({filters, fromInside: true})
+        } else{
             console.log('illegal filter expression, doing nothing');
         }
 

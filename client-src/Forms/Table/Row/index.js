@@ -1,22 +1,9 @@
 import React from 'react';
-import styled from 'styled-components';
 
-import Cell from '../../Cell/Cell';
+import Cell from '../../Cell';
 import Rows from '../Rows';
 import Formwell from '../../Formwell';
 
-const TRBar = styled.tr`
-    height: 5px;
-`
-
-const TDTab = styled.td`
-    margin-top: 5px;
-    width: auto;
-`
-
-const TR = styled.tr`
-    width: auto;
-`
 
 function Indicator(props){
 
@@ -186,17 +173,20 @@ export default class Row extends React.Component {
             
             } else if (subsType === 'Table'){
 
-                subs = <TR key={'rest'}>
-                    <TDTab colSpan={head.lenDisplayed()+1} ><Formwell tables={data.subs} /></TDTab>
-                </TR>
+                subs = <tr style={{width: 'auto'}} key={'rest'}>
+                    <td colSpan={head.lenDisplayed()+1} style={{marginTop: '5px', width: 'auto'}}>
+                        <Formwell tables={data.subs} />
+                    </td>
+                </tr>
             }
         }
 
-        let tr = <TR key={'first'}
+        let tr = <tr key={'first'} style={{width: 'auto'}}
             onDoubleClick={this.toggleExpand}
             onMouseEnter={this.onMouseEnter}
             onMouseLeave={this.onMouseLeave}
-        >{cols}</TR>
+        >{cols}</tr>
+
         return [tr, subs]
 
     }

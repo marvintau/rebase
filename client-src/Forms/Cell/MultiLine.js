@@ -1,17 +1,16 @@
 import React from 'react';
 import Normal from './Normal';
-import styled from 'styled-components';
 
-const FlexRows = styled.div`
-    display: flex;
-    flex-direction: column;
-`
+const rows = {
+    display: 'flex',
+    flexDirection: 'column',
+}
 
-const FlexCols = styled.div`
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-`
+const cols = {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+}
 
 export default class MultiLine extends React.Component{
 
@@ -55,9 +54,9 @@ export default class MultiLine extends React.Component{
             lines = lines[0];
         }
 
-        return <FlexCols onDoubleClick={this.toggleCollapse}>
-            <FlexRows>{lines}</FlexRows>
+        return <div onDoubleClick={this.toggleCollapse} style={cols}>
+            <div style={rows}>{lines}</div>
             {(data.lines.length > 1 && this.state.collapsed ? '...' : '')}
-        </FlexCols>
+        </div>
     }
 }

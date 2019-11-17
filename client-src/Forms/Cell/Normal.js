@@ -15,7 +15,7 @@ const String = styled.div`
     line-height: 25px;
     word-wrap: break-word;
     font-family: 'Helvetica Neue', 'Pingfang SC', 'Microsoft Yahei', sans-serif;
-    ${({isTitle}) => isTitle ? 'font-size: 100%; font-weight: 700;' : 'font-weight: 300;'}
+    ${({isTitle}) => isTitle ? 'font-size: 100%; font-weight: 700;' : 'font-size: 110%; font-weight: 400;'}
 `
 
 const Error =styled.div`

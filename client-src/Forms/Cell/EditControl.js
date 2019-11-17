@@ -1,27 +1,22 @@
 import React from 'react';
-import styled from 'styled-components';
 
 import ModifyRecordIcon from './icons/modify.png';
 import CreateRecordIcon from './icons/create-record.png';
 import DeleteRecordIcon from './icons/cross.png';
 import SaveRecordIcon from './icons/check.png';
 
-const Control = styled.div`
-    display: flex;
-    jusify-content: flex-end;
-`
+const controlStyle = {
+    display: 'flex',
+    jusifyContent: 'flex-end'
+}
 
-const Icon = styled.img`
-    width: 25px;
-    height: 25px;
-    margin: 0px 2px;
-    cursor: pointer;
-    opacity: ${({isHovered}) => isHovered ? '0.4' : '0'};
-
-    &:hover {
-        opacity: 1;
-    }
-`
+const iconStyle = {
+    width: '25px',
+    height: '25px',
+    margin: '0px 2px',
+    cursor: 'pointer',
+    opacity: '0'
+}
 
 export default class EditControl extends React.Component{
 
@@ -40,19 +35,24 @@ export default class EditControl extends React.Component{
         let {isRowEditing, isHovered, toggleEdit} = this.props;
         
         if (isRowEditing){
-            return <Control>
+            return <div style={controlStyle}>
                 <Icon key={'save'} isHovered={isHovered} src={SaveRecordIcon} onClick={toggleEdit}/>
-            </Control>
+            </div>
+        }
+
+        let imgStyle = iconStyle;
+        if (isHovered) {
+            imgStyle = Object.assign({}, iconStyle, {opacity: '1'})
         }
 
         let move = [
-            <Icon key={'create'} isHovered={isHovered} src={CreateRecordIcon} onClick={this.insert}/>,
-            <Icon key={'remove'} isHovered={isHovered} src={DeleteRecordIcon} onClick={this.remove}/>,
-            <Icon key={'modify'} isHovered={isHovered} src={ModifyRecordIcon} onClick={toggleEdit}/>
+            <img style={imgStyle} key={'create'} src={CreateRecordIcon} onClick={this.insert}/>,
+            <img style={imgStyle} key={'remove'} src={DeleteRecordIcon} onClick={this.remove}/>,
+            <img style={imgStyle} key={'modify'} src={ModifyRecordIcon} onClick={toggleEdit}/>
         ]
             
-        return <Control>
+        return <div style={controlStyle}>
             {move}
-        </Control>
+        </div>
     }
 }

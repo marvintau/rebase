@@ -1,5 +1,4 @@
 import React from 'react';
-import styled from 'styled-components';
 import io from 'socket.io-client';
 
 import Formwell from './Forms/Formwell';
@@ -10,31 +9,19 @@ import {SheetCollection} from 'persisted';
 
 import { saveAs } from 'file-saver';
 
-const Log = styled.div`
-    white-space: pre-wrap;
-    margin: 10px;
-    font-size: 80%;
-    line-height: 2em;
-    height: 250px;
-`
+const loggerStyle = {    
+    whiteSpace: 'pre-wrap',
+    margin: '10px',
+    fontSize: '80%',
+    lineHeight: '2em',
+    height: '250px',
+}
 
-const WorkAreaContainer = styled.div`
-    flex-grow: 1.5;
-    font-size : 85%;
-    margin: 10px;
-`
-
-const FlexBox = styled.div`
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-    height: 100vh;
-`
-
-const Title = styled.div`
-    font-size: 200%;
-    font-weight: black;
-`
+const wrapper = {
+    display: 'flex',
+    width: '100%',
+    height: '100vh',
+}
 
 export default class BookManagerComp extends React.Component{
     constructor(props){
@@ -49,15 +36,17 @@ export default class BookManagerComp extends React.Component{
         this.socket = io(`${props.address}/TABLES`)
         .on('ERROR', ({msg}) =>{
             this.log(msg);
+        })
+        .on('connect_error', (error) => {
+            this.log('与服务器的连接貌似断开了');
         });
         
-        console.log(this.socket);
         this.sheetColl = new SheetCollection(this.socket, this.log);
         this.sheetColl.addSheets(getFinancialTables());
     }
 
-    log = (newLog, replace=false) => {
-        let logs = this.state.logs.slice(0, replace ? -1 : undefined).concat(newLog);
+    log = (newdiv, replace=false) => {
+        let logs = this.state.logs.slice(0, replace ? -1 : undefined).concat(newdiv);
         this.setState({logs})
     }
 
@@ -92,21 +81,19 @@ export default class BookManagerComp extends React.Component{
         let {currProjectName, currSheet} = this.state;
         let sheet = this.sheetColl.get(currSheet);
 
-        console.log(data, 'to be saved');
-
         this.socket.emit('SAVE', {
             projName: currProjectName,
             sheetName: currSheet,
             type: sheet.type,
             data
+        }).on('SAVED', () => {
+            this.log('已保存')
         })
     }
 
     export = (data) => {
         let {currProjectName, currSheet} = this.state;
         let sheet = this.sheetColl.get(currSheet);
-
-        console.log(data, 'to be saved');
 
         this.socket.emit('EXPORT', {
             projName: currProjectName,
@@ -116,6 +103,7 @@ export default class BookManagerComp extends React.Component{
         })
         .on('EXPORTED', ({outputArrayBuffed, projName, sheetName}) => {
             saveAs(new Blob([outputArrayBuffed],{type:"application/octet-stream"}), `导出-${projName}-${sheetName}.xlsx`);
+            this.log('已导出')
         })
     }
 
@@ -126,40 +114,39 @@ export default class BookManagerComp extends React.Component{
 
         let logs = this.state.logs.map((log, index) => <div key={index}>{log}</div>)
 
-        let displayedContent = <Log>{logs}</Log>;
+        let displayedContent = <div style={loggerStyle}>{logs}</div>;
 
+        let formwell;
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
                 {desc, tables, exportProc, isSavable, isExportable} = this.sheetColl.get(sheetName);
 
-            displayedContent = <WorkAreaContainer>
-                <Title>{desc}</Title>
-                <Formwell
-                    key={sheetName}
-                    sheetName={sheetName}
-                    tables={tables}
+            formwell = <Formwell
+                key={sheetName}
+                desc={desc}
+                sheetName={sheetName}
+                tables={tables}
 
-                    isExportable={isExportable}
-                    isSavable={isSavable}
-                    exportProc={exportProc}
-                    saveRemote={this.save}
-                    exportRemote={this.export}
-                />
-            </WorkAreaContainer>;
+                isExportable={isExportable}
+                isSavable={isSavable}
+                exportProc={exportProc}
+                saveRemote={this.save}
+                exportRemote={this.export}
+            />;
         }
 
-        // console.log()
+        let navigation = <Navigation
+            sheetColl={this.sheetColl}
+            address={address}
+            fetchTable={this.fetchTable}
+            clearCurrentProject={this.clearCurrentProject}
+        />
 
-        return (<FlexBox>
-            <Navigation
-                sheetList={this.sheetColl.sheets}
-                address={address}
-                socket={this.socket}
-                fetchTable={this.fetchTable}
-                clearCurrentProject={this.clearCurrentProject}/>
-            {displayedContent}
-        </FlexBox>)
+        return (<div style={wrapper}>
+            {navigation}    
+            {formwell}
+        </div>)
 
     }
 }
