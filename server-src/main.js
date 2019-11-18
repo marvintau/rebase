@@ -51,11 +51,11 @@ app.get('*', function(req, res){
 
 uploadServer.on('connection', function (socket) {
 
-    socket.on('CREATE', function({projName}) {
+    socket.on('CREATE', function({id, projName}) {
 
         console.log('Creating directory of ', projName);
 
-        let filePath = path.join(BACKUP_PATH, projName);
+        let filePath = path.join(BACKUP_PATH, id, projName);
 
         fs.mkdir(filePath).then(() => {
             console.log('create directory done')
@@ -65,9 +65,9 @@ uploadServer.on('connection', function (socket) {
         })
     })
 
-    socket.on('DELETE', function({projName}) {
-        console.log('received DELETE', projName, path.join(BACKUP_PATH, projName));
-        let projPath = path.join(BACKUP_PATH, projName);
+    socket.on('DELETE', function({id, projName}) {
+        console.log('received DELETE', projName, path.join(BACKUP_PATH, id, projName));
+        let projPath = path.join(BACKUP_PATH, id, projName);
 
         del([projPath], {force: true}).then(() => {
             console.log('remove directory done')
@@ -79,9 +79,9 @@ uploadServer.on('connection', function (socket) {
         // fs
     })
 
-    socket.on('PREP', function ({projName, name, size}) { 
+    socket.on('PREP', function ({id, projName, name, size}) { 
 
-        let filePath = path.resolve(BACKUP_PATH, projName, name);
+        let filePath = path.resolve(BACKUP_PATH, id, projName, name);
 
         fs.access(filePath)
         .then(() => {
@@ -91,12 +91,12 @@ uploadServer.on('connection', function (socket) {
             console.log('File with same name has been removed.');
         })
         .finally(() => {
-            Files[name] = new FileServ(filePath, size);
+            Files[`${id}-${name}`] = new FileServ(filePath, size);
             socket.emit('SEND', {name, percent: 0, position: 0});    
         })
     });
 
-    socket.on('RECV', function ({position, name, data}) {
+    socket.on('RECV', function ({id, position, name, data}) {
         
         let afterWrite = ({part, percent, position}) => {
             console.log('afterWrite', part, percent, position);
@@ -109,7 +109,7 @@ uploadServer.on('connection', function (socket) {
             socket.emit(label, {name, percent, position})
         }
 
-        Files[name].writeChunk(position, data, afterWrite);
+        Files[`${id}-${name}`].writeChunk(position, data, afterWrite);
     });
 
 })
@@ -121,16 +121,16 @@ function getRestoredFileName(projName, sheetName, type){
 
 tableServer.on('connection', function (socket) {
 
-    socket.on('REQUIRE_LIST', function(){
-        console.log('Received requiring list of projects');
-        fs.readdir(BACKUP_PATH, {withFileTypes: true}).then(res => {
+    socket.on('REQUIRE_LIST', ({id}) => {
+        console.log('Received requiring list of projects from ', id);
+        fs.readdir(path.resolve(BACKUP_PATH, id), {withFileTypes: true}).then(res => {
             socket.emit('LIST', {list: res.filter(e => e.isDirectory()).map(e => e.name)});
         }).catch(err => {
             console.log('server reading local file failed', err);
         })    
     })
 
-    socket.on('SEND', function({projName, sheetName, type, position}){
+    socket.on('SEND', function({id, projName, sheetName, type, position}){
 
         console.log(`SENDING ${projName}-${sheetName}${type? `-${type}`:''} FROM@ ${position}`, );
         
@@ -175,14 +175,14 @@ tableServer.on('connection', function (socket) {
         // 初始化的时候不需要指明size。会在open的时候获取。打开文件的后续操作即
         // 上面所述的发送第一个块。如果FileServ存在，则只需要完成后续的读取-发送
         // 操作，当然也是根据客户端发送来的position来读取。
-        if(Files[fileName] === undefined){
-            Files[fileName] = new FileServ(path.resolve(BACKUP_PATH, projName, fileName));
+        let fileID = `${id}-${fileName}`
+        if(Files[fileID] === undefined){
+            Files[fileID] = new FileServ(path.resolve(BACKUP_PATH, id, projName, fileName));
         }
-        console.log(fileName);
-        Files[fileName].readChunk(position, afterRead, notExisted)
+        Files[fileID].readChunk(position, afterRead, notExisted)
     })
 
-    socket.on('SAVE', function({projName, sheetName, type, data}){
+    socket.on('SAVE', function({id, projName, sheetName, type, data}){
 
         let dataBuffer;
         switch(typeof data){
@@ -197,12 +197,12 @@ tableServer.on('connection', function (socket) {
         }
 
         let fileName = getRestoredFileName(projName, `saved${sheetName}`, type),
-            filePath = path.resolve(BACKUP_PATH, projName, fileName);
+            filePath = path.resolve(BACKUP_PATH, id, projName, fileName);
         
         fs.writeFile(filePath, dataBuffer);
     })
 
-    socket.on('EXPORT', function({projName, sheetName, data}){
+    socket.on('EXPORT', function({id, projName, sheetName, data}){
 
 
         let xlsBook = XLSX.utils.book_new();
@@ -293,19 +293,29 @@ authServer.on('connection', (socket) => {
 
     socket.on('LOGIN', ({username, password}) => {
         console.log(username, password, 'recved')
-        db.find({username, password}, function(err, docs) {
-            if (docs.length === 0) {
-                socket.emit('LOG_DONE', `${username} ${password}`)
+        db.findOne({username, password}, function(err, doc) {
+            if (doc !== null) {
+                console.log(doc, 'account found');
+                let {username, nickname, _id: id} = doc;
+                socket.emit('LOG_DONE', {username, nickname, id});
             } else {
                 socket.emit('LOG_NOT_FOUND')
             }
         })
     })
 
-    socket.on('REGISTER', ({username, password}) => {
-        db.insert({username, password}, (err, newDoc) => {
+    socket.on('REGISTER', ({username, password, nickname}) => {
+        db.insert({username, password, nickname}, (err, newDoc) => {
             if(!err){
-                socket.emit('REG_DONE');
+                console.log(newDoc, 'reged')
+                let {_id: id} = newDoc;
+                fs.mkdir(path.resolve(BACKUP_PATH, id))
+                .then(() => {
+                    socket.emit('REG_DONE', {id: newDoc._id});
+                })
+                .catch((err) => {
+                    socket.emit('ERROR', JSON.stringify(err))
+                })
             } else if (err.errorType === 'uniqueViolated'){
                 socket.emit('REG_DUP_NAME');
             } else {

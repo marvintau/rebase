@@ -41,7 +41,9 @@ export default class BookManagerComp extends React.Component{
             this.log('与服务器的连接貌似断开了');
         });
         
-        this.sheetColl = new SheetCollection(this.socket, this.log);
+        let id = localStorage.getItem('user_id')
+
+        this.sheetColl = new SheetCollection(this.socket, id, this.log);
         this.sheetColl.addSheets(getFinancialTables());
     }
 

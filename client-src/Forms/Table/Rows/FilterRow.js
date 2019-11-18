@@ -13,9 +13,9 @@ const inputStyle = {
 }
 
 const wrapperStyle = {
-    borderTop: '1px solid black',
     display:'flex',
     justifyContent: 'space-around',
+    alignItems: 'center'
 }
 
 const buttonStyle = {
@@ -68,8 +68,8 @@ export default class FilterRow extends React.Component {
         return <tr><td colSpan={colSpan}><div style={wrapperStyle}>
             <div style={labelStyle}>{colDesc}</div>
             <input style={inputStyle} ref={this.filterInputDOM} defaultValue={filterText} />
-            <button style={buttonStyle} onClick={(e) => addFilter(colKey, this.getText())}>应用过滤器</button>
-            <button style={buttonStyle} onClick={(e) => removeFilter(colKey)}>移除过滤器</button>
+            <button style={buttonStyle} onClick={(e) => addFilter(colKey, this.getText())}>应用过滤</button>
+            <button style={buttonStyle} onClick={(e) => removeFilter(colKey)}>移除过滤</button>
         </div></td></tr>
     }
 }

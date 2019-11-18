@@ -12,9 +12,9 @@ const indicator = {
 }
 
 const headCell = {
-    padding: "6px 5px 4px",
-    minWidth: "25px",
-    height: "28px",
+    // padding: "6px 5px 4px",
+    // minWidth: "25px",
+    // height: "28px",
     textAlign: "center",
     background: "#555555",
     color: "#FEFEFE",
@@ -23,7 +23,7 @@ const headCell = {
     position: "sticky",
     top: "-1px",
     userSelect: "none",
-    cursor: "pointer",
+    // cursor: "pointer",
 }
 
 

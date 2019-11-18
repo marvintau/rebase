@@ -9,10 +9,9 @@ function Indicator(props){
 
     const style = {
         borderTop: '1px solid black',
-        borderBottom: '1px solid black',
-        width: '25px',
-        minWidth: '25px',
-        maxWidth: '25px',
+        width: '28px',
+        minWidth: '28px',
+        maxWidth: '28px',
         padding: '5px',
     }
 
@@ -181,7 +180,7 @@ export default class Row extends React.Component {
             }
         }
 
-        let tr = <tr key={'first'} style={{width: 'auto'}}
+        let tr = <tr key={'first'} style={{width: 'auto', height: '28px'}}
             onDoubleClick={this.toggleExpand}
             onMouseEnter={this.onMouseEnter}
             onMouseLeave={this.onMouseLeave}

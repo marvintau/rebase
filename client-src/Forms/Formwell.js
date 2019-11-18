@@ -1,5 +1,6 @@
 import React from 'react';
 import Tabs from './Group/Tabs'
+import {Table} from 'reactstrap';
 
 const tableStyle = {
     width: '750px',
@@ -77,12 +78,12 @@ export default class Formwell extends React.Component {
             for (let i = 0; i < tables.length; i++){
                 let tabSpec = tables[i];
                 if (('head' in tabSpec) && ('data' in tabSpec)){
-                    tab.push(<table style={tableStyle} key={`${sheetName}${i}`}><tbody><Tabs {...tabSpec} /></tbody></table>)
+                    tab.push(<Table borderless style={tableStyle} key={`${sheetName}${i}`}><tbody><Tabs {...tabSpec} /></tbody></Table>)
                 }
             }
 
         } else if (tables.constructor.name === 'Table'){
-            tab = <table style={tableStyle} key={`${sheetName}`}><tbody><Tabs {...tables} /></tbody></table>
+            tab = <Table style={tableStyle} key={`${sheetName}`}><tbody><Tabs {...tables} /></tbody></Table>
 
         } else {
             return <div>

@@ -2,9 +2,9 @@ import React from 'react';
 import CellComponent from './CellComponent';
 
 const cellStyle = {
-    padding: '6px 5px 4px',
-    minWidth: '25px',
-    height: '25px',
+    padding: '0.5rem 0.4rem 0.4rem',
+    // minWidth: '25px',
+    // height: '25px',
     whiteSpace: 'nowrap',
     userSelect: 'none',
 }
@@ -32,8 +32,9 @@ export default function Cell(props){
             CellComp;
 
         let style = {...cellStyle,
-            borderTop: '1px solid black',
-            borderBototm: '1px solid black',
+            borderTop: '0.25px solid black',
+            borderBototm: '0.25px solid black',
+            borderLeft: '0.25px dotted lightgray',
         }
 
         if (isHovered){

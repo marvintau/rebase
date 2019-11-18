@@ -2,67 +2,42 @@ import React from 'react';
 import styled from 'styled-components';
 import io from 'socket.io-client';
 
-const InputGroup = styled.div`
-    list-style:none;
-    border: 0.5px solid black;
-    border-radius: 5px;
-    padding:5px 10px 5px 10px;
-    margin: 10px 0;
-`
-const Button = styled.button`
-    border: 1px solid gray;
-    outline: none;
-    border-radius: 5px;
-    margin: 5px 0;
-    padding: 5px;
-`
+import {Label, Button, FormGroup, FormText, Form, Input} from 'reactstrap';
 
-const HDiv = styled.div`
-    margin-top:5px;
-    margin-bottom:5px;
-    height:1px;
-    width:100%;
-    border-top:1px solid gray;
-`
 
-const Label = styled.label`
-    font-size:80%;
-    font-weight: bold;
-`
+const FileInput = styled.input`
+    width: 100%;
+    height: 2.5rem;
+    margin-bottom: 5px;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    background: #fff;
 
-const Input = styled.input`
-    width: 90%;
-    border: 1px solid gray;
-    outline: none;
-    border-radius: 5px;
-    margin: 5px 0;
-    padding: 5px;
-
-    &[type=file]::-webkit-file-upload-button {
-        border: 1px solid gray;
-        border-radius: 5px;
-        height: 100%;
-        background-color: white;
-        font-size: 80%;
+    ::-webkit-file-upload-button {
+        visibility: hidden;
     }
-`
-
-const Select = styled.select`
-    width: 95%;
-    height: 35px;
-    border: 1px solid gray;
-    outline: none;
-    border-radius: 5px;
-    margin: 5px 0;
-    padding: 5px 10px;
-`
-
-const Note = styled.div`
-    margin: 10px 10px;
-    font-size: 80%;
-    font-weight: 400;
-`
-
+    ::before {
+        content: '选择文件';
+        display: inline-block;
+        background: linear-gradient(top, #f9f9f9, #e3e3e3);
+        border: 1px solid #999;
+        border-radius: 3px;
+        padding: 5px 8px;
+        margin: 3px;
+        outline: none;
+        white-space: nowrap;
+        -webkit-user-select: none;
+        cursor: pointer;
+        text-shadow: 1px 1px #fff;
+        font-weight: 700;
+        font-size: 10pt;
+    }
+    :hover::before {
+        border-color: black;
+    }
+    :active::before {
+        background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+    }`
 
 const BLOCK_SIZE = 524288;
 
@@ -131,7 +106,8 @@ export default class UploadBackup extends React.Component{
 
     upload = () => {
 
-        let {projName} = this.props;
+        let {projName} = this.props,
+            id = localStorage.getItem('user_id');
 
         let fileType = this.fileTypeRef.current.value,
             bookType = this.bookTypeRef.current.value,
@@ -142,6 +118,7 @@ export default class UploadBackup extends React.Component{
         }
 
         let payload = {
+            id,
             projName,
             name: `SOURCE.${projName}.${bookType}.${year}.${fileType}`,
             size: this.fileObj.size,
@@ -156,8 +133,9 @@ export default class UploadBackup extends React.Component{
 
     create = () => {
         console.log('creating');
+        let id = localStorage.getItem('user_id');
         let destName = this.nameRef.current.value;
-        this.socket.emit('CREATE', {projName: destName})
+        this.socket.emit('CREATE', {projName: destName, id})
         this.setState({
             uploadState: 'WAITING'
         })
@@ -219,76 +197,79 @@ export default class UploadBackup extends React.Component{
         if (projName == undefined){
             switch(uploadState){
                 case 'NONE':
-                    return <InputGroup>
+                    return <FormGroup>
                         <Label>客户名称</Label>
                         <Input id="company-name" placeholder="项目（客户）名称" ref={this.nameRef} />
 
                         <Button id="upload" onClick={this.create}>创建</Button>
-                        <Note>项目名称一经创建则不能更改，请再三检查。如果写错名称，您必须先删除整个项目，并重新上传数据文件。</Note>
-                    </InputGroup>
+                        <FormText>项目名称一经创建则不能更改，请再三检查。如果写错名称，您必须先删除整个项目，并重新上传数据文件。</FormText>
+                    </FormGroup>
                 case 'WAITING':
-                    return <InputGroup>请稍候…</InputGroup>
+                    return <FormGroup>请稍候…</FormGroup>
                 case 'CREATE_DONE':
-                    return <InputGroup>创建完成，请从项目列表中进入项目，并继续上传文件</InputGroup>                
+                    return <FormGroup>创建完成，请从项目列表中进入项目，并继续上传文件</FormGroup>                
                 case 'ERROR':
-                    return <InputGroup><Label>{this.state.errMsg}</Label></InputGroup>
+                    return <FormGroup><Label>{this.state.errMsg}</Label></FormGroup>
             
             }
         } else if (toDelete){
             switch(uploadState){
                 case 'DELETE_DONE':
-                    return <InputGroup>项目已经清除，请从列表中进入项目，或建立新的项目</InputGroup>                
+                    return <FormGroup>项目已经清除，请从列表中进入项目，或建立新的项目</FormGroup>                
                 case 'NONE':
-                    return <InputGroup>
+                    return <FormGroup>
                         <Label>确定删除这个项目吗？</Label>
                         <Button id='delete' onClick={this.delete}>我确定了</Button>
-                    </InputGroup>
+                    </FormGroup>
             }
         }
 
         switch(uploadState){
             case 'DONE':
             case 'NONE':
-                return (
-                    <InputGroup>
+                return <Form>
+                    <FormGroup>
                         {uploadState === 'DONE' ? <Label>上传完毕，请返回至上一级，从列表中打开进行相应操作, 或者继续</Label> : []}
                         <Label>上传文件</Label>
-                        <Input type="file" id="choose-backup-file" ref={this.fileRef} onChange={this.updateFile} />
-                        <Button onClick={this.guessFields}>猜名字</Button>
-                        <HDiv />
-
+                        <FileInput type="file" id="choose-backup-file" ref={this.fileRef} onChange={this.updateFile} />
+                        <Button color="info" onClick={this.guessFields}>猜名字</Button>
+                    </FormGroup>
+                    <FormGroup>
                         <Label>年度</Label>
                         <Input id="year" placeholder="会计年度" ref={this.yearRef} />
-
+                        </FormGroup>
+                    <FormGroup>
                         <Label>上传文件类型</Label>
-                        <Select id="file-type" ref={this.fileTypeRef}>
+                        <Input id="file-type" type="select" ref={this.fileTypeRef}>
                             <option value='csv'>.CSV文件</option>
                             <option value='xls'>.XLS（Excel兼容格式）</option>
                             <option value='xlsx'>.XLSX（Excel2007及以上）</option>
                             <option value='bak2008'>.BAK（SQLServer2008以下）</option>
                             <option value='bak2019'>.BAK（SQLServer2008以上）</option>
-                        </Select>
-
+                        </Input>
+                    </FormGroup>
+                    <FormGroup>
                         <Label>数据类别</Label>
-                        <Select id="file-type" ref={this.bookTypeRef}>
+                        <Input id="file-type" type="select" ref={this.bookTypeRef}>
                             <option value='BALANCE'>科目余额</option>
                             <option value='JOURNAL'>序时账</option>
                             <option value='ASSISTED'>辅助核算</option>
                             <option value='CASHFLOW_WORKSHEET'>现金流编制底稿</option>
                             <option value='FINANCIAL_WORKSHEET'>资产负债表编制底稿</option>
-                        </Select>
+                        </Input>
                         {(fileName !== undefined) ?
                             <Button id="upload" onClick={this.upload}>上传</Button> :
                             <Label>选择文件后才能上传</Label>
                         }
-                    </InputGroup>)
+                    </FormGroup>
+                </Form>
             case 'MORE':
                 return (
-                    <InputGroup>
+                    <FormGroup>
                         已上传 {this.state.progress} %
-                    </InputGroup>)
+                    </FormGroup>)
             case 'ERROR':
-                return <InputGroup><Label>{this.state.errMsg}</Label></InputGroup>
+                return <FormGroup><Label>{this.state.errMsg}</Label></FormGroup>
         }
     }
 }

@@ -67,7 +67,7 @@ let clientConfigure = {
 			},
 			{
 				test: /\.css$/,
-				use: ["css-loader", "style-loader"]
+				use: ["style-loader", "css-loader"]
 			},
 	　　　　{
 	　　　　　　test: /\.(png|jpg)$/,
@@ -76,7 +76,7 @@ let clientConfigure = {
 			{
 				test: /\.txt$/i,
 				use: 'raw-loader',
-			},				
+			},		
 		]
 	},
 

@@ -3,7 +3,17 @@ import React from 'react';
 import Rows from '../Table/Rows';
 import Head from '../Table/Head';
 
+const cellStyle = {
+    padding: 0,
+    minWidth: '25px',
+    height: '25px',
+    whiteSpace: 'nowrap',
+    userSelect: 'none',
+}
+
 const tabRowStyle = {
+    height: '28px',
+    padding: '0',
     width: "100%",
     borderTop: '1px solid black',
     fontFamily: "'Optima'",
@@ -92,7 +102,7 @@ export default class Tabs extends React.Component {
             let controller;
             if(tabStyle === 'paginator'){
                 
-                controller = <td colSpan={head.lenDisplayed()+1}>
+                controller = <td style={cellStyle} colSpan={head.lenDisplayed()+1}>
                     <div style={tabCellStyle}>
                         <div style={tabElemStyle}  onClick={() => this.prevKey()}>前一{data.desc}</div>
                         <div style={tabElemStyle} >当前第{this.state.currKey}{data.desc}</div>
@@ -107,7 +117,7 @@ export default class Tabs extends React.Component {
                     return <div key={i} onClick={() => this.setCurrKey(e)}>{displayed}</div>
                 })
     
-                controller = <td style={{width: '100%'}} colSpan={head.lenDisplayed()+1}>
+                controller = <td style={{...cellStyle, width: '100%'}} colSpan={head.lenDisplayed()+1}>
                     <div style={tabCellStyle}>
                         <div style={tabElemStyle} onClick={() => this.prevKey()}>前一{data.desc}</div>
                         {keys}

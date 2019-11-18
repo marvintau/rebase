@@ -28,30 +28,33 @@
 
 import React from 'react';
 import styled from 'styled-components';
+import {Col, Badge, Button, Row} from 'reactstrap';
 
 import UploadManager from './UploadManager';
 import RestoreBackup from './RestoreBackup';
+
+const ItemButton = ({color, click, text, dataKey}) => {
+
+    let buttonStyle = {
+        margin: '5px',
+        width: '90%',
+        display: 'block',
+        TextAlign: 'left',
+    }
+    return <Row><Button outline={color!=='warning'} style={buttonStyle} color={color} onClick={click} data-key={dataKey}>{text}</Button></Row>
+}
+
+const SideBar = ({children}) => {
+    return <Col xs="2" style={{background: '#FAFAFA'}}>
+        <Row style={{height: '20px'}} />
+        {children}
+    </Col>
+}
 
 const Container = styled.div`
     width: 250px;
     background: #EEEEEE;
     padding: 8px;
-`
-
-const Title = styled.div`
-    font-weight: bold;
-    margin: 10px 0px;
-`
-
-const ManuItem = styled.button`
-    display:flex;
-    justify-content: space-between;
-    width: 100%;
-    border: 1px solid gray;
-    outline: none;
-    border-radius: 5px;
-    margin: 5px 0px;
-    padding: 5px;
 `
 
 const Note = styled.div`
@@ -79,6 +82,8 @@ export default class Navigation extends React.Component {
         let {sheetColl} = this.props,
             {socket} = sheetColl;
 
+        let id = localStorage.getItem('user_id');
+        console.log(id, 'before require list')
         socket.on('LIST', ({list}) => {
             let projList = list.map(e => ({projName: e}));
             console.log(projList);
@@ -87,7 +92,7 @@ export default class Navigation extends React.Component {
                 navPos: 'start'
             });
         })
-        .emit('REQUIRE_LIST', {});
+        .emit('REQUIRE_LIST', {id});
     }
 
     selectProject(index){
@@ -101,11 +106,15 @@ export default class Navigation extends React.Component {
 
     selectSheet = (e) => {
         
+        e.preventDefault();
+        e.stopPropagation();
+
         let {fetchTable} = this.props;
 
         let sheetName = e.target.dataset.key,
             {projName} = this.state.proj;
 
+        console.log(projName, sheetName, 'selectSheet');
         fetchTable({projName, sheetName});
     }
 
@@ -114,10 +123,17 @@ export default class Navigation extends React.Component {
     }
 
     goto = (navPos) => {
+        let id = localStorage.getItem('user_id')
         if(navPos === 'start'){
-            this.props.sheetColl.socket.emit('REQUIRE_LIST', {});
+            this.props.sheetColl.socket.emit('REQUIRE_LIST', {id});
         }
         this.setState({navPos})
+    }
+
+    logout = () => {
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('user_nickname');
+        location.reload(true);
     }
 
     render(){
@@ -125,52 +141,63 @@ export default class Navigation extends React.Component {
         let {sheetColl, address, clearCurrentProject} = this.props,
             {socket, sheets:sheetList} = sheetColl;
 
+        let nickname = localStorage.getItem('user_nickname');
+
         let {navPos} = this.state;
 
         if (navPos === 'start'){
-            return <Container>
-                <ManuItem onClick={() => this.goto('open')}>打开现有项目</ManuItem>
-                <ManuItem onClick={() => this.goto('create')}>创建新的项目</ManuItem>
-            </Container>
+            return <SideBar>
+                <Row><h4><Badge style={{margin: '0px 5px'}} color="secondary">{nickname}</Badge></h4></Row>
+                <ItemButton color="primary" click={() => this.goto('open')} text="打开现有项目" />
+                <ItemButton color="primary" click={() => this.goto('create')} text="创建新的项目" />
+                <ItemButton color="warning" click={() => this.logout()} text="登出" />
+            </SideBar>
         }
 
         if (navPos === 'open'){
             let {projList} = this.state;
 
             let projElems = projList.map((e, i) => {
-                return <ManuItem key={`project-${i}`} onClick={(e) => this.selectProject(i)}>
-                    {e.projName}
-                </ManuItem>
+                return <ItemButton 
+                    key={`project-${i}`}
+                    click={(e) => this.selectProject(i)}
+                    text={e.projName}
+                />
             })
     
-            projElems.push(<ManuItem key={'back'} onClick={() => this.goto('start')}>返回</ManuItem>)
+            projElems.push(<ItemButton
+                key={'back'}
+                color="warning"
+                click={() => this.goto('start')}
+                text="返回"
+            />)
 
-            return <Container>
+            return <SideBar>
                 {projElems}
-            </Container>
+            </SideBar>
         }
 
         if(navPos === 'create'){
-            return <Container>
+            return <SideBar>
                 <UploadManager key='create' socket={socket} address={address}/>
-                <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
-            </Container>
+                <ItemButton color="warning" click={() => this.goto('start')} text="返回" />
+            </SideBar>
         }
 
         if(navPos === 'upload'){
             let {projName} = this.state.proj;
-            return <Container>
+            return <SideBar>
                 <UploadManager key='upload' projName={projName} socket={socket} address={address}/>
-                <ManuItem onClick={() => this.goto('sheets')}>返回</ManuItem>
-            </Container>
+                <ItemButton color="warning" click={() => this.goto('sheets')} text="返回" />
+            </SideBar>
         }
 
         if(navPos === 'delete'){
             let {projName} = this.state.proj
-            return <Container>
+            return <SideBar>
                 <UploadManager projName={projName} toDelete={true} key='delete' socket={socket} address={address}/>
-                <ManuItem onClick={() => this.goto('start')}>返回</ManuItem>
-            </Container>
+                <ItemButton click={() => this.goto('start')} text="返回" />
+            </SideBar>
         }
 
         if (navPos === 'sheets'){
@@ -178,41 +205,35 @@ export default class Navigation extends React.Component {
             for (let sheetName in sheetList){
                 let {desc, location} = sheetList[sheetName];
                 if (location === 'local'){
-                    elemDisplay.push(<ManuItem key={sheetName} data-key={sheetName} onClick={this.selectSheet}>{desc}</ManuItem>)
+                    elemDisplay.push(<ItemButton
+                        key={sheetName}
+                        dataKey={sheetName}
+                        click={this.selectSheet}
+                        text={desc}
+                    />)
                 }
             }
 
-            return <Container>
-                <Title>{this.state.proj.projName}</Title>
+            return <SideBar>
+                <h3 style={{letterSpacing: '-1px'}}>{this.state.proj.projName}</h3>
                 {elemDisplay}
                 <Note>点击以下按钮来上传和追加新的数据。</Note>
-                <ManuItem onClick={(e) => {
-                    this.goto('upload');
-                }}>上传数据</ManuItem>
-                <Note>无论何时您上传了新的数据，都要回来点一下这里更新。需要注意的是，如果您在更新之前有存档，更新之后的存档都会被清零。所以对于一些配置性的数据表，请在更新之前导出备份。</Note>
-                <ManuItem onClick={(e) => {
-                    this.goto('restore');
-                }}>更新数据</ManuItem>
-                <ManuItem onClick={(e) => {
-                    this.goto('delete');
-                }}><span style={{color:'red', fontWeight: 'bold'}}>{'删除项目'}</span></ManuItem>
-                <ManuItem onClick={(e) => {
-                    clearCurrentProject();
-                    this.goto('start');
-                }}>返回</ManuItem>
-            </Container>
+                <ItemButton color="primary" click={(e) => {this.goto('upload');}} text="上传数据" />
+                <Note>只要上传了新的数据，都要回来点一下这里更新。需要注意的是，如果您在更新之前有存档，更新之后的存档都会被清零。所以对于一些配置性的数据表，请在更新之前导出备份。</Note>
+                <ItemButton color="primary" click={(e) => {this.goto('restore');}} text="更新数据" />
+                <ItemButton color="danger" click={(e) => {this.goto('delete');}} text="删除项目" />
+                <ItemButton color="warning" click={(e) => {clearCurrentProject();this.goto('start');}} text="返回" />
+            </SideBar>
         }
 
         if (navPos === 'restore'){
 
             let {projName, path} = this.state.proj;
             console.log(projName, path, 'restoring');
-            return <Container>
+            return <SideBar>
                 <RestoreBackup path={path} projName={projName} socket={socket} goto={this.goto} />
-                <ManuItem onClick={(e) => {
-                    this.goto('sheets');
-                }}>返回</ManuItem>
-            </Container>
+                <ItemButton color="warning" click={(e) => {this.goto('sheets');}} text="返回" />
+            </SideBar>
         }
 
     }
