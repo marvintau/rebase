@@ -17,14 +17,17 @@ export default class LoginPage extends React.Component {
             this.props.history.push(from);
         })
         .on('LOG_NOT_FOUND', () => {
-            this.setState({error:'没登进去，密码错了？', loading: false})
+            this.setState({error:'没登进去，您检查下密码？', loading: false})
         })
         .on('REG_DONE', () => {
             const { from } = this.props.location.state || { from: { pathname: "/" } };
             this.props.history.push(from);
         })
         .on('REG_DUP_NAME', () => {
-            this.setState({error:'重名了，换个名字吧', loading: false})
+            this.setState({error:'重名了，换个名字注册吧。', loading: false})
+        })
+        .on('connect_error', (err) => {
+            this.setState({error:'矮油，连不到服务器了。您先检查下网络是否正常？如果一直都连不上就召唤程序员。', loading: false})
         });
 
         this.state = {
