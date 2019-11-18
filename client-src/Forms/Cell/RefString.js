@@ -75,48 +75,51 @@ export default class RefString extends React.Component{
 
         if(isRowEditing){
             let text = <ReactTextareaAutocomplete
-            key={'text'}
-            style={{width: '80%', height: '80%', border:'1px solid black', borderRadius:'5px', outline:'none', resize: 'none', padding: '10px', fontSize: '110%', fontFamily: 'TheSansMono Office', marginBottom:'5px'}}
-            dropdownStyle={{width: '80%', height: '300px', overflowY: 'scroll', border: '1px solid black', borderRadius: '5px', backgroundColor: 'white',  zIndex: 99999}}
-            containerStyle={{width: '100%', height: '100px', zIndex:99999}}
-            loadingComponent={() => <span>Loading</span>}
-            trigger={{
-                ':' : {
-                    dataProvider: token => {
-                        return ['借方', '贷方', '借方-贷方', '贷方-借方']
+                key={'text'}
+                style={{width: '80%', height: '80%', border:'1px solid black', borderRadius:'5px', outline:'none', resize: 'none', padding: '10px', fontSize: '110%', fontFamily: 'TheSansMono Office', marginBottom:'5px'}}
+                dropdownStyle={{width: '80%', height: '300px', overflowY: 'scroll', border: '1px solid black', borderRadius: '5px', backgroundColor: 'white',  zIndex: 99999}}
+                containerStyle={{width: '100%', height: '100px', zIndex:99999}}
+                loadingComponent={() => <span>Loading</span>}
+                trigger={{
+                    ':' : {
+                        dataProvider: token => {
+                            return ['借方', '贷方', '借方-贷方', '贷方-借方', '期初+借方-贷方', '期初+贷方-借方']
+                        },
+                        component: Item,
+                        output: (item, trigger) => `:${item}`
                     },
-                    component: Item,
-                    output: (item, trigger) => `:${item}`
-                },
-                '/' : {
-                    dataProvider: token => {
+                    '/' : {
+                        dataProvider: token => {
 
-                        // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
-                        let path = data.string.replace(/\s/g, '').split('/').slice(1);
+                            // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
+                            let path = data.string.replace(/\s/g, '').split('/').slice(1);
 
-                        return getSuggestion(token, path, paths);
+                            return getSuggestion(token, path, paths);
+                        },
+                        component: Item,
+                        output: (item, trigger) => `/${item}`
                     },
-                    component: Item,
-                    output: (item, trigger) => `/${item}`
-                },
-                '&' : {
-                    dataProvider: token => {
+                    '&' : {
+                        dataProvider: token => {
 
-                        // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
-                        let path = data.string.replace(/\s/g, '').split('/').slice(1,-1);
+                            // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
+                            let path = data.string.replace(/\s/g, '').split('/').slice(1,-1);
 
-                        return getSuggestion(token, path, paths);
+                            return getSuggestion(token, path, paths);
+                        },
+                        component: Item,
+                        output: (item, trigger) => `&${item}`
                     },
-                    component: Item,
-                    output: (item, trigger) => `&${item}`
-                },
 
-            }}
-            ref={(rta) => { this.rta = rta; } }
-            onInput={e => {
-                data.string = e.target.value;
-            }}
-          />
+                }}
+                ref={(rta) => { this.rta = rta; } }
+                onInput={e => {
+                    data.string = e.target.value;
+                }}
+                onChange={e => {
+                    data.string = e.target.value;
+                }}
+            />
             res.push(text);
         }
 

@@ -36,7 +36,7 @@ export default class EditControl extends React.Component{
         
         if (isRowEditing){
             return <div style={controlStyle}>
-                <Icon key={'save'} isHovered={isHovered} src={SaveRecordIcon} onClick={toggleEdit}/>
+                <img style={{...iconStyle, opacity: '1'}} key={'save'} src={SaveRecordIcon} onClick={toggleEdit}/>
             </div>
         }
 
