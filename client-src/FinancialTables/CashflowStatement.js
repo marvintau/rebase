@@ -1,17 +1,5 @@
 import {Cols, Body, List, Head, Sheet, Table} from 'persisted';
 
-
-let balanceHead = new Head({
-    ccode: 'String',
-    ccode_name: 'String',
-    iyear: 'String',
-    iperiod: 'String',
-    mb: 'Number',
-    md: 'Number',
-    mc: 'Number',
-    me: 'Number',
-})
-
 let head = new Head({
     item:     'String',
     value:    'Number', 
@@ -46,6 +34,20 @@ function outer(listOfLists){
     }
 
     return res;
+}
+
+const calcVal = (expr, rec) => {
+    const wrap = (key) => `e.rec(${key})`;
+
+    const dict = {
+        '期初' : 'mb',
+        '期末' : 'me',
+        '借方' : 'md',
+        '贷方' : 'mc'
+    }
+
+    let expression = expr.replace(/([^+-]+)/g, "(rec.get(dict['$&']))");
+    return eval(expression)
 }
 
 function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
@@ -117,74 +119,32 @@ function importProc({CashflowWorksheet, BALANCE, CategoricalAccruals}){
         return rec;
     })
 
-    console.log(balanceLastPeriod);
-
     let refs = {};
     worksheetContent.backTraverse((rec) => {
         
-        let {item, value} = rec.cols;
-        value = value.valueOf().replace(/\s+/, '');
+        let {item, value} = rec.cols,
+            {refName, expr, refBody} = value.toAST();
 
-        if(value.match(/(\/[^\/]+)+:/) !== null){
-            let [refPath, refVal] = value.split(':'),
-                pathSegs = refPath.split('/').slice(1).map(e => e.split('&'));
-            refVal = refVal.trim();
+        if(expr === undefined){
 
-            let pathSegsOutered = outer(pathSegs);
-            let destRecs = new Body(0);
-
-            for (let path of pathSegsOutered){
-                
-                destRecs.push({
-                    path: path.join('/')+":"+refVal,
-                    balance: balanceLastPeriod.findBy('ccode_name', path),
-                })
+            let res = value.evaluate(balanceLastPeriod, refs);
+            console.log(res,' evaluated')
+            if(item === '-'){
+                res.value = - res.value;
             }
 
-            let res;
-            if (destRecs.some(e => e.balance === undefined)){
-                res = {error: '未能取数'}
-            } else {
-                switch(refVal){
-                    case '借方' : res = destRecs.map(e => e.balance.get('md')); break;
-                    case '贷方' : res = destRecs.map(e => e.balance.get('mc')); break;
-                    case '贷方-借方' : res = destRecs.map(e => e.balance.get('mc') - e.balance.get('md')); break;
-                    case '借方-贷方' : res = destRecs.map(e => e.balance.get('md') - e.balance.get('mc')); break;
-                    case '期初' : res = destRecs.map(e => e.balance.get('mb')); break;
-                    case '期末' : res = destRecs.map(e => e.balance.get('me')); break;
-                }
+            return new Cols({item: `${item} ${value}`, value: res.value}, {head, attr: { note: res.note}})
 
-                if (res === undefined){
-                    console.log(value, refVal);
-                }
-
-                res = res.reduce((acc, e) => acc+e, 0);
-
-                if (item.valueOf() == '-'){
-                    res = -res;
-                }
-            }
-
-            return new Cols({item: `${item} ${value}`, value: res}, {head})
-
-        } else if (!Number.isNaN(parseFloat(value))){
+        } else if (!Number.isNaN(parseFloat(expr))){
 
             return new Cols({item, value: parseFloat(value)}, {head})
 
         } else {
 
-            // 这里情况就复杂了，是一个表达式。需要具体分析。
-
-            let [ref, refExpr] = value.split('@');
-            if (refExpr === undefined){
-                refExpr = ref;
-                ref = undefined;
-            } 
-
             // 我们现对表达式求值，如果存在ref就将值赋给ref
             
             let evaled, attr={};
-            switch(refExpr){
+            switch(expr){
                 case 'SUMSUB': 
                     evaled = rec.subs.map(e => e.get('value'))
                         .filter(e => !Number.isNaN(e) && (e.error === undefined));

@@ -4,7 +4,7 @@ const nodeExternals = require('webpack-node-externals');
 const path = require('path');
 const fs = require('fs');
 
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 let serverConfigure = {
 	resolve: {
@@ -78,6 +78,15 @@ let clientConfigure = {
 				use: 'raw-loader',
 			},		
 		]
+	},
+
+	plugins: [
+		new BundleAnalyzerPlugin()
+	],
+
+	externals: {
+		react: 'React',
+		'react-dom': 'ReactDOM',
 	},
 
 	mode: 'development',

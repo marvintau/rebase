@@ -1,7 +1,7 @@
 import React from 'react';
 import io from 'socket.io-client';
 
-import Formwell from './Forms/Formwell';
+import Formwell from './Forms';
 import Navigation from './Navigation';
 
 import getFinancialTables from './FinancialTables';

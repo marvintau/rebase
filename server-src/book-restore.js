@@ -27,6 +27,9 @@ function parseRemap(type, book, year){
         if (newRec.iyear === undefined){
             newRec.iyear = year;
         }
+        if (newRec.iperiod === undefined){
+            newRec.iperiod = 0;
+        }
 
         parsed[p] = newRec;
     }

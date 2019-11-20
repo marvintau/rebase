@@ -37,11 +37,23 @@ export default class Tabs extends React.Component {
     constructor(props){
         super(props);
 
-        let currKey = props.data.keys ? props.data.keys()[0] : undefined;
+        let {table} = props,
+            currKey = table.data.keys ? table.data.keys()[0] : undefined;
 
         this.state = {
-            data: this.props.data,
+            data: table.data,
             currKey
+        }
+    }
+
+    evaluate = () => {
+        let {table} = this.props;
+        if(table.constructor.name === 'WorkTable'){
+            console.log('evaluated, ateleast')
+            
+            this.setState({
+                data: table.evaluate()
+            })
         }
     }
 
@@ -75,7 +87,8 @@ export default class Tabs extends React.Component {
 
     render(){
 
-        let {head, attr} = this.props,
+        let {table} = this.props,
+            {head, attr} = table,
             {editable, expandable, autoExpanded} = attr,
             {data} = this.state;
 
@@ -91,6 +104,7 @@ export default class Tabs extends React.Component {
                     editable={editable}
                     expandable={expandable}
                     autoExpanded={autoExpanded}
+                    evaluate={this.evaluate}
                 />
             ]
         } else if(data.constructor.name === 'Tabs') {

@@ -21,14 +21,13 @@ const iconStyle = {
 export default class EditControl extends React.Component{
 
     remove = () => {
-        console.log('remove')
-        let {update, rowIndex} = this.props;
-        update('list', 'remove', [rowIndex]);
+        let {updateRows, rowIndex} = this.props;
+        updateRows('remove', [rowIndex]);
     }
 
     insert = () => {
-        let {rowIndex, update} = this.props;
-        update('list', 'insert', [rowIndex]);
+        let {updateRows, rowIndex} = this.props;
+        updateRows('insert', [rowIndex]);
     }
 
     render(){

@@ -68,6 +68,8 @@ export default class Rows extends React.PureComponent {
     
     updateRows = (operation, args) => {
         
+        let {evaluate} = this.props;
+
         if (operation === 'insert') {
             args.push(this.props.head.createCols());
             console.log(args, 'insert argument')
@@ -75,6 +77,7 @@ export default class Rows extends React.PureComponent {
 
         let data = this.state.data[operation](...args);
 
+        evaluate();
         this.setState({data, fromInside: true})
     }
 
@@ -134,12 +137,13 @@ export default class Rows extends React.PureComponent {
     }
 
     render(){
-        let {head, autoExpanded, editable, expandable} = this.props;
+        let {head, autoExpanded, editable, expandable, evaluate} = this.props;
         let {data, page, expandedRowIndex, filters} = this.state;
 
         let rowProps = {
             head,
             editable,
+            evaluate,
             expandable,
             autoExpanded,
             expandedRowIndex,
@@ -149,14 +153,18 @@ export default class Rows extends React.PureComponent {
 
         if (expandedRowIndex === -1 || autoExpanded){
 
-            let orderRow = <OrderRow
-                key="order"
-                head={head}
-                orderFunc={this.orderRows}
-                filters={filters}
-                addFilter={this.addFilter}
-                removeFilter={this.removeFilter}
-            />
+            let orderRow;
+            // If there no sortable column, not show this row.
+            if(Object.values(head).some(e => e.isSortable)){
+                orderRow = <OrderRow
+                    key="order"
+                    head={head}
+                    orderFunc={this.orderRows}
+                    filters={filters}
+                    addFilter={this.addFilter}
+                    removeFilter={this.removeFilter}
+                />
+            }
 
             let shownData;
             let paginator;
@@ -178,7 +186,6 @@ export default class Rows extends React.PureComponent {
                     turnPrev={() => this.turnPage(-1)}
                     turnNext={() => this.turnPage(1)}
                 />
-
             }
 
             let recordRows = shownData.map((entry, index) => {

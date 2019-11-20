@@ -2,7 +2,7 @@ import React from 'react';
 
 import Cell from '../../Cell';
 import Rows from '../Rows';
-import Formwell from '../../Formwell';
+import Formwell from '../../index';
 
 
 function Indicator(props){
@@ -51,16 +51,6 @@ export default class Row extends React.Component {
         return state;
     }
 
-    updateRow = (type, method, args) => {
-
-        if (type === 'list') {
-            console.log(type, method, args, 'updateRow');
-            this.props.updateRows(method, args);
-        } else if (type === 'self'){
-            this.state.data[method](...args);
-        }
-    }
-
     toggleExpand = () => {
 
         let {expandable} = this.props,
@@ -77,6 +67,10 @@ export default class Row extends React.Component {
 
     toggleEdit = () => {
         console.log('togglededit')
+        let {evaluate} = this.props;
+        if(this.state.isRowEditing){
+            evaluate();
+        }
         this.setState({
             isRowEditing: !this.state.isRowEditing,
             fromInside: true
@@ -102,9 +96,9 @@ export default class Row extends React.Component {
          * 1. 首先显示必要的columns，包括显示是否存在子层数据的indicator，以及按规则
          *    呈现每一列（每一个单元格）的数据。
          */
-        let {head, rowIndex} = this.props;
+        let {head, rowIndex, updateRows, evaluate} = this.props;
         let {data, isHovered, isRowEditing} = this.state;
-        let sharedCellProps = {rowIndex, isHovered, isRowEditing, update: this.updateRow}
+        let sharedCellProps = {rowIndex, isHovered, isRowEditing, updateRows}
 
         let cols = [<Indicator key={'indi'} data={data}/>];
 
@@ -113,7 +107,6 @@ export default class Row extends React.Component {
             let {hidden} = head[colKey];
 
             let cellProps = { colKey, data: data.get(colKey), ...sharedCellProps, ...head[colKey]}
-
             // 如果单元格是title（Cols的attr中包含title属性，且其值为colKey），那么
             // cols将只包含一个cell，同时占满整个表格行。注意这是一个Cols-wise的属性，
             // 而且它将忽略下面的hidden判断。也就是说你可以将一个可能会包含title的列
@@ -168,6 +161,7 @@ export default class Row extends React.Component {
                     editable={editable}
                     expandable={expandable}
                     autoExpanded={autoExpanded}
+                    evaluate={evaluate}
                 />
             
             } else if (subsType === 'Table'){

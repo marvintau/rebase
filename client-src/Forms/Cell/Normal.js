@@ -58,71 +58,33 @@ export default class Normal extends React.Component{
         return state;
     }
 
-    updateColumn = (e) => {
-        let {colKey, update} = this.props;
-        update('self', 'set', [colKey, e.target.value])
-    }
-
     render(){
-        let {isRowEditing, isTitle} = this.props,
+        let {isTitle} = this.props,
             {data} = this.state;
     
         let type = data !== undefined ? data.constructor : String;
 
-        if (isRowEditing) {
-            let value;
-            switch(type.name){
-                case 'Number':
-                    let parsedNumber = parseFloat(data);
-                        value = parsedNumber.toFixed(2);
-                    break;
-                case 'String':
-                    console.log(value);
-                    value = data;
-                    value = value == "undefined" ? "" : value;
-                    break;
-                default:
-                    value = data;
-            }
+        switch(type.name){
 
-            return [
-                <Edit key={'edit'} defaultValue={value} onChange={this.updateColumn}/>,
-            ]
-        } else {
+            case 'Number':
 
-            if (data && data.error){
-                return <Error>{data.error}</Error>
-            }
-            if(data && (data.valid !== undefined)){
-                console.log(data.valid, 'normal valid');
-                return <Digits style={{fontWeight: 'bold', color: data.valid ? 'green' : 'red'}}>{data.valid ? '妥了' : '不妥'}</Digits>;
-            }
-            switch(type.name){
+                let parsedNumber = parseFloat(data),
+                    value = parsedNumber.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
 
-                case 'Number':
+                return <Digits>{value}</Digits>;
 
-                    let parsedNumber = parseFloat(data),
-                        value = parsedNumber.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})
-    
-                    return <Digits>{value}</Digits>;
+            case 'String':
+                
+                data = data == "undefined" ? "无" : data;
 
-                case 'String':
-                    
-                    data = data == "undefined" ? "无" : data;
-
-                    if (data.startsWith('#') && !data.startsWith('###')){
-                        isTitle = true;
-                    }
-                    data = data.replace(/#*/, '');
-
-                default:
-                    if (data === undefined){
-                        data = '';
-                    }
-                    
-                    return <String isTitle={isTitle}>{data}</String>;
-            }
+            default:
+                if (data === undefined){
+                    data = '';
+                }
+                
+                return <String isTitle={isTitle}>{data}</String>;
         }
+
 
     }
 }

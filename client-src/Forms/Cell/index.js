@@ -16,14 +16,14 @@ export default function Cell(props){
     if (isControlCell){
 
         let {EditControl} = CellComponent,
-            {isRowEditing, isHovered, rowIndex, update, toggleEdit} = props;
+            {isRowEditing, isHovered, rowIndex, updateRows, toggleEdit} = props;
 
         return <td style={{...cellStyle, width:'75px'}}>
             <EditControl
                 isHovered={isHovered}
                 isRowEditing={isRowEditing}
                 rowIndex={rowIndex}
-                update={update}
+                updateRows={updateRows}
                 toggleEdit={toggleEdit}
             />
         </td>

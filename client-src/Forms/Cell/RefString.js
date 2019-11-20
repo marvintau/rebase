@@ -1,128 +1,158 @@
 import React from 'react';
 import styled from 'styled-components';
-import ReactTextareaAutocomplete from "@webscopeio/react-textarea-autocomplete";
+
+import Autosuggest from 'react-autosuggest';
 
 const Display = styled.div`
+    display: flex;
+    justify-content: space-between;
     line-height: 25px;
     overflow: hidden;
-    font-family: 'TheSansMono Office', 'Consolas', 'Pingfang SC', 'Microsoft Yahei', monospace;
-    ${({isTitle}) => isTitle ? 'font-size: 100%; font-weight: 700;' : 'font-weight: 300;'}
+    font-weight: 400;
 `
 
-const Wrapper = styled.div`
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-`
+const toCurrency = (number) => {
+    return number.toLocaleString({
+        style:'currency',
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+    })
+}
 
-const Item = ({ entity: name }) => <div style={{margin: '5px'}}>{name}</div>;
-
-function getSuggestion(token, path, paths){
-    let options = paths, found;
-    for (let elem of path){
-        found = paths.find(e => e.get('ccode_name') == elem);
-        if(found === undefined){
-            break;
-        } else {
-            options = found.subs;
-        }
+const titleStyle = (level=1) => {
+    return {
+        fontSize: `${100+(3 - level)*10}%`,
+        fontWeight: 'bold'
     }
-    options = options.map(e => e.get('ccode_name'));
-    
-    let filtered = options.filter(e => [...token].some(t=>e.includes(t)));
+}
 
-    if (filtered.length > 0){
-        options = filtered;
-    }
+const dataStyle = (type='NORMAL') => {
+    let color = {
+        'WARN'   : '#ffc017',
+        'ERROR'  : '#dc3545',
+        'NORMAL' : '#f8f9fa'
+    }[type];
 
-    return options;
-
+    return {
+        fontSize: '110%',
+        borderRadius: '5px',
+        textAlign: 'right',
+        minWidth: '50px' ,
+        padding: '0 5px',
+        fontWeight: 'bold',
+        fontFamily: 'Arial Narrow',
+        background: color,
+    };
 }
 
 export default class RefString extends React.Component{
 
+    constructor(props){
+        super(props);
+
+        this.state = {
+            string : props.data.string,
+            suggestions: []
+        }
+    }
+
+    getSuggestions = (value) => {
+
+        let {paths} = this.props;
+
+        if(value.match(/\/(.*)$/)){
+            let path = value.split('/').slice(1),
+                {list} = paths.findBy('ccode_name', path);
+
+            let candidates = list.map(({cols:{ccode_name}}) => ccode_name.valueOf()),
+                accurated = path.length === 0 ? [] : path[path.length - 1].split('').map(char => candidates.filter(e => e.includes(char))).flat();
+            
+            return accurated.length === 0 ? candidates : accurated;
+
+        } else if (value.endsWith(':')){
+            return [
+                '借方', '贷方', '借方-贷方', '贷方-借方', '期初', '期末', '期初+借方-贷方', '期初+贷方-借方'
+            ]
+        } else {
+            return []
+        }
+    }
+
+    renderSuggestion = (sugg) => <div>{sugg.toString()}</div>
+
+    getSuggestionValue = (sugg) => sugg;
+
+    onChange = (e, {newValue}) => {
+        if(e.type == 'keydown'){
+            // preventing the options replaces all text during selecting
+            // with up/down key;
+            return;
+        }
+        this.props.data.string = newValue;
+        this.setState({
+            string: newValue
+        })
+    }
+
+    onSuggestionsFetchRequested = ({ value }) => {
+        this.setState({
+            suggestions: this.getSuggestions(value)
+        });
+    };
+    
+      // Autosuggest will call this function every time you need to clear suggestions.
+    onSuggestionsClearRequested = () => {
+        this.setState({
+            suggestions: []
+        });
+    };
+
+    onSuggestionSelected = (e, {suggestionValue}) => {
+        
+        this.props.data.string += suggestionValue;
+
+        let {string} = this.state;
+
+        this.setState({
+            string: string + suggestionValue
+        });
+    }
     render() {
     
-        let {paths, data, isRowEditing} = this.props;
-
-        const display = (data) => {
-
-            let ast = data.display();
+        let {data, isRowEditing} = this.props;
+        let {string, suggestions} = this.state;
     
-            let refName = <b>{ast.refName}{ast.refName ? '@' : ''}</b>;
-    
-            let refBody;
-            if('func' in ast.refBody){
-                refBody = <b style={{color: 'red'}}>{ast.refBody.func}</b>
-            } else if ('path' in ast.refBody){
-                let path;
-                if(ast.refBody.path){
-                    path = ast.refBody.path.map((e,i) => {
-                        let jux = e.map((el, j) => <span key={j}>{j == 0 ? '' : '&'}<b style={{color: 'blue'}}>{el}</b></span>);
-                        return <span key={i}>/{jux}</span>
-                    })
-                }
-                
-                let valExpr = <span key={'expr'}><b>{ast.refBody.valExpr}</b></span>;
-    
-                refBody = [path, path ? ':' : '', valExpr].flat();
-            }
-    
-            return <Display key={'disp'}>{refName}{refBody}</Display>
-        }
-    
-        let res = [display(this.props.data)];
+        let res;
+        if(!isRowEditing){
 
-        if(isRowEditing){
-            let text = <ReactTextareaAutocomplete
-                key={'text'}
-                style={{width: '80%', height: '80%', border:'1px solid black', borderRadius:'5px', outline:'none', resize: 'none', padding: '10px', fontSize: '110%', fontFamily: 'TheSansMono Office', marginBottom:'5px'}}
-                dropdownStyle={{width: '80%', height: '300px', overflowY: 'scroll', border: '1px solid black', borderRadius: '5px', backgroundColor: 'white',  zIndex: 99999}}
-                containerStyle={{width: '100%', height: '100px', zIndex:99999}}
-                loadingComponent={() => <span>Loading</span>}
-                trigger={{
-                    ':' : {
-                        dataProvider: token => {
-                            return ['借方', '贷方', '借方-贷方', '贷方-借方', '期初+借方-贷方', '期初+贷方-借方']
-                        },
-                        component: Item,
-                        output: (item, trigger) => `:${item}`
-                    },
-                    '/' : {
-                        dataProvider: token => {
+            console.log(data.type);
 
-                            // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
-                            let path = data.string.replace(/\s/g, '').split('/').slice(1);
+            let title = data.desc
+                    ? <div style={titleStyle(data.desc.match(/#/g).length)}>{data.desc.replace(/#/g, '')}</div>
+                    : <div>{data.string}</div>
 
-                            return getSuggestion(token, path, paths);
-                        },
-                        component: Item,
-                        output: (item, trigger) => `/${item}`
-                    },
-                    '&' : {
-                        dataProvider: token => {
+            res = <Display key={'disp'}>
+                {title}
+                <div style={dataStyle(data.type)}>{!isNaN(data.value) ? toCurrency(data.value): data.value}</div>
+            </Display>
 
-                            // 这里我们提供路径搜索的方法较为复杂，不是很直观。解释如下：
-                            let path = data.string.replace(/\s/g, '').split('/').slice(1,-1);
+        } else {
 
-                            return getSuggestion(token, path, paths);
-                        },
-                        component: Item,
-                        output: (item, trigger) => `&${item}`
-                    },
-
+            res = <Autosuggest
+                suggestions={suggestions}
+                onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
+                onSuggestionsClearRequested={this.onSuggestionsClearRequested}
+                onSuggestionSelected={this.onSuggestionSelected}
+                getSuggestionValue={this.getSuggestionValue}
+                renderSuggestion={this.renderSuggestion}
+                inputProps={{
+                    placeholder: '请按引用字串的约定进行修改',
+                    onChange: this.onChange,
+                    value: string
                 }}
-                ref={(rta) => { this.rta = rta; } }
-                onInput={e => {
-                    data.string = e.target.value;
-                }}
-                onChange={e => {
-                    data.string = e.target.value;
-                }}
-            />
-            res.push(text);
+              />;
         }
 
-        return <Wrapper>{res}</Wrapper>;
+        return res;
     }
 }
