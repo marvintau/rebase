@@ -196,9 +196,10 @@ tableServer.on('connection', function (socket) {
                 break;
         }
 
+        console.log(BACKUP_PATH, id, projName, fileName);
         let fileName = getRestoredFileName(projName, `saved${sheetName}`, type),
             filePath = path.resolve(BACKUP_PATH, id, projName, fileName);
-        
+
         fs.writeFile(filePath, dataBuffer);
     })
 

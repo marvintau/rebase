@@ -27,7 +27,6 @@
  */
 
 import React from 'react';
-import styled from 'styled-components';
 import {Col, Badge, Button, Row} from 'reactstrap';
 
 import UploadManager from './UploadManager';
@@ -51,17 +50,12 @@ const SideBar = ({children}) => {
     </Col>
 }
 
-const Container = styled.div`
-    width: 250px;
-    background: #EEEEEE;
-    padding: 8px;
-`
 
-const Note = styled.div`
-    margin: 10px 10px;
-    letter-spacing: -0.8px;
-    font-size: 90%;
-`
+const noteStyle = {
+    margin: '10px 10px',
+    letterSpacing: '-0.8px',
+    fontSize: '90%',
+}
 
 export default class Navigation extends React.Component {
 
@@ -217,9 +211,9 @@ export default class Navigation extends React.Component {
             return <SideBar>
                 <h3 style={{letterSpacing: '-1px'}}>{this.state.proj.projName}</h3>
                 {elemDisplay}
-                <Note>点击以下按钮来上传和追加新的数据。</Note>
+                <div style={noteStyle}>点击以下按钮来上传和追加新的数据。</div>
                 <ItemButton color="primary" click={(e) => {this.goto('upload');}} text="上传数据" />
-                <Note>只要上传了新的数据，都要回来点一下这里更新。需要注意的是，如果您在更新之前有存档，更新之后的存档都会被清零。所以对于一些配置性的数据表，请在更新之前导出备份。</Note>
+                <div style={noteStyle}>只要上传了新的数据，都要回来点一下这里更新。需要注意的是，如果您在更新之前有存档，更新之后的存档都会被清零。所以对于一些配置性的数据表，请在更新之前导出备份。</div>
                 <ItemButton color="primary" click={(e) => {this.goto('restore');}} text="更新数据" />
                 <ItemButton color="danger" click={(e) => {this.goto('delete');}} text="删除项目" />
                 <ItemButton color="warning" click={(e) => {clearCurrentProject();this.goto('start');}} text="返回" />

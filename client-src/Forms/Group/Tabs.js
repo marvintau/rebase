@@ -3,6 +3,8 @@ import React from 'react';
 import Rows from '../Table/Rows';
 import Head from '../Table/Head';
 
+import {Table} from 'persisted';
+
 const cellStyle = {
     padding: 0,
     minWidth: '25px',
@@ -65,7 +67,8 @@ export default class Tabs extends React.Component {
     }
 
     prevKey = () => {
-        let keys = this.props.data.keys(),
+        let {table} = this.props,
+            keys = table.data.keys(),
             {currKey} = this.state,
             currKeyIndex = keys.indexOf(currKey),
             prevKey = keys[currKeyIndex === 0 ? 0 : currKeyIndex - 1];
@@ -76,7 +79,8 @@ export default class Tabs extends React.Component {
     }
 
     nextKey = () => {
-        let keys = this.props.data.keys(),
+        let {table} = this.props,
+            keys = table.data.keys(),
             {currKey} = this.state,
             currKeyIndex = keys.indexOf(currKey),
             nextKey = keys[currKeyIndex === keys.length - 1 ? keys.length - 1 : currKeyIndex + 1];
@@ -107,7 +111,7 @@ export default class Tabs extends React.Component {
                     evaluate={this.evaluate}
                 />
             ]
-        } else if(data.constructor.name === 'Tabs') {
+        } else if( data.constructor.name === 'Tabs') {
 
             // 如果列表左侧有工具按钮，那么tab的宽度也需要对应增加1
             
@@ -160,9 +164,7 @@ export default class Tabs extends React.Component {
                 ]
             } else if (content.constructor.name === 'Tabs'){
                 subLevel = <Tabs key={`group-${this.state.currKey}-${content.desc}`}
-                    head={head}
-                    data={content}
-                    attr={attr}
+                    table= {new Table(head, content, attr)}
                 />
             }
     

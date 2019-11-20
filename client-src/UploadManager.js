@@ -1,43 +1,9 @@
 import React from 'react';
-import styled from 'styled-components';
 import io from 'socket.io-client';
 
 import {Label, Button, FormGroup, FormText, Form, Input} from 'reactstrap';
 
 
-const FileInput = styled.input`
-    width: 100%;
-    height: 2.5rem;
-    margin-bottom: 5px;
-    border: 1px solid #ced4da;
-    border-radius: .25rem;
-    background: #fff;
-
-    ::-webkit-file-upload-button {
-        visibility: hidden;
-    }
-    ::before {
-        content: '选择文件';
-        display: inline-block;
-        background: linear-gradient(top, #f9f9f9, #e3e3e3);
-        border: 1px solid #999;
-        border-radius: 3px;
-        padding: 5px 8px;
-        margin: 3px;
-        outline: none;
-        white-space: nowrap;
-        -webkit-user-select: none;
-        cursor: pointer;
-        text-shadow: 1px 1px #fff;
-        font-weight: 700;
-        font-size: 10pt;
-    }
-    :hover::before {
-        border-color: black;
-    }
-    :active::before {
-        background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
-    }`
 
 const BLOCK_SIZE = 524288;
 
@@ -231,7 +197,7 @@ export default class UploadBackup extends React.Component{
                     <FormGroup>
                         {uploadState === 'DONE' ? <Label>上传完毕，请返回至上一级，从列表中打开进行相应操作, 或者继续</Label> : []}
                         <Label>上传文件</Label>
-                        <FileInput type="file" id="choose-backup-file" ref={this.fileRef} onChange={this.updateFile} />
+                        <input className='file-input' type="file" id="choose-backup-file" ref={this.fileRef} onChange={this.updateFile} />
                         <Button color="info" onClick={this.guessFields}>猜名字</Button>
                     </FormGroup>
                     <FormGroup>

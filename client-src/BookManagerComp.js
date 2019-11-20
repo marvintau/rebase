@@ -84,6 +84,7 @@ export default class BookManagerComp extends React.Component{
         let sheet = this.sheetColl.get(currSheet);
 
         this.socket.emit('SAVE', {
+            id: localStorage.getItem('user_id'),
             projName: currProjectName,
             sheetName: currSheet,
             type: sheet.type,

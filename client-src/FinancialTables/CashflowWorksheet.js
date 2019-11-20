@@ -72,7 +72,7 @@ function importProc({CASHFLOW_WORKSHEET, BALANCE, CategoricalAccruals, savedCash
         cates = categoryHead.createBody(BALANCE.data).uniq('ccode').cascade('ccode');
     // annual data of accrual & balance.
     let balanceOfYear = balanceData.grip('iyear', {});
-    balanceOfYear = getYear(balanceOfYear, year).grip('iperiod', {});
+        balanceOfYear = getYear(balanceOfYear, year).grip('iperiod', {});
 
     let accrualOfYear = CategoricalAccruals.tables.data.get(year),
         accrualHead = CategoricalAccruals.tables.head;
@@ -155,8 +155,8 @@ function exportProc(tables){
 
     let savedDate = dateSec.data[0].cols,
         savedContent = contentSec.data.flatten().map(e => {
-            let {item, value} = e.cols;
-            return {item, value:value.string}
+            let {desc: item, string: value} = e.cols.value;
+            return {item, value}
         });
 
     return {
@@ -168,14 +168,14 @@ function exportProc(tables){
 export default function(){ 
     return new Sheet({
         referred: {
-            CASHFLOW_WORKSHEET: {desc: '现金流表底稿', location: 'remote'},
+            CASHFLOW_WORKSHEET: {desc: '现金流量表底稿', location: 'remote'},
             BALANCE: {desc: '科目余额', location: 'remote'},
             CategoricalAccruals: {desc: '科目发生额', location: 'local'},
             savedCashflowWorksheet: {desc: '已保存的现金流底稿模版', location:'remote', type:'CONF'}
         },
         importProc,
         exportProc,
-        desc: '现金流量表底稿',
+        desc: '现金流量表',
         type: 'CONF',
         isSavable: true,
         isExportable: true

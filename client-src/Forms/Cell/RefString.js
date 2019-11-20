@@ -1,15 +1,14 @@
 import React from 'react';
-import styled from 'styled-components';
 
 import Autosuggest from 'react-autosuggest';
 
-const Display = styled.div`
-    display: flex;
-    justify-content: space-between;
-    line-height: 25px;
-    overflow: hidden;
-    font-weight: 400;
-`
+const displayStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    lineHeight: '25px',
+    overflow: 'hidden',
+    fontWeight: '400',
+}
 
 const toCurrency = (number) => {
     return number.toLocaleString({
@@ -125,16 +124,14 @@ export default class RefString extends React.Component{
         let res;
         if(!isRowEditing){
 
-            console.log(data.type);
-
             let title = data.desc
                     ? <div style={titleStyle(data.desc.match(/#/g).length)}>{data.desc.replace(/#/g, '')}</div>
                     : <div>{data.string}</div>
 
-            res = <Display key={'disp'}>
+            res = <div style={displayStyle} key={'disp'}>
                 {title}
                 <div style={dataStyle(data.type)}>{!isNaN(data.value) ? toCurrency(data.value): data.value}</div>
-            </Display>
+            </div>
 
         } else {
 

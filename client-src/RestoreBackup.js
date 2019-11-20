@@ -1,29 +1,18 @@
 import React from 'react';
-import styled from 'styled-components';
+import {Button} from 'reactstrap';
 
-const InputGroup = styled.div`
-    list-style:none;
-    border: 0.5px solid black;
-    border-radius: 5px;
-    padding:5px 10px 5px 10px;
-    margin: 10px 0;
-`
+const inputGroupStyle = {
+    listStyle: 'none',
+    border: '0.5px solid black',
+    borderRadius: '5px',
+    padding: '5px 10px 5px 10px',
+    margin: '10px 0',
+}
 
-const Note = styled.div`
-    font-size: 80%;
-    margin: 15px 5px;
-`
-
-const Button = styled.button`
-    display:block;
-    width: 100%;
-    border: 1px solid gray;
-    outline: none;
-    border-radius: 5px;
-    margin: 5px 0px;
-    padding: 5px;
-`
-
+const noteStyle = {
+    fontSize: '80%',
+    margin: '15px 5px',
+}
 
 export default class RestoreBackup extends React.Component{
     constructor(props){
@@ -57,33 +46,33 @@ export default class RestoreBackup extends React.Component{
 
         switch(this.state.restoreState){
             case "NONE":
-                return <InputGroup>
-                    <Note><b>{projName}</b></Note>
-                    <Note>
+                return <div style={inputGroupStyle}>
+                    <div style={noteStyle}><b>{projName}</b></div>
+                    <div style={noteStyle}>
                         <p>如果您首次上传了数据文件，或者在上次更新之后又上传了新的数据文件，您需要在这里更新。</p>
                         <p>您每次上传的文件都会保存下来，系统通过您上传的文件转换为内部数据，并通过内部数据进行计算。如果您上传了同名的文件，则会覆盖现有的文件。</p>
-                    </Note>
+                    </div>
 
-                    <Button onClick={(e) => {
+                    <Button color='yellow' onClick={(e) => {
                         e.stopPropagation();
                         this.props.socket.emit('RESTORE', {projName})
                     }}>明白了，那么更新吧</Button>
-                </InputGroup>;
+                </div>;
             case "RESTORING":
-                return <InputGroup>
-                    <Note>已经恢复了{this.state.progress} %</Note>
-                    <Note>剩余时间 {this.state.remainingTime}</Note>
-                    <Note>NOTE: 这个时间有可能不准确，最好在完成后等待几秒再进行后续操作</Note>
-                </InputGroup>
+                return <div style={inputGroupStyle}>
+                    <div style={noteStyle}>已经恢复了{this.state.progress} %</div>
+                    <div style={noteStyle}>剩余时间 {this.state.remainingTime}</div>
+                    <div style={noteStyle}>NOTE: 这个时间有可能不准确，最好在完成后等待几秒再进行后续操作</div>
+                </div>
             case "RESTOREDONE":
-                return <Note>
+                return <div style={inputGroupStyle}><div style={noteStyle}>
                     已完成数据库的恢复, 正在生成数据，可能要花几秒钟时间。
-                </Note>
+                </div></div>
             case "FILEPREPARED":
-                return <InputGroup>
-                    <Note>数据文件已就绪。</Note>
-                    <Button onClick={(e) => goto('sheets')}>返回到列表</Button>
-                </InputGroup>
+                return <div style={inputGroupStyle}>
+                    <div style={noteStyle}>数据文件已就绪。</div>
+                    <Button color="yellow" onClick={(e) => goto('sheets')}>返回到列表</Button>
+                </div>
         }
     }
 }
