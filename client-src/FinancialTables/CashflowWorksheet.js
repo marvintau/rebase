@@ -153,15 +153,23 @@ function exportProc(tables){
     
     let [dateSec, contentSec] = tables;
 
-    let savedDate = dateSec.data[0].cols,
-        savedContent = contentSec.data.flatten().map(e => {
-            let {desc: item, string: value} = e.cols.value;
-            return {item, value}
-        });
+    let savedDate = [dateSec.data[0].cols],
+        flattened = contentSec.data.flatten(),
+        savedContent = flattened.map(e => {
+            let {desc: item, string: value, value:result} = e.cols.value;
+            return {item, value, result}
+        }),
+        savedValue = flattened
+        .filter(e => e.subs.length > 0)
+        .map(e => {
+            let {desc: item, value} = e.cols.value;
+            return {item:item.replace(/#/g, ''), value}
+        })
 
     return {
         date: savedDate,
-        content: savedContent
+        content: savedContent,
+        values: savedValue
     }
 }
 

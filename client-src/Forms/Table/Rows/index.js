@@ -6,6 +6,8 @@ import Row from '../Row';
 import PaginatorRow from './PaginatorRow';
 import OrderRow from './OrderRow';
 
+import {Button} from 'reactstrap';
+
 const ENTRIES_PER_PAGE = 15;
 
 function filterData(list, filters){
@@ -65,7 +67,15 @@ export default class Rows extends React.PureComponent {
         }
         return state;
     }
-    
+
+    exportRows = () => {
+        let {rowswiseExport=(e)=>{console.log(e)}} = this.props,
+            {data, filters} = this.state,
+            filteredData = filterData(data, filters);
+
+        return rowswiseExport(filteredData);
+    }
+
     updateRows = (operation, args) => {
         
         let {evaluate} = this.props;
@@ -137,8 +147,11 @@ export default class Rows extends React.PureComponent {
     }
 
     render(){
-        let {head, autoExpanded, editable, expandable, evaluate} = this.props;
+        let {head, autoExpanded, editable, expandable, evaluate} = this.props,
+            {rowswiseExportable, rowswiseExport} = this.props;
         let {data, page, expandedRowIndex, filters} = this.state;
+
+        console.log(rowswiseExportable, 'rowswise, => rows');
 
         let rowProps = {
             head,
@@ -147,6 +160,8 @@ export default class Rows extends React.PureComponent {
             expandable,
             autoExpanded,
             expandedRowIndex,
+            rowswiseExport,
+            rowswiseExportable,
             updateRows: this.updateRows,
             updateRowsExpanded: this.updateRowsExpanded,
         }
@@ -197,7 +212,14 @@ export default class Rows extends React.PureComponent {
                 />
             })
 
-            return [orderRow, recordRows, paginator]
+            let utilRol;
+            if(rowswiseExportable){
+                utilRol = <tr><td colSpan={head.lenDisplayed() + 1}>
+                    <div><Button color='warning' style={{width: '200px'}} onClick={this.exportRows}>导出筛选结果</Button></div>
+                </td></tr>
+            }
+
+            return [orderRow, recordRows, paginator, utilRol]
             
         } else {
             return [<Row

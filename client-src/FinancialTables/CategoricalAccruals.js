@@ -110,7 +110,7 @@ function importProc({JOURNAL, BALANCE}){
 
     console.log(data);
 
-    return new Table(head, data, {expandable: true});
+    return new Table(head, data, {expandable: true, rowswiseExportable: true});
 }
 
 export default function(){

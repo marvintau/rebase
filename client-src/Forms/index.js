@@ -1,6 +1,6 @@
 import React from 'react';
 import Tabs from './Group/Tabs'
-import {Table} from 'reactstrap';
+import {Table, Button} from 'reactstrap';
 
 const tableStyle = {
     width: '750px',
@@ -72,6 +72,17 @@ export default class Formwell extends React.Component {
 
         };
 
+        let rowswiseExport = (rows) => {
+            exportRemote(rows.map(e => {
+                let newCols = {};
+                for (let key in e.head){
+                    newCols[e.head[key].colDesc] = e.cols[key];
+                }
+                return newCols;
+            }));
+            // console.log(rows, 'rowsewiseExport')
+        }
+
         let supportedTableTypes = {
             Table: '',
             WorkTable: ''
@@ -83,12 +94,16 @@ export default class Formwell extends React.Component {
             for (let i = 0; i < tables.length; i++){
                 let table = tables[i];
                 if (table.constructor.name in supportedTableTypes){
-                    tab.push(<Table borderless style={tableStyle} key={`${sheetName}${i}`}><tbody><Tabs table={table} /></tbody></Table>)
+                    tab.push(<Table borderless style={tableStyle} key={`${sheetName}${i}`}><tbody>
+                        <Tabs table={table} rowswiseExport={rowswiseExport} />
+                    </tbody></Table>)
                 }
             }
 
         } else if (tables.constructor.name in supportedTableTypes){
-            tab = <Table style={tableStyle} key={`${sheetName}`}><tbody><Tabs table={tables} /></tbody></Table>
+            tab = <Table style={tableStyle} key={`${sheetName}`}><tbody>
+                <Tabs table={tables} rowswiseExport={rowswiseExport}/>
+            </tbody></Table>
 
         } else {
             return <div>
@@ -99,13 +114,14 @@ export default class Formwell extends React.Component {
             </div>
         }
 
-        let saveUtils = [];
+        let saveUtils = [],
+            buttonStyle = {width: '200px', margin: '5px 10px'};
         if (isSavable){
-            saveUtils.push(<div style={button} key={0} onClick={save}>保存</div>)
+            saveUtils.push(<Button color="primary" style={buttonStyle} key={0} onClick={save}>保存</Button>)
         }
 
         if(isExportable){
-            saveUtils.push(<div style={button} key={2} onClick={exportDocument}>导出</div>)
+            saveUtils.push(<Button color="warning" style={buttonStyle} key={2} onClick={exportDocument}>导出</Button>)
         }
 
         return <div style={containerStyle}>

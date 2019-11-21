@@ -91,9 +91,9 @@ export default class Tabs extends React.Component {
 
     render(){
 
-        let {table} = this.props,
+        let {table, rowswiseExport} = this.props,
             {head, attr} = table,
-            {editable, expandable, autoExpanded} = attr,
+            {editable, expandable, autoExpanded, rowswiseExportable} = attr,
             {data} = this.state;
 
         if (data.constructor.name === 'Body'){
@@ -109,6 +109,8 @@ export default class Tabs extends React.Component {
                     expandable={expandable}
                     autoExpanded={autoExpanded}
                     evaluate={this.evaluate}
+                    rowswiseExport={rowswiseExport}
+                    rowswiseExportable={rowswiseExportable}
                 />
             ]
         } else if( data.constructor.name === 'Tabs') {
@@ -160,11 +162,15 @@ export default class Tabs extends React.Component {
                         editable={editable}
                         expandable={expandable}
                         autoExpanded={autoExpanded}
+                        evaluate={this.evaluate}
+                        rowswiseExport={rowswiseExport}
+                        rowswiseExportable={rowswiseExportable}
                     />
                 ]
             } else if (content.constructor.name === 'Tabs'){
                 subLevel = <Tabs key={`group-${this.state.currKey}-${content.desc}`}
                     table= {new Table(head, content, attr)}
+                    rowswiseExport={rowswiseExport}
                 />
             }
     

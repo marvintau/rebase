@@ -154,7 +154,7 @@ export default class Row extends React.Component {
 
         let subs = [];
 
-        let {autoExpanded, expandedRowIndex, expandable} = this.props,
+        let {autoExpanded, expandedRowIndex, expandable, rowswiseExportable} = this.props,
         isRowExpanded = autoExpanded || (rowIndex === expandedRowIndex);
 
         if(isRowExpanded){
@@ -169,6 +169,7 @@ export default class Row extends React.Component {
                     expandable={expandable}
                     autoExpanded={autoExpanded}
                     evaluate={evaluate}
+                    rowswiseExportable={rowswiseExportable}
                 />
             
             } else if (subsType === 'Table'){

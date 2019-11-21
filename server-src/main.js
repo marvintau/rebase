@@ -212,13 +212,13 @@ tableServer.on('connection', function (socket) {
             let xlsSheet = XLSX.utils.json_to_sheet(data);
             xlsBook.SheetNames.push('sheet1');
             xlsBook.Sheets['sheet1'] = xlsSheet;
-        } else if(Array.isArray(data.content)) {            
-            let xlsSheet = XLSX.utils.json_to_sheet(data.content);
-            xlsBook.SheetNames.push('sheet1');
-            xlsBook.Sheets['sheet1'] = xlsSheet;    
         } else {
-            socket.emit('ERROR', {msg: '前端生成的数据不能用来导出Excel文件，请联系程序员解决这个问题。'});
-            return
+            console.log(data);
+            for (let key in data) {
+                let xlsSheet = XLSX.utils.json_to_sheet(data[key]);
+                xlsBook.SheetNames.push(key);
+                xlsBook.Sheets[key] = xlsSheet;    
+            }
         }
 
         let xlsOutput = XLSX.write(xlsBook, {bookType:'xlsx', type: 'binary'});

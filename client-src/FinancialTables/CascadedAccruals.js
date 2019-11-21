@@ -53,7 +53,7 @@ function importProc({BALANCE, CategoricalAccruals}){
                 .cascade('ccode');
         })
 
-    return new Table(head, data, {expandable: true});
+    return new Table(head, data, {expandable: true, rowswiseExportable: true});
 }
 
 export default function(){

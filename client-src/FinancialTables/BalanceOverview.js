@@ -186,7 +186,7 @@ function importProc({BALANCE, JOURNAL}){
 
     console.log(data, 'balance');
 
-    return new Table(head, data, {expandable: true, editable:false});
+    return new Table(head, data, {expandable: true, editable:false, rowswiseExportable: true});
 }
 
 
