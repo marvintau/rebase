@@ -131,12 +131,19 @@ export default class Row extends React.Component {
 
         let {editable} = this.props;
 
-        if (editable && (data.attr.title === undefined)){
+        if (editable){
+
+            let editProps = {};
+            if(data.attr.isTitle){
+                editProps = {modifiable: true, removable:false, insertable:false}
+            }
+
             // console.log
             cols.push(<Cell
                 key={'ctrl'}
                 toggleEdit={this.toggleEdit}
                 isControlCell={true}
+                {...editProps}
                 {...sharedCellProps}
             />)
         }    

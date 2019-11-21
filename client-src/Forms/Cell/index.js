@@ -16,7 +16,8 @@ export default function Cell(props){
     if (isControlCell){
 
         let {EditControl} = CellComponent,
-            {isRowEditing, isHovered, rowIndex, updateRows, toggleEdit} = props;
+            {isRowEditing, isHovered, rowIndex, updateRows, toggleEdit} = props,
+            {insertable=true, removable=true, modifiable=true} = props;
 
         return <td style={{...cellStyle, width:'75px'}}>
             <EditControl
@@ -25,6 +26,9 @@ export default function Cell(props){
                 rowIndex={rowIndex}
                 updateRows={updateRows}
                 toggleEdit={toggleEdit}
+                insertable={insertable}
+                removable={removable}
+                modifiable={modifiable}
             />
         </td>
     } else {

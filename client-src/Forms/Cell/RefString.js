@@ -1,5 +1,5 @@
 import React from 'react';
-
+import {Input} from 'reactstrap';
 import Autosuggest from 'react-autosuggest';
 
 const displayStyle = {
@@ -8,6 +8,12 @@ const displayStyle = {
     lineHeight: '25px',
     overflow: 'hidden',
     fontWeight: '400',
+}
+
+const inputStyle = {
+    marginTop: '5px',
+    fontSize: '100%',
+    padding: '5px'
 }
 
 const toCurrency = (number) => {
@@ -19,6 +25,9 @@ const toCurrency = (number) => {
 }
 
 const titleStyle = (level=1) => {
+    if (level === null){
+        level = 3;
+    }
     return {
         fontSize: `${100+(3 - level)*10}%`,
         fontWeight: 'bold'
@@ -51,6 +60,7 @@ export default class RefString extends React.Component{
 
         this.state = {
             string : props.data.string,
+            desc: props.data.desc,
             suggestions: []
         }
     }
@@ -124,18 +134,24 @@ export default class RefString extends React.Component{
         let res;
         if(!isRowEditing){
 
-            let title = data.desc
-                    ? <div style={titleStyle(data.desc.match(/#/g).length)}>{data.desc.replace(/#/g, '')}</div>
-                    : <div>{data.string}</div>
+            let desc;
+            if (data.desc){
+                let match = data.desc.match(/#/g);
+                desc = match
+                ? <div style={titleStyle(match.length)}>{data.desc.replace(/#/g, '')}</div>
+                : <div>{data.desc}</div>
+            } else {
+                desc = <div>{data.string}</div>
+            }
 
             res = <div style={displayStyle} key={'disp'}>
-                {title}
+                {desc}
                 <div style={dataStyle(data.type)}>{!isNaN(data.value) ? toCurrency(data.value): data.value}</div>
             </div>
 
         } else {
 
-            res = <Autosuggest
+            let auto = <Autosuggest
                 suggestions={suggestions}
                 onSuggestionsFetchRequested={this.onSuggestionsFetchRequested}
                 onSuggestionsClearRequested={this.onSuggestionsClearRequested}
@@ -143,11 +159,29 @@ export default class RefString extends React.Component{
                 getSuggestionValue={this.getSuggestionValue}
                 renderSuggestion={this.renderSuggestion}
                 inputProps={{
-                    placeholder: '请按引用字串的约定进行修改',
+                    placeholder: '请按引用字串/表达式的约定格式进行修改',
                     onChange: this.onChange,
                     value: string
                 }}
               />;
+
+            let input = <Input
+                style={inputStyle}
+                value={this.state.desc}
+                placeholder='给定此条目的说明。如果此处为空，则显示给定的表达式'
+                onChange={(e) => {
+                    let newValue = e.target.value;
+                    this.props.data.desc = newValue;
+                    this.setState({
+                        desc: newValue
+                    })        
+                }}
+            />
+
+            res = <div style={{display: 'flex', flexDirection:'column'}}>
+                {auto}
+                {input}>
+            </div>
         }
 
         return res;

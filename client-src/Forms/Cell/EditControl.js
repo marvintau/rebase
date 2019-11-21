@@ -10,14 +10,6 @@ const controlStyle = {
     jusifyContent: 'flex-end'
 }
 
-const iconStyle = {
-    width: '25px',
-    height: '25px',
-    margin: '0px 2px',
-    cursor: 'pointer',
-    opacity: '0'
-}
-
 export default class EditControl extends React.Component{
 
     remove = () => {
@@ -31,25 +23,31 @@ export default class EditControl extends React.Component{
     }
 
     render(){
-        let {isRowEditing, isHovered, toggleEdit} = this.props;
+        let {isRowEditing, isHovered, toggleEdit} = this.props,
+            {insertable, removable, modifiable} = this.props; 
         
         if (isRowEditing){
             return <div style={controlStyle}>
-                <img style={{...iconStyle, opacity: '1'}} key={'save'} src={SaveRecordIcon} onClick={toggleEdit}/>
+                <img className='icon' style={{opacity: '1'}} key={'save'} src={SaveRecordIcon} onClick={toggleEdit}/>
             </div>
         }
 
-        let imgStyle = iconStyle;
+        let imgStyle = {};
         if (isHovered) {
-            imgStyle = Object.assign({}, iconStyle, {opacity: '1'})
+            imgStyle = {opacity: 0.4}
         }
 
-        let move = [
-            <img style={imgStyle} key={'create'} src={CreateRecordIcon} onClick={this.insert}/>,
-            <img style={imgStyle} key={'remove'} src={DeleteRecordIcon} onClick={this.remove}/>,
-            <img style={imgStyle} key={'modify'} src={ModifyRecordIcon} onClick={toggleEdit}/>
-        ]
-            
+        let move = [];
+        if(insertable){
+            move.push(<img className='icon' style={imgStyle} key={'create'} src={CreateRecordIcon} onClick={this.insert}/>)
+        }
+        if(removable){
+            move.push(<img className='icon' style={imgStyle} key={'remove'} src={DeleteRecordIcon} onClick={this.remove}/>)
+        }
+        if(modifiable){
+            move.push(<img className='icon' style={imgStyle} key={'modify'} src={ModifyRecordIcon} onClick={toggleEdit}/>)
+        }
+
         return <div style={controlStyle}>
             {move}
         </div>
