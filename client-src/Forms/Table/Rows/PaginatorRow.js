@@ -34,5 +34,3 @@ export default class PaginatorRow extends React.Component {
         </tr>
     }
 }
-
-// Math.ceil(data.length/ENTRIES_PER_PAGE)

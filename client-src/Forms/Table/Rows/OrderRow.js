@@ -6,8 +6,6 @@ import FilterRow from './FilterRow';
 
 const cellStyle = {
     padding: '0.5rem 0.4rem 0.4rem',
-    // minWidth: '25px',
-    // height: '25px',
     whiteSpace: 'nowrap',
     userSelect: 'none',
 }
@@ -72,7 +70,6 @@ export default class OrderRow extends React.Component {
             filterEditedCol: filterEditedCol === colKey ? undefined : colKey
         })
     }
-
 
     render() {
 

@@ -63,8 +63,6 @@ export default class FilterRow extends React.Component {
         console.log(filterText, 'row');
         filterText = filterText === undefined ? 'true' : filterText;
 
-
-
         return <tr><td colSpan={colSpan}><div style={wrapperStyle}>
             <div style={labelStyle}>{colDesc}</div>
             <input style={inputStyle} ref={this.filterInputDOM} defaultValue={filterText} />
