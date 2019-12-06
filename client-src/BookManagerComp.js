@@ -115,17 +115,16 @@ export default class BookManagerComp extends React.Component{
 
         let {address} = this.props;
 
-        let logs = this.state.logs.map((log, index) => <div key={index}>{log}</div>)
+        let logs = this.state.logs.map((log, index) => <div key={index} style={{margin: '3px'}}>{log}</div>)
 
         let displayedContent = <div style={loggerStyle}>{logs}</div>;
 
-        let formwell;
         if(this.state.currSheet !== undefined){
 
             let sheetName = this.state.currSheet,
                 {desc, tables, exportProc, isSavable, isExportable} = this.sheetColl.get(sheetName);
 
-            formwell = <Formwell
+            displayedContent = <Formwell
                 key={sheetName}
                 desc={desc}
                 sheetName={sheetName}
@@ -148,7 +147,7 @@ export default class BookManagerComp extends React.Component{
 
         return (<div style={wrapper}>
             {navigation}    
-            {formwell}
+            {displayedContent}
         </div>)
 
     }

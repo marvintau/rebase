@@ -6,6 +6,8 @@ const fs = require('fs');
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
 let serverConfigure = {
 	resolve: {
 		extensions: ['.js', '.json'],
@@ -55,8 +57,9 @@ let clientConfigure = {
 	},
 
 	output: {
-		path: path.resolve(__dirname),
-		filename: 'public/dist.js'
+		publicPath: './',
+		path: path.resolve(__dirname, 'public'),
+		filename: 'dist.js'
 	},
 	module: {
 		rules: [
@@ -81,17 +84,43 @@ let clientConfigure = {
 	},
 
 	plugins: [
-		new BundleAnalyzerPlugin()
+		new BundleAnalyzerPlugin(),
+		new HtmlWebpackPlugin({
+			template: './client-src/page/index.html',
+			filename: 'index.html'
+		})
 	],
 
 	externals: {
 		react: 'React',
 		'react-dom': 'ReactDOM',
+		'reactstrap': 'Reactstrap',
 	},
 
 	mode: 'development',
 
 	optimization: {
+		// splitChunks: {
+		// 	chunks: "all",
+		// 	maxInitialRequests: Infinity,
+
+		// 	cacheGroups: {
+		// 	  vendor: {
+		// 		test: /[\\/]node_modules[\\/]/,
+		// 		name(module) {
+		// 		  // get the name. E.g. node_modules/packageName/not/this/part.js
+		// 		  // or node_modules/packageName
+		// 		  const packageName = module.context.match(
+		// 			/[\\/]node_modules[\\/](.*?)([\\/]|$)/
+		// 		  )[1];
+	
+		// 		  // npm package names are URL-safe, but some servers don't like @ symbols
+		// 		  return `npm.${packageName.replace("@", "")}`;
+		// 		}
+		// 	  }
+		// 	},
+		// 	name: false
+		// },
 		minimizer: [
 			new TerserPlugin({
 				terserOptions: {
@@ -105,9 +134,10 @@ let clientConfigure = {
 				toplevel: false,
 				nameCache: null,
 				ie8: false,
-				keep_classnames: undefined,
-				keep_fnames: true, // change to true here
+				keep_classnames: true,
+				keep_fnames: true,
 				safari10: false,
+
 				},
 			}),
 		],

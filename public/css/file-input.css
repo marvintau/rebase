@@ -1,0 +1,35 @@
+
+.file-input{
+    width: 100%;
+    height: 2.5rem;
+    margin-bottom: 5px;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    background: #fff;
+}
+
+.file-input::-webkit-file-upload-button {
+    visibility: hidden;
+}
+.file-input::before {
+    content: '选择文件';
+    display: inline-block;
+    background: linear-gradient(top, #f9f9f9, #e3e3e3);
+    border: 1px solid #999;
+    border-radius: 3px;
+    padding: 5px 8px;
+    margin: 3px;
+    outline: none;
+    white-space: nowrap;
+    -webkit-user-select: none;
+    cursor: pointer;
+    text-shadow: 1px 1px #fff;
+    font-weight: 700;
+    font-size: 10pt;
+}
+.file-input:hover::before {
+    border-color: black;
+}
+.file-input:active::before {
+    background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+}

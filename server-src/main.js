@@ -49,6 +49,15 @@ app.get('*', function(req, res){
 // RECV：接受文件名和buffer的信息。返回新的百分比，和下次读取的位置。
 //       客户端如果使用file position其实可以不需要这个位置。
 
+function copyFromPublic(fileName, id, projName){
+    let sourceFileName = fileName,
+        sourcePath = path.join(BACKUP_PATH, 'public', sourceFileName),
+        targetFileName = `SOURCE.${projName}.${sourceFileName}`,
+        targetPath = path.join(BACKUP_PATH, id, projName, targetFileName);
+
+    return {sourcePath, targetPath};
+}
+
 uploadServer.on('connection', function (socket) {
 
     socket.on('CREATE', function({id, projName}) {
@@ -58,6 +67,12 @@ uploadServer.on('connection', function (socket) {
         let filePath = path.join(BACKUP_PATH, id, projName);
 
         fs.mkdir(filePath).then(() => {
+            let {sourcePath, targetPath} = copyFromPublic('CASHFLOW_WORKSHEET.0.xlsx', id, projName)
+            return fs.copyFile(sourcePath, targetPath)
+        }).then(() => {
+            let {sourcePath, targetPath} = copyFromPublic('FINANCIAL_WORKSHEET.0.xlsx', id, projName)
+            return fs.copyFile(sourcePath, targetPath)
+        }).then(() => {
             console.log('create directory done')
             socket.emit('CREATE_DONE', {});
         }).catch(({code}) => {
@@ -135,6 +150,7 @@ tableServer.on('connection', function (socket) {
         console.log(`SENDING ${projName}-${sheetName}${type? `-${type}`:''} FROM@ ${position}`, );
         
         let fileName = getRestoredFileName(projName, sheetName, type);
+        console.log('restored filename', fileName);
     
         // 以下是读取一个块之后的操作。块的大小是固定的，并封装在了FileServ中，不难
         // 理解，如果buffer读取的字节数小于一个块的长度，它肯定会是最后一个块（当然

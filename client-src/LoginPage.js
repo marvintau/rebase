@@ -7,29 +7,6 @@ export default class LoginPage extends React.Component {
     constructor(props) {
         super(props);
 
-        this.socket = io(`${props.address}/AUTH`)
-        .on('LOG_DONE', ({id, nickname}) => {
-
-            localStorage.setItem('user_id', id);
-            localStorage.setItem('user_nickname', nickname)
-
-            const { from } = this.props.location.state || { from: { pathname: "/" } };
-            this.props.history.push(from);
-        })
-        .on('LOG_NOT_FOUND', () => {
-            this.setState({error:'没登进去，您检查下密码？', loading: false})
-        })
-        .on('REG_DONE', () => {
-            const { from } = this.props.location.state || { from: { pathname: "/" } };
-            this.props.history.push(from);
-        })
-        .on('REG_DUP_NAME', () => {
-            this.setState({error:'重名了，换个名字注册吧。', loading: false})
-        })
-        .on('connect_error', (err) => {
-            this.setState({error:'矮油，连不到服务器了。您先检查下网络是否正常？如果一直都连不上就召唤程序员。', loading: false})
-        });
-
         this.state = {
             registering: false,
             username: '',
@@ -40,6 +17,33 @@ export default class LoginPage extends React.Component {
             loading: false,
             error: ''
         };
+    }
+
+    componentDidMount(){
+        this.socket = io(`${this.props.address}/AUTH`)
+        .on('LOG_DONE', ({id, nickname}) => {
+
+            localStorage.setItem('user_id', id);
+            localStorage.setItem('user_nickname', nickname)
+
+            const { from } = this.props.location.state || { from: { pathname: "/" } };
+            this.props.history.push(from);
+        })
+        .on('LOG_NOT_FOUND', () => {
+            console.log('错误');
+            this.setState({error:'没登进去，您检查下密码？', loading: false})
+        })
+        .on('REG_DONE', () => {
+            const { from } = this.props.location.state || { from: { pathname: "/" } };
+            this.props.history.push(from);
+        })
+        .on('REG_DUP_NAME', () => {
+            console.log('重名');
+            this.setState({error:'有人用了这个用户名了，换个名注册吧。', loading: false})
+        })
+        .on('connect_error', (err) => {
+            this.setState({error:'矮油，连不到服务器了。系统需要时刻保持与服务器的连接。您先检查下网络是否正常？如果仍然无法连接，请召唤程序员。', loading: false})
+        });
     }
 
     componentWillUnmount(){
@@ -79,6 +83,10 @@ export default class LoginPage extends React.Component {
 
     render() {
         const { registering, username, password, passtwice, nickname, submitted, loading, error } = this.state;
+
+        let errorMsgElem = error ? <UncontrolledAlert color="danger">{error}</UncontrolledAlert> : [];
+        console.log(errorMsgElem);
+
         return (
             <Col md={{size:'4', offset:'4'}} style={{marginTop: '100px'}}>
                 <h2>{registering ? '新用户注册': '登录'}</h2>
@@ -123,7 +131,7 @@ export default class LoginPage extends React.Component {
                             onClick={this.toggleRegister}
                         >{registering ? '返回登录' : '还没注册?'}</Button>
                     </FormGroup>
-                    {error && <UncontrolledAlert color="danger">{error}</UncontrolledAlert>}
+                    {errorMsgElem}
                 </Form>
             </Col>
         );
