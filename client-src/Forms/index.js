@@ -10,13 +10,6 @@ const tableStyle = {
     position: 'relative',
 }
 
-const tableWrapper = {
-    height: '90vh',
-    width: 'auto',
-    boxSizing: 'border-box',
-    overflowY: 'scroll',
-}
-
 const button = {
     textAlign: 'center',
     float: 'left',
@@ -126,7 +119,7 @@ export default class Formwell extends React.Component {
 
         return <div style={containerStyle}>
             <div style={title}>{desc}</div>
-            <div style={tableWrapper}>{tab}</div>
+            <div className="table-wrapper">{tab}</div>
             {saveUtils}
         </div>
     }

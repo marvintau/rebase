@@ -98,19 +98,20 @@ export default class UploadBackup extends React.Component{
     }
 
     create = () => {
-        console.log('creating');
         let id = localStorage.getItem('user_id');
-        let destName = this.nameRef.current.value;
-        this.socket.emit('CREATE', {projName: destName, id})
+        let projName = this.nameRef.current.value;
+        console.log('creating', projName, this.nameRef);
+        this.socket.emit('CREATE', {projName, id})
         this.setState({
             uploadState: 'WAITING'
         })
     }
 
     delete = () => {
+        let id = localStorage.getItem('user_id');
         let {projName} = this.props;
-        console.log("to delete project", projName);
-        this.socket.emit('DELETE', {projName})
+        console.log("deleting project", projName);
+        this.socket.emit('DELETE', {id, projName})
         this.setState({
             updateState: 'WAITING'
         })
@@ -165,8 +166,7 @@ export default class UploadBackup extends React.Component{
                 case 'NONE':
                     return <FormGroup>
                         <Label>客户名称</Label>
-                        <Input id="company-name" placeholder="项目（客户）名称" ref={this.nameRef} />
-
+                        <input class="form-control" style={{margin:'3px'}} id="company-name" placeholder="项目（客户）名称" ref={this.nameRef} />
                         <Button id="upload" onClick={this.create}>创建</Button>
                         <FormText>项目名称一经创建则不能更改，请再三检查。如果写错名称，您必须先删除整个项目，并重新上传数据文件。</FormText>
                     </FormGroup>
@@ -206,23 +206,23 @@ export default class UploadBackup extends React.Component{
                         </FormGroup>
                     <FormGroup>
                         <Label>上传文件类型</Label>
-                        <Input id="file-type" type="select" ref={this.fileTypeRef}>
+                        <input className="form-control" id="file-type" type="select" ref={this.fileTypeRef}>
                             <option value='csv'>.CSV文件</option>
                             <option value='xls'>.XLS（Excel兼容格式）</option>
                             <option value='xlsx'>.XLSX（Excel2007及以上）</option>
                             <option value='bak2008'>.BAK（SQLServer2008以下）</option>
                             <option value='bak2019'>.BAK（SQLServer2008以上）</option>
-                        </Input>
+                        </input>
                     </FormGroup>
                     <FormGroup>
                         <Label>数据类别</Label>
-                        <Input id="file-type" type="select" ref={this.bookTypeRef}>
+                        <input className="form-control" id="file-type" type="select" ref={this.bookTypeRef}>
                             <option value='BALANCE'>科目余额</option>
                             <option value='JOURNAL'>序时账</option>
                             <option value='ASSISTED'>辅助核算</option>
                             <option value='CASHFLOW_WORKSHEET'>现金流编制底稿</option>
                             <option value='FINANCIAL_WORKSHEET'>资产负债表编制底稿</option>
-                        </Input>
+                        </input>
                         {(fileName !== undefined) ?
                             <Button id="upload" onClick={this.upload}>上传</Button> :
                             <Label>选择文件后才能上传</Label>
