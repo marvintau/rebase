@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Route } from 'react-router-dom';
 import PrivateRoute from './PrivateRoute';
 import LoginPage from './LoginPage';
 
-import BookManagerComp from './BookManagerComp';
+import MainManager from './MainManager';
 
 export default class App extends React.Component {
     constructor(props) {
@@ -16,7 +16,7 @@ export default class App extends React.Component {
         
         return <Router>
             <div>
-                <PrivateRoute exact path="/" render={(props) => (<BookManagerComp address={address} {...props} />)} />
+                <PrivateRoute exact path="/" render={(props) => (<MainManager address={address} {...props} />)} />
                 <Route path="/login" render={(props) =>{return <LoginPage address={address} {...props} />}} />
             </div>
         </Router>

@@ -31,30 +31,23 @@ let balanceHead = new Head({
 
 const handleSaved = (saved, defaultVal) => {
     if(saved.data.length > 0 || Object.keys(saved.data).length > 0){
-        return saved.data;
+        return saved.data.content;
     } else {
         return defaultVal;
     }
 }
 
-const getYear = (body, year) => {
-    let keys = body.keys();
-    if(keys.length === 1 && keys[0] == '0'){
-        return body.get('0');
-    } else {
-        return body.get(year);
-    }
-}
-
 function importProc({FINANCIAL_WORKSHEET, BALANCE, CategoricalAccruals, savedFinancialWorksheet}){
 
-    // 处理预先保存的数据，并获取日期。date
-    let {content: worksheetData, date} = handleSaved(savedFinancialWorksheet, {
-        date: {year: 2014, startPeriod: 0, endPeriod: 15},
-        content: FINANCIAL_WORKSHEET.data
-    });
+    let worksheetData = handleSaved(savedFinancialWorksheet, FINANCIAL_WORKSHEET.data);
 
-    let {year, startPeriod, endPeriod} = date;
+    // 注意，这是一个temporarily patch，当下一次进行完整的测试流程后，应当删去此处，
+    // 这部分的数据处理是在后端上传时进行的。不应该出现在这里。
+    for (let i = 0; i < BALANCE.data.length; i++) {
+        if (BALANCE.data[i].iperiod === undefined){
+            BALANCE.data[i].iperiod = 0;
+        }
+    }
 
     // First we process hte accrual and balance data until it can be accepted by 
     // worktable object.
@@ -67,15 +60,10 @@ function importProc({FINANCIAL_WORKSHEET, BALANCE, CategoricalAccruals, savedFin
         }
     }
 
-    // the original data.
     let balanceData = balanceHead.createBody(BALANCE.data),
         cates = categoryHead.createBody(BALANCE.data).uniq('ccode').cascade('ccode');
-    // annual data of accrual & balance.
-    let balanceOfYear = balanceData.grip('iyear', {});
-        balanceOfYear = getYear(balanceOfYear, year).grip('iperiod', {});
 
-    let accrualOfYear = CategoricalAccruals.tables.data.get(year),
-        accrualHead = CategoricalAccruals.tables.head;
+    let {head: accrualHead, data:accrualData} = CategoricalAccruals.tables;
 
     // the the balance of period according to the given month.
     // 注意 | Caution
@@ -84,47 +72,34 @@ function importProc({FINANCIAL_WORKSHEET, BALANCE, CategoricalAccruals, savedFin
     // 然而仍然存在可能性，balance中仅包含一个期间，且不为0。我们不应当自动处理这类情况
     // 而是要将处理办法告知使用者，并且尽可能要求他们上传数据的时候添加合适的期间。
 
-    console.log(balanceOfYear);
+    console.log(balanceData, 'balanceData');
 
-    let {max:lastKey, min:firstKey} = new List(...balanceOfYear.keys())
-        .filter(e => {
-            let int = parseInt(e);
-            console.log(e, int, startPeriod, endPeriod);
-            return int >= startPeriod && int <= endPeriod
-        })
-        .minMax();
-    let balanceLastPeriod  = balanceOfYear.get(lastKey),
-        balanceFirstPeriod = balanceOfYear.get(firstKey);
-
-    console.log(lastKey, firstKey, 'lastfirst')
-    console.log(balanceLastPeriod, 'lastperiod');
-
-    // the summed categorical accrual for of last period
-    let accrualWithinPeriod = accrualOfYear.map(e => {
+    // 将整个年度各期间内各科目的发生额求和，得到的是整个年度内不同科目下的发生额
+    // 在这里再次注意一下，发生额是根据在序时账中出现的科目来汇总的，因此
+    // 1) 不一定包含所有科目余额表中的科目
+    // 2) 所有的科目均为末级科目
+    let summedAccrual = accrualData.map(e => {
+        let sum = accrualHead.sum(e.subs);
+        
         let {ccode, ccode_name} = e.cols;
-        let vouchersWithinRange = e.subs.filter(e => e.get('iperiod') <= parseInt(endPeriod));
-        let sum = accrualHead.sum(vouchersWithinRange);
-        sum.cols.ccode = ccode;
-        sum.cols.ccode_name = ccode_name;
+        Object.assign(sum.cols, {ccode,ccode_name});
         return sum;
     })
 
-    // add the summed accrual to balance. So we will get the initial balance from the
-    // first period, the accrual of both debit, credit, and the ending from the last period.
-    while(accrualWithinPeriod.length > 0){
+    // 把发生额添加到科目余额表中
+    while(summedAccrual.length > 0){
 
         let codeMatch = (codeA, codeB) => (codeA.valueOf() == codeB.valueOf());
 
-        let accrualCateSum = accrualWithinPeriod.pop(),
-            {mc, md, ccode} = accrualCateSum.cols,
-            balanceCate = balanceLastPeriod.find(e => codeMatch(e.cols.ccode, ccode)),//.find(e => e.cols.ccode == ccode);
-            mb = balanceFirstPeriod.find(e => codeMatch(e.cols.ccode, ccode)).cols.mb;
-        Object.assign(balanceCate.cols, {mb, mc, md});
+        let summedAccrualEntry = summedAccrual.pop(),
+            {mc, md, ccode} = summedAccrualEntry.cols,
+            balanceCate = balanceData.find(e => codeMatch(e.cols.ccode, ccode));
+        Object.assign(balanceCate.cols, {mc, md});
     }
 
-    // make the balance cascaded, and get the summed balance of each category level. After
-    // this step, the balanceLastPeriod will be accepted by worktable as referred data.
-    balanceLastPeriod = balanceLastPeriod
+    // 由于科目余额表中只有末级科目的发生额被更新，这步操作会更新所有更高级的科目
+    // 更新之后就会得到各级包含发生额的科目余额表。
+    balanceData = balanceData
         .cascade('ccode')
         .backTraverse((rec) => {
             if (rec.subs.length > 0){
@@ -138,30 +113,35 @@ function importProc({FINANCIAL_WORKSHEET, BALANCE, CategoricalAccruals, savedFin
 
     // Then we initialize the worksheet. Since the parse procedure has been
     // specified in the worksheet, the worktable object will be created in the beginning.
-    let workTable = new WorkTable(balanceLastPeriod, cates, {editable: true, expandable: true, autoExpanded: true});
+
+    console.log(worksheetData);
+    let workTable = new WorkTable(balanceData, cates, {editable: true, expandable: true, autoExpanded: true});
     workTable.parse(worksheetData);
     workTable.evaluate();
     console.log(workTable);
 
-    return [
-        new Table(dateHead, dateHead.createBody([date]), {editable: true}),
-        workTable
-    ]    
+    return workTable
 }
 
 function exportProc(tables){
     
-    let [dateSec, contentSec] = tables;
+    let contentSec = tables;
 
-    let savedDate = dateSec.data[0].cols,
-        savedContent = contentSec.data.flatten().map(e => {
-            let {desc: item, string: value} = e.cols.value;
-            return {item, value}
-        });
+    let flattened = contentSec.data.flatten(),
+        savedContent = flattened.map(e => {
+            let {desc: item, string: value, value:result} = e.cols.value;
+            return {item, value, result}
+        }),
+        savedValue = flattened
+        .filter(e => e.subs.length > 0)
+        .map(e => {
+            let {desc: item, value} = e.cols.value;
+            return {item:item.replace(/#/g, ''), value}
+        })
 
     return {
-        date: savedDate,
-        content: savedContent
+        content: savedContent,
+        values: savedValue
     }
 }
 

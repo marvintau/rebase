@@ -7,7 +7,7 @@ import colRemap from './parseTypeDictionary';
 
 const BACKUP_PATH='../ServerStorage';
 
-function parseRemap(type, book, year){
+function parseRemap(type, book){
 
     let recRemap = colRemap[type];
 
@@ -21,12 +21,11 @@ function parseRemap(type, book, year){
             newRec = {};
         for (let ent = 0; ent < recRemap.length; ent++){
             let [oldKey, newKey] = recRemap[ent];
-            newRec[newKey] = rec[oldKey];
+            if(oldKey in rec){
+                newRec[newKey] = rec[oldKey];
+            }
         }
 
-        if (newRec.iyear === undefined){
-            newRec.iyear = year;
-        }
         if (newRec.iperiod === undefined){
             newRec.iperiod = 0;
         }
@@ -37,26 +36,19 @@ function parseRemap(type, book, year){
     return parsed
 }
 
-export default function bookRestore(projName, postProcess=(x) => x){
+export default function bookRestore(id, projName, postProcess=(x) => x){
 
-    return del([path.resolve(BACKUP_PATH, projName, 'RESTORED.*')], {force: true})
+    console.log('restoring', path.resolve(BACKUP_PATH, id, projName));
+
+    return del([path.resolve(BACKUP_PATH, id, projName, 'RESTORED.*')], {force: true})
     .then(() => {
-        return fs.readdir(path.resolve(BACKUP_PATH, projName))
+        return fs.readdir(path.resolve(BACKUP_PATH, id, projName))
     })
     .then(res => {
-        let fileNames = res.filter(path => path.includes(projName) && path.includes('SOURCE'));
+        let fileNames = res.filter(filePath => filePath.includes('SOURCE'));
         
-        console.log('ready to handle', fileNames);
+        console.log('ready to handle', res, fileNames);
                 
-        // let balancesPath = fileNames.filter(e => e.includes('BALANCE')),
-        //     journalsPath = fileNames.filter(e => e.includes('JOURNAL')),
-        //     assistedsPath = fileNames.filter(e => e.includes('ASSISTED')),
-        //     cashflowWorksheetPath = fileNames.filter(e => e.includes('CASHFLOW_WORKSHEET'));
-
-        // if((balancesPath.length !== journalsPath.length) || (journalsPath.length !== assistedsPath.length)){
-        //     console.log('RESTORE_MSG', '缺少某些期间/年份的数据表，对应期间的查询也无法生成，不过没有大碍。')
-        // }
-
         let data = {
             BALANCE: [],
             JOURNAL: [],
@@ -66,7 +58,7 @@ export default function bookRestore(projName, postProcess=(x) => x){
         };
 
         return Promise.all(fileNames.map(e => {
-            return fs.readFile(path.resolve(BACKUP_PATH, projName, e))
+            return fs.readFile(path.resolve(BACKUP_PATH, id, projName, e))
             .then(fileBuffer => {
                 return XLSX.read(fileBuffer, {type: 'buffer'})
             })
@@ -80,14 +72,14 @@ export default function bookRestore(projName, postProcess=(x) => x){
 
                 let fileName = fileNames[i],
                     book = result[i],
-                    [_S, _N, type, year, _FT] = fileName.split('.');
+                    [_S, bookType,  _FileType] = fileName.split('.');
 
-                let parsed = parseRemap(type, book, year)
+                let parsed = parseRemap(bookType, book)
                 // 因为data中汇总了所有期间的数据，因此需要flatten，或者按记录push进来。
-                if(type === 'CASHFLOW_WORKSHEET' || type === 'FINANCIAL_WORKSHEET'){
-                    data[type] = parsed;
+                if(['CASHFLOW_WORKSHEET', 'FINANCIAL_WORKSHEET'].includes(bookType)){
+                    data[bookType] = parsed;
                 } else {
-                    data[type].push(...parsed);
+                    data[bookType].push(...parsed);
                 }
             }
 
@@ -97,7 +89,7 @@ export default function bookRestore(projName, postProcess=(x) => x){
                 if(data[type].length === 0){
                     return true;
                 } else {
-                    return fs.writeFile(path.resolve(BACKUP_PATH, projName, `RESTORED.${projName}.${type}.JSON`), JSON.stringify(data[type]));
+                    return fs.writeFile(path.resolve(BACKUP_PATH, id, projName, `RESTORED.${type}.JSON`), JSON.stringify(data[type]));
                 }
             }))                    
         })

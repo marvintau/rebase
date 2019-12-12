@@ -9,10 +9,8 @@ let head = new Head({
     mc:         'Number',
     me:         'Number',
     iperiod:    'String',
-    iyear:      'String'
 })
 
-head.setColProp({colDesc: "年", hidden: true}, 'iyear')
 head.setColProp({colDesc: "期间", hidden: true}, 'iperiod')
 head.setColProp({colDesc: "科目名称", isExpandToggler: true}, 'ccode_name')
 head.setColProp({colDesc: "科目编码"}, 'ccode' )
@@ -71,7 +69,12 @@ function processSingleBalanceCode(balancePeriod, accrualPeriod, ccode){
     // 资产类： 期末 = 期初 + (借方-贷方)
     // 负债类： 期末 = 期初 - (借方-贷方)
     // 权益属于负债类，成本、共同、损益类都属于资产
-    let dir = {
+    // 其中损益类理论上每月结转的结果应该是0，但即使结果不是0也不要紧
+    
+    // 往来科目只存在六种类别，分别是
+    // 应收，预付，其他应收（归入资产类）
+    // 应付，预收，其他应付（归入负债类）
+    let classType = {
         '资产' : '+',
         '负债' : '-',
         '权益' : '-',
@@ -80,12 +83,19 @@ function processSingleBalanceCode(balancePeriod, accrualPeriod, ccode){
         '成本' : '+'
     };
 
-    let {cclass, mc, md, mb} = curr;
-    curr.me = eval(`${mb}${dir[cclass]}(${md - mc})`);
+    let direction = (cclass in classType)
+        ? classType[cclass]
+        : cclass !== '往来'
+        ? '+'
+        : ccode_name.match(/(应收|预付)/)
+        ? '+' : '-'
+
+    let {ccode_name, cclass, mc, md, mb} = curr;
+    curr.me = eval(`${mb}${direction}(${md - mc})`);
 }
 
 function processPeriodicalBalance(balanceData, journalData){
-    let periodicalBalances = balanceData.grip(rec => rec.iyear, {desc: '年'})
+    let periodicalBalances = balanceData
     .iter((year, recs) => {
         let journalOfYear = Object.entries(journalData[year]),
             balanceOfYear = recs.grip(rec => rec.ccode, {desc: '科目'})
@@ -119,77 +129,61 @@ function processPeriodicalBalance(balanceData, journalData){
     return periodicalBalances;
 }
 
+function periodicalBalanceCascaded(){
+    
+    let balanceData = List.from(BALANCE.data);
+    for (let i = 0; i < balanceData.length; i++){
+        balanceData[i].mb = toNum(balanceData[i].mb)
+        balanceData[i].me = toNum(balanceData[i].me)
+    }
+
+    let journalData = processJournal(JOURNAL.data);
+    let periodicalBalances = processPeriodicalBalance(balanceData, journalData);
+        
+    function backTraverse(list, func){
+        for (let i = 0; i < list.length; i++){
+            backTraverse(list[i].heir, func);
+            func(list[i]);
+        }
+    }
+
+    for (let i = 0; i < periodicalBalances.length; i++){
+        periodicalBalances[i] = List.from(Object.values(periodicalBalances[i]))
+        .map(e => new Record(e, {head}))
+        .cascade(rec=>rec.get('ccode').length,
+            (desc, ances) => {
+                let descCode  = desc.get('ccode'),
+                    ancesCode = ances.get('ccode');
+                return descCode.startsWith(ancesCode);
+            }
+        )
+
+        backTraverse(periodicalBalances[i], (rec) => {
+            if(rec.heir.length > 0){
+                rec.set('mb', rec.heir.reduce((acc, e) => acc + e.get('mb'), 0))
+                rec.set('me', rec.heir.reduce((acc, e) => acc + e.get('me'), 0)) 
+                rec.set('md', rec.heir.reduce((acc, e) => acc + e.get('md'), 0)) 
+                rec.set('mc', rec.heir.reduce((acc, e) => acc + e.get('mc'), 0)) 
+            }
+        })
+    }
+
+    console.log(periodicalBalances);
+    let data = periodicalBalances.flat().grip(e => `${e.get('iyear')}-${e.get('iperiod')}`, {desc: '期间'})
+
+    return data;
+}
+
 function importProc({BALANCE, JOURNAL}){
 
-    // 首先我们检查余额表的期间与序时账的期间是否一致。
-    // 余额表有可能没有期间，有可能只有一个期间。对于这种情况我们就需要通过
-    // 序时账累加来计算期间的余额了。反之，如果余额表的期间与序时账一致，那
-    // 么就直接使用余额表。
-
-    // let balanceData = List.from(BALANCE.data);
-    // for (let i = 0; i < balanceData.length; i++){
-    //     balanceData[i].mb = toNum(balanceData[i].mb)
-    //     balanceData[i].me = toNum(balanceData[i].me)
-    // }
-
-    // let journalData = processJournal(JOURNAL.data);
-    // let periodicalBalances = processPeriodicalBalance(balanceData, journalData);
-        
-    // function backTraverse(list, func){
-    //     for (let i = 0; i < list.length; i++){
-    //         backTraverse(list[i].heir, func);
-    //         func(list[i]);
-    //     }
-    // }
-
-    // for (let i = 0; i < periodicalBalances.length; i++){
-    //     periodicalBalances[i] = List.from(Object.values(periodicalBalances[i]))
-    //     .map(e => new Record(e, {head}))
-    //     .cascade(rec=>rec.get('ccode').length,
-    //         (desc, ances) => {
-    //             let descCode  = desc.get('ccode'),
-    //                 ancesCode = ances.get('ccode');
-    //             return descCode.startsWith(ancesCode);
-    //         }
-    //     )
-
-    //     backTraverse(periodicalBalances[i], (rec) => {
-    //         if(rec.heir.length > 0){
-    //             rec.set('mb', rec.heir.reduce((acc, e) => acc + e.get('mb'), 0))
-    //             rec.set('me', rec.heir.reduce((acc, e) => acc + e.get('me'), 0)) 
-    //             rec.set('md', rec.heir.reduce((acc, e) => acc + e.get('md'), 0)) 
-    //             rec.set('mc', rec.heir.reduce((acc, e) => acc + e.get('mc'), 0)) 
-    //         }
-    //     })
-    // }
-
-    // console.log(periodicalBalances);
-    // let data = periodicalBalances.flat().grip(e => `${e.get('iyear')}-${e.get('iperiod')}`, {desc: '期间'})
-
-    let balanceData = head.createBody(BALANCE.data)
-        .uniq(entry => `${entry.get('ccode')}-${entry.get('iperiod')}-${entry.get('iyear')}`);
-    let data = balanceData
-        .grip('iyear', {desc:'年'})
-        .iter((key, recs) => {
-
-            if (recs.isColSame('iperiod')){
-                for (let i = 0; i < recs.length; i++){
-                    recs[i].set('iperiod', 0);
-                }
-            }
-
-            return recs.grip('iperiod', {desc: '期间'})
-                .iter((key, codeRecs) => {
-                    return codeRecs.orderBy('ccode').cascade('ccode');;
-                })
-        });
+    let data = head.createBody(BALANCE.data)
+        .uniq(entry => `${entry.get('ccode')}-${entry.get('iperiod')}`)
+        .orderBy('ccode').cascade('ccode');
 
     console.log(data, 'balance');
 
     return new Table(head, data, {expandable: true, editable:false, rowswiseExportable: true});
 }
-
-
 
 export default function(){
     return new Sheet ({

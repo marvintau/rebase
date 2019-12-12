@@ -1,4 +1,4 @@
-import {Cols, Body, Head, Table, Sheet} from 'persisted';
+import {Head, Table, Sheet} from 'persisted';
 
 // head是科目发生额分析的表头
 let head = new Head({
@@ -27,31 +27,24 @@ function importProc({BALANCE, CategoricalAccruals}){
 
     let {head: vHead, data: vData, attr:vAttr} = CategoricalAccruals.tables;
 
-    let vDict = vData.iter((key, annual) => {
-        return annual.grip('ccode')
-            .iter((key, content) => {
-                return new Table(vHead, content[0].subs, vAttr);
-            })
-    })
+    let vDict = vData.grip('ccode')
+        .iter((key, content) => {
+            return new Table(vHead, content[0].subs, vAttr);
+        })
 
     // 接下来我们首先获得每个期间的科目发生额，然后在对应期间内
     // 从上面的科目-凭证索引中找到所有期间内对应科目的凭证列表
 
-    let data = head.createBody(BALANCE.data)
-        .orderBy('iyear')
-        .grip('iyear', {desc: '年'})
-        .iter((key, balance) => {
-            let vouchers = vDict.get(key);
+    let balance = head.createBody(BALANCE.data)
 
-            for (let i = 0; i < balance.length; i++){
-                let ccode = balance[i].get('ccode');
-                balance[i].subs = vouchers.get(ccode);
-            }
+    for (let i = 0; i < balance.length; i++){
+        let ccode = balance[i].get('ccode');
+        balance[i].subs = vDict.get(ccode);
+    }
 
-            return balance
-                .orderBy('ccode')
-                .cascade('ccode');
-        })
+    let data = balance
+        .orderBy('ccode')
+        .cascade('ccode');
 
     return new Table(head, data, {expandable: true, rowswiseExportable: true});
 }
@@ -64,6 +57,6 @@ export default function(){
         },
         importProc,
         desc: '科目发生额',
-        type: 'DATA'
+        type: 'DATA',
     })
 }

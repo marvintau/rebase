@@ -1,11 +1,9 @@
-
-const BACKUP_PATH='../ServerStorage';
-
 import express from 'express';
 import path from 'path';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import del from 'del';
+
+import {BACKUP_PATH} from './config'
 
 const fs = require('fs').promises;
 
@@ -16,7 +14,6 @@ db.ensureIndex({fieldName: 'username', unique: true});
 import FileServ from './file-serv.js';
 const Files = {};
 
-import {operate, retrieveAndStore} from './database.js';
 
 import XLSX from 'xlsx';
 import bookRestore from './book-restore';
@@ -29,8 +26,12 @@ var server = app.listen(8080, function () {
 });
 
 const io = require('socket.io').listen(server);
+
+import projectServerInit from './proj-server';
+import uploadServerInit from './upload-server';
 const tableServer = io.of('/TABLES');
 const uploadServer = io.of('/UPLOAD');
+const projServer = io.of('/PROJECT');
 const authServer = io.of('/AUTH');
 
 app.use(express.static(path.join(__dirname, '../public')));
@@ -42,114 +43,26 @@ app.get('*', function(req, res){
     res.redirect('/');
 })
 
-// 上传文件的handler响应两种message：
-// 
-// PREP：接受一个包含文件名和文件尺寸的信息，创建文件并返回SEND指令，
-//       包含文件名和起始位置。
-// RECV：接受文件名和buffer的信息。返回新的百分比，和下次读取的位置。
-//       客户端如果使用file position其实可以不需要这个位置。
-
-function copyFromPublic(fileName, id, projName){
-    let sourceFileName = fileName,
-        sourcePath = path.join(BACKUP_PATH, 'public', sourceFileName),
-        targetFileName = `SOURCE.${projName}.${sourceFileName}`,
-        targetPath = path.join(BACKUP_PATH, id, projName, targetFileName);
-
-    return {sourcePath, targetPath};
-}
-
-uploadServer.on('connection', function (socket) {
-
-    socket.on('CREATE', function({id, projName}) {
-
-        console.log('Creating directory of ', projName);
-
-        let filePath = path.join(BACKUP_PATH, id, projName);
-
-        fs.mkdir(filePath).then(() => {
-            let {sourcePath, targetPath} = copyFromPublic('CASHFLOW_WORKSHEET.0.xlsx', id, projName)
-            return fs.copyFile(sourcePath, targetPath)
-        }).then(() => {
-            let {sourcePath, targetPath} = copyFromPublic('FINANCIAL_WORKSHEET.0.xlsx', id, projName)
-            return fs.copyFile(sourcePath, targetPath)
-        }).then(() => {
-            console.log('create directory done')
-            socket.emit('CREATE_DONE', {});
-        }).catch(({code}) => {
-            socket.emit('ERROR', {msg: code});
-        })
-    })
-
-    socket.on('DELETE', function({id, projName}) {
-        console.log('received DELETE', projName, path.join(BACKUP_PATH, id, projName));
-        let projPath = path.join(BACKUP_PATH, id, projName);
-
-        del([projPath], {force: true}).then(() => {
-            console.log('remove directory done')
-            socket.emit('DELETE_DONE', {});
-        }).catch((err) => {
-            console.log(err)
-            socket.emit('ERROR', {msg: err.code})
-        })
-        // fs
-    })
-
-    socket.on('PREP', function ({id, projName, name, size}) { 
-
-        let filePath = path.resolve(BACKUP_PATH, id, projName, name);
-
-        fs.access(filePath)
-        .then(() => {
-            return fs.unlink(filePath)
-        })
-        .then(() => {
-            console.log('File with same name has been removed.');
-        })
-        .finally(() => {
-            Files[`${id}-${name}`] = new FileServ(filePath, size);
-            socket.emit('SEND', {name, percent: 0, position: 0});    
-        })
-    });
-
-    socket.on('RECV', function ({id, position, name, data}) {
-        
-        let afterWrite = ({part, percent, position}) => {
-            console.log('afterWrite', part, percent, position);
-
-            let label = {
-                LAST: 'DONE',
-                MOST: 'SEND',
-            }[part]
-
-            socket.emit(label, {name, percent, position})
-        }
-
-        Files[`${id}-${name}`].writeChunk(position, data, afterWrite);
-    });
-
+projServer.on('connection', function (socket) {
+    socket = projectServerInit(socket);
 })
 
+uploadServer.on('connection', function(socket) {
+    socket = uploadServerInit(socket, Files);
+})
 
-function getRestoredFileName(projName, sheetName, type){
-    return `RESTORED.${projName}.${sheetName}${type === undefined ? "" : "."+type}.JSON`
+function getRestoredFileName(sheetName, type){
+    return `RESTORED.${sheetName}${type === undefined ? "" : "."+type}.JSON`
 }
 
 tableServer.on('connection', function (socket) {
 
-    socket.on('REQUIRE_LIST', ({id}) => {
-        console.log('Received requiring list of projects from ', id);
-        fs.readdir(path.resolve(BACKUP_PATH, id), {withFileTypes: true}).then(res => {
-            socket.emit('LIST', {list: res.filter(e => e.isDirectory()).map(e => e.name)});
-        }).catch(err => {
-            console.log('server reading local file failed', err);
-        })    
-    })
 
     socket.on('SEND', function({id, projName, sheetName, type, position}){
 
         console.log(`SENDING ${projName}-${sheetName}${type? `-${type}`:''} FROM@ ${position}`, );
         
-        let fileName = getRestoredFileName(projName, sheetName, type);
+        let fileName = getRestoredFileName(sheetName, type);
         console.log('restored filename', fileName);
     
         // 以下是读取一个块之后的操作。块的大小是固定的，并封装在了FileServ中，不难
@@ -183,7 +96,6 @@ tableServer.on('connection', function (socket) {
                 } else {
                     socket.emit('NOTFOUND', {sheetName, projName})
                 }
-            
             }
         }
 
@@ -213,7 +125,7 @@ tableServer.on('connection', function (socket) {
         }
 
         console.log(BACKUP_PATH, id, projName, fileName);
-        let fileName = getRestoredFileName(projName, `saved${sheetName}`, type),
+        let fileName = getRestoredFileName(`saved${sheetName}`, type),
             filePath = path.resolve(BACKUP_PATH, id, projName, fileName);
 
         fs.writeFile(filePath, dataBuffer);
@@ -249,59 +161,6 @@ tableServer.on('connection', function (socket) {
         let outputArrayBuffed = s2ab(xlsOutput);
 
         socket.emit('EXPORTED', {outputArrayBuffed, projName, sheetName})
-    })
-
-    socket.on('RESTORE', function({projName, path}){
-
-        bookRestore(projName)
-        .then(result => {
-            socket.emit('FILEPREPARED', {});
-        })
-        .catch(err => {
-            console.log('error during restoring xls files', err);
-        })
-
-        // console.log('begin restoring', data);
-        // operate('RESTORE', path.join(BACKUP_PATH, `${data.path}.BAK`)).then(res => {
-        //     let dataPath = path.join(BACKUP_PATH, data.path);
-            
-        //     Promise.all(initialTables.map(method => retrieveAndStore(dataPath, method)))
-        //         .then(res => {
-        //             return fs.writeFile(path.join(BACKUP_PATH, `${data.path}.RESTORED`))
-        //         })
-        //         .then(res => {
-        //             socket.emit('FILEPREPARED', {})
-        //         })
-
-        // }).catch(err=>{
-        //     console.error(err, 'restore');
-        //     socket.emit('ERROR', {type:"ERROR", data:{err, from:"restore"}})
-        // });
-
-        // let processDetected = false;
-
-        // (function polling(){
-        //     operate('PROGRESS').then(function(res){
-
-        //         if(res.recordset.length === 0){
-        //             if(processDetected){
-        //                 console.log('no more restoring process');
-        //                 socket.emit('RESTOREDONE', {});    
-        //             } else {
-        //                 setTimeout(polling, 100);
-        //             }
-
-        //         } else {
-        //             processDetected = true;
-        //             console.log(res.recordset[0], 'prog');
-        //             socket.emit('PROG', {data : res.recordset[0] });
-        //             setTimeout(polling, 100);
-        //         }
-        //     }).catch(err=>{
-        //         console.log(err, 'polling');
-        //         socket.emit('ERROR', {type:"ERROR", data: {err, from:"polling"}})
-        //     })
-        // })();
     })
 });
 

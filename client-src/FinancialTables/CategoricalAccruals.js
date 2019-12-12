@@ -28,8 +28,8 @@ head.setColProp({colDesc: '对方科目'}, 'ccode_equal');
 head.setColProp({colDesc: '摘要'},     'cdigest');
 head.setColProp({colDesc: '借方发生', isSortable: true}, 'md');
 head.setColProp({colDesc: '贷方发生', isSortable: true}, 'mc');
-head.setColProp({colDesc: '年', hidden: true}, 'iyear');
 head.setColProp({colDesc: '期间'}, 'iperiod');
+head.setColProp({colDesc: '年', hidden: true}, 'iyear');
 
 function makeBackwardReference(listOfList){
     let backward = new Body(0);
@@ -85,20 +85,17 @@ function importProc({JOURNAL, BALANCE}){
         }
     }
 
-    data = data
-    .grip('iyear', {desc: '年'})
-    .iter((key, recs) => {
 
-        let voucherList = recs
-            .grip(route => `${route.get('iperiod')}-${route.get('ino_id')}`, 'by-voucher-id')
-            .vals();
+    let voucherList = data
+        .grip(route => `${route.get('iperiod')}-${route.get('ino_id')}`, 'by-voucher-id')
+        .vals();
 
         // voucherList现在是一个list of list，其中每个子层list是凭证。现在要将凭证中的
         // 每一行抽出来作为索引，然后将子层list作为其child。需要注意的是我们此时建立了
         // 一个循环引用。因为子层list里面的每个凭证行的child还是这个list自己。最终形成
         // 的是一个表。
 
-        return makeBackwardReference(voucherList)
+    data = makeBackwardReference(voucherList)
         .grip(e => e.get('ccode'))
         .iter((key, val) => {
             let summed = head.sum(val);
@@ -106,7 +103,6 @@ function importProc({JOURNAL, BALANCE}){
             return summed;
         })
         .grap();
-    }) 
 
     console.log(data);
 
@@ -121,6 +117,7 @@ export default function(){
         },
         importProc,
         desc: '按科目重分类的明细',
-        type: 'DATA'
+        type: 'DATA',
+        hidden: true,
     })
 }

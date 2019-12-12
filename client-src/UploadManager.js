@@ -3,11 +3,24 @@ import io from 'socket.io-client';
 
 import {Label, Button, FormGroup, FormText, Form, Input} from 'reactstrap';
 
-
-
 const BLOCK_SIZE = 524288;
 
-export default class UploadBackup extends React.Component{
+function BoldLabel(props){
+    let {children} = props;
+    return <Label className="font-weight-bold" >{children}</Label>
+}
+
+function HoriGroup(props){
+    let {children} = props;
+    return <FormGroup style={{margin:'0px 10px'}}>{children}</FormGroup>
+}
+
+function Tip(props){
+    let {children} = props;
+    return <div style={{color:'#B86162'}}>{children}</div>
+}
+
+export default class UploadManager extends React.Component{
     constructor(props){
         super(props);
 
@@ -15,20 +28,17 @@ export default class UploadBackup extends React.Component{
             fileName: undefined,
             uploadState: "NONE",
             progress : 0,
+            bookType: 'NONE',
         }
 
         this.fileObj = undefined;
         this.fileRef = React.createRef();
- 
-        this.nameRef = React.createRef();
-        this.yearRef = React.createRef();
-        this.fileTypeRef = React.createRef();
-        this.bookTypeRef = React.createRef();
     }
 
     componentDidMount(){
 
-        const {address} = this.props;
+        const {address, projName} = this.props;
+        const id = localStorage.getItem('user_id');
 
         this.socket = io(`${address}/UPLOAD`);
 
@@ -44,25 +54,24 @@ export default class UploadBackup extends React.Component{
                 this.fileObj[sliceMethod](position, sliceEnd)
                     .arrayBuffer()
                     .then(buffer => {
-                        this.socket.emit('RECV', { position, name, data: buffer });
+                        this.socket.emit('RECEIVE', {id, position, projName, name, data: buffer });
                     })
                 break;
             } else {
                 throw new Error('上传文件：浏览器的版本比较旧，不支持Blob.slice方法。')
             }
-        }).on('CREATE_DONE', () => {
-            console.log('create done');
-            this.setState({uploadState: 'CREATE_DONE'})
-        }).on('DELETE_DONE', () => {
-            console.log('delete done');
-            this.setState({uploadState: 'DELETE_DONE'})
-        }).on('DONE', () => {
-            this.setState({uploadState : "DONE"});
+        }).on('RECEIVE_DONE', () => {
+            this.setState({uploadState : "RESTORING"});
+            this.socket.emit('RESTORE', {id, projName})
+        }).on('RESTORE_DONE', () => {
+            this.setState({
+                uploadState : "DONE",
+                fileName: undefined,
+                bookType: "NONE",
+                progress: 0
+            });
         }).on('ERROR', ({msg}) => {
-            let errMsg = {
-                'EEXIST': '已经有一个同名的项目了'
-            }[msg];
-            this.setState({uploadState: 'ERROR', errMsg})
+            this.setState({uploadState: 'ERROR', msg})
         });
     }
 
@@ -75,45 +84,22 @@ export default class UploadBackup extends React.Component{
         let {projName} = this.props,
             id = localStorage.getItem('user_id');
 
-        let fileType = this.fileTypeRef.current.value,
-            bookType = this.bookTypeRef.current.value,
-            year = this.yearRef.current.value;
+        let {bookType, fileName} = this.state,
+            fileType = fileName.split('.').pop().toLowerCase();
 
-        if(bookType === 'CASHFLOW_WORKSHEET' || bookType === 'FINANCIAL_WORKSHEET'){
-            year = 0;
-        }
+        console.log(projName, 'projName');
 
         let payload = {
             id,
             projName,
-            name: `SOURCE.${projName}.${bookType}.${year}.${fileType}`,
+            name: `SOURCE.${bookType}.${fileType}`,
             size: this.fileObj.size,
         }
 
-        this.socket.emit('PREP', payload);
+        this.socket.emit('PREPARE_TO_RECEIVE', payload);
 
         this.setState({
             uploadState: 'MORE'
-        })
-    }
-
-    create = () => {
-        let id = localStorage.getItem('user_id');
-        let projName = this.nameRef.current.value;
-        console.log('creating', projName, this.nameRef);
-        this.socket.emit('CREATE', {projName, id})
-        this.setState({
-            uploadState: 'WAITING'
-        })
-    }
-
-    delete = () => {
-        let id = localStorage.getItem('user_id');
-        let {projName} = this.props;
-        console.log("deleting project", projName);
-        this.socket.emit('DELETE', {id, projName})
-        this.setState({
-            updateState: 'WAITING'
         })
     }
 
@@ -126,113 +112,66 @@ export default class UploadBackup extends React.Component{
         })
     }
 
-    guessFields = () => {
-        if (this.fileObj !== undefined){
-    
-            let [base, fileType] = this.fileObj.name.split('.'),
-                [year, bookType, projName] = base.split('-');
-    
-            fileType = {
-                XLS : 'xls',
-                xls : 'xls',
-                XLSX: 'xlsx',
-                xlsx: 'xlsx',
-                csv:  'csv',
-                CSV:  'csv',
-                BAK:  'bak2019',
-                bak:  'bak2019',
-            }[fileType]
-    
-            bookType = {
-                '序时账' : 'JOURNAL',
-                '科目余额表' : 'BALANCE',
-                '辅助核算明细表' : 'ASSISTED',
-                '现金流编制明细' : 'CASHFLOW_WORKSHEET'
-            }[bookType]
-    
-            this.fileTypeRef.current.value = fileType
-            this.bookTypeRef.current.value = bookType
-            this.yearRef.current.value = year
-        }
+    selectFileType = (e) => {
+        let {value: bookType} = e.target;
+        this.setState({bookType})
     }
 
     render(){
 
-        let {projName, toDelete} = this.props;
-        let {fileName, uploadState} = this.state;
-
-        if (projName == undefined){
-            switch(uploadState){
-                case 'NONE':
-                    return <FormGroup>
-                        <Label>客户名称</Label>
-                        <input class="form-control" style={{margin:'3px'}} id="company-name" placeholder="项目（客户）名称" ref={this.nameRef} />
-                        <Button id="upload" onClick={this.create}>创建</Button>
-                        <FormText>项目名称一经创建则不能更改，请再三检查。如果写错名称，您必须先删除整个项目，并重新上传数据文件。</FormText>
-                    </FormGroup>
-                case 'WAITING':
-                    return <FormGroup>请稍候…</FormGroup>
-                case 'CREATE_DONE':
-                    return <FormGroup>创建完成，请从项目列表中进入项目，并继续上传文件</FormGroup>                
-                case 'ERROR':
-                    return <FormGroup><Label>{this.state.errMsg}</Label></FormGroup>
-            
-            }
-        } else if (toDelete){
-            switch(uploadState){
-                case 'DELETE_DONE':
-                    return <FormGroup>项目已经清除，请从列表中进入项目，或建立新的项目</FormGroup>                
-                case 'NONE':
-                    return <FormGroup>
-                        <Label>确定删除这个项目吗？</Label>
-                        <Button id='delete' onClick={this.delete}>我确定了</Button>
-                    </FormGroup>
-            }
-        }
+        let {uploadState} = this.state;
 
         switch(uploadState){
             case 'DONE':
             case 'NONE':
-                return <Form>
-                    <FormGroup>
-                        {uploadState === 'DONE' ? <Label>上传完毕，请返回至上一级，从列表中打开进行相应操作, 或者继续</Label> : []}
-                        <Label>上传文件</Label>
+                let {fileName, bookType} = this.state;
+
+                let bookTypeOptions = {
+                    NONE : '未选择',
+                    BALANCE : '科目余额',
+                    JOURNAL : '序时账',
+                    // ASSISTED : '辅助核算',
+                    CASHFLOW_WORKSHEET : '现金流编制底稿',
+                    FINANCIAL_WORKSHEET : '资产负债表编制底稿',
+                }
+
+                return <Form style={{display:"flex", flexDirection:'row'}}>
+                    <HoriGroup>
+                        <BoldLabel>{uploadState==='DONE' && '继续'}上传文件</BoldLabel>
                         <input className='file-input' type="file" id="choose-backup-file" ref={this.fileRef} onChange={this.updateFile} />
-                        <Button color="info" onClick={this.guessFields}>猜名字</Button>
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>年度</Label>
-                        <Input id="year" placeholder="会计年度" ref={this.yearRef} />
-                        </FormGroup>
-                    <FormGroup>
-                        <Label>上传文件类型</Label>
-                        <input className="form-control" id="file-type" type="select" ref={this.fileTypeRef}>
-                            <option value='csv'>.CSV文件</option>
-                            <option value='xls'>.XLS（Excel兼容格式）</option>
-                            <option value='xlsx'>.XLSX（Excel2007及以上）</option>
-                            <option value='bak2008'>.BAK（SQLServer2008以下）</option>
-                            <option value='bak2019'>.BAK（SQLServer2008以上）</option>
-                        </input>
-                    </FormGroup>
-                    <FormGroup>
-                        <Label>数据类别</Label>
-                        <input className="form-control" id="file-type" type="select" ref={this.bookTypeRef}>
-                            <option value='BALANCE'>科目余额</option>
-                            <option value='JOURNAL'>序时账</option>
-                            <option value='ASSISTED'>辅助核算</option>
-                            <option value='CASHFLOW_WORKSHEET'>现金流编制底稿</option>
-                            <option value='FINANCIAL_WORKSHEET'>资产负债表编制底稿</option>
-                        </input>
-                        {(fileName !== undefined) ?
-                            <Button id="upload" onClick={this.upload}>上传</Button> :
-                            <Label>选择文件后才能上传</Label>
-                        }
-                    </FormGroup>
+                        {fileName === undefined 
+                         ? <Tip>您还没选择要上传的文件</Tip>
+                         : fileName.match(/.xlsx?|.XLSX?/) === null
+                         ? <Tip>当前只支持Excel文件(.xls或.xlsx)</Tip>
+                         : undefined}
+                    </HoriGroup>
+                    <HoriGroup>
+                        <BoldLabel>数据类别</BoldLabel>
+                        <select className="form-control" id="book-type" name="bookType" onChange={this.selectFileType}>
+                            {Object.entries(bookTypeOptions).map(([k, v], i) => {
+                                return <option key={i} value={k}>{v}</option>
+                            })}
+                        </select>
+                        {bookType === 'NONE' && <Tip>您还没选择待上传数据的类别</Tip>}
+                    </HoriGroup>
+                    <HoriGroup>
+                        {(fileName && bookType!== 'NONE' ) && <Button id="upload" color="success" style={{margin: '29px 5px 0px'}} onClick={this.upload}>上传</Button>}
+                    </HoriGroup>
+                    <HoriGroup>
+                        {bookType !== 'NONE' && <div style={{marginTop: '35px'}}>
+                            <a href={`./static/${bookType}.xlsx`} download>查看 {bookTypeOptions[bookType]} 的范例</a>
+                        </div>}
+                    </HoriGroup>
                 </Form>
             case 'MORE':
                 return (
                     <FormGroup>
                         已上传 {this.state.progress} %
+                    </FormGroup>)
+            case 'RESTORING':
+                return (
+                    <FormGroup>
+                        上传完成，正在处理已上传数据
                     </FormGroup>)
             case 'ERROR':
                 return <FormGroup><Label>{this.state.errMsg}</Label></FormGroup>
