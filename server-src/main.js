@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import copy from 'recursive-copy';
 
 import {BACKUP_PATH} from './config'
 
@@ -186,6 +187,12 @@ authServer.on('connection', (socket) => {
                 console.log(newDoc, 'reged')
                 let {_id: id} = newDoc;
                 fs.mkdir(path.resolve(BACKUP_PATH, id))
+                .then(() => {
+                    return copy(path.resolve(BACKUP_PATH, 'public', '示例项目-2018'), path.resolve(BACKUP_PATH, id, '示例项目-2018'))
+                    .catch((err) => {
+                        console.log('file copying', err);
+                    })
+                })
                 .then(() => {
                     socket.emit('REG_DONE', {id: newDoc._id});
                 })
