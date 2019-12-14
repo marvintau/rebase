@@ -11,6 +11,7 @@ export default class LoginPage extends React.Component {
         this.state = {
             registering: false,
             username: '',
+            usernameValid : false,
             password: '',
             passtwice: '',
             nickname: '',
@@ -32,7 +33,7 @@ export default class LoginPage extends React.Component {
         })
         .on('LOG_NOT_FOUND', () => {
             console.log('错误');
-            this.setState({error:'没登进去，您检查下密码？', loading: false})
+            this.setState({error:'没登进去，您检查一下用户名或密码？', loading: false})
         })
         .on('REG_DONE', () => {
             const { from } = this.props.location.state || { from: { pathname: "/" } };
@@ -53,7 +54,10 @@ export default class LoginPage extends React.Component {
 
     handleChange = (e) => {
         const { name, value } = e.target;
-        this.setState({ [name]: value });
+
+        let usernameValid = this.state.username.match(/^[\._a-zA-Z]+$/) !== null;
+
+        this.setState({ [name]: value, usernameValid});
     }
 
     toggleRegister = (e) => {
@@ -67,15 +71,16 @@ export default class LoginPage extends React.Component {
         e.preventDefault();
 
         this.setState({ submitted: true });
-        const { username, password, nickname } = this.state;
+        const { registering, username, usernameValid, password, nickname } = this.state;
 
         // stop here if form is invalid
-        if (!(username && password)) {
+        if (registering ? !(username && usernameValid && nickname && password) : !(username && password)) {
             return;
         }
 
         this.setState({ loading: true });
-        if(this.state.registering){
+
+        if(registering){
             this.socket.emit('REGISTER', {username, password, nickname});
         } else {
             this.socket.emit('LOGIN', {username, password}); 
@@ -83,14 +88,15 @@ export default class LoginPage extends React.Component {
     }
 
     render() {
-        const { registering, username, password, passtwice, nickname, submitted, loading, error } = this.state;
+        const { registering, username, usernameValid, password, passtwice, nickname, submitted, loading, error } = this.state;
 
         let errorMsgElem = error ? <UncontrolledAlert color="danger">{error}</UncontrolledAlert> : [];
-        console.log(errorMsgElem);
+        console.log(errorMsgElem, usernameValid, 'valid');
 
         let navBar = <Navbar color="light" light expand="md">
             <NavbarBrand style={{fontWeight:'bolder', letterSpacing:'-0.08em'}}>🧐Integraudit{' - '}审计通</NavbarBrand>
         </Navbar>
+
 
         let form = <Col md={{size:'4', offset:'4'}} style={{marginTop: '100px'}}>
             <h2>{registering ? '新用户注册': '登录'}</h2>
@@ -98,8 +104,11 @@ export default class LoginPage extends React.Component {
                 <FormGroup className={submitted && !username ? ' has-error' : ''}>
                     <Label for="username">用户名</Label>
                     <Input type="text" name="username" value={username} onChange={this.handleChange} />
-                    {submitted && !username &&
-                        <div className="help-block">用户名是必填的</div>
+                    {(submitted && !username)
+                        ? <div className="help-block">用户名是必填的</div>
+                        : (submitted && !usernameValid)
+                        ? <div className="help-block">用户名包含的字符仅限大小写英文字符，及英文的".", "-"与"_"符号</div>
+                        : undefined
                     }
                 </FormGroup>
                 <FormGroup className={submitted && !password ? ' has-error' : ''}>
