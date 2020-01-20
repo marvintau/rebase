@@ -15,12 +15,12 @@ function parseRemap(type, book){
         // 尽管名字叫做sheet_to_json，但其实它指的是Plain Object
         parsed = XLSX.utils.sheet_to_json(sheet);
 
-    console.log(parsed);
     for (let p = 0; p < parsed.length; p++){
         let rec = parsed[p],
             newRec = {};
         for (let ent = 0; ent < recRemap.length; ent++){
             let [oldKey, newKey] = recRemap[ent];
+
             if(oldKey in rec){
                 newRec[newKey] = rec[oldKey];
             }
@@ -32,6 +32,8 @@ function parseRemap(type, book){
 
         parsed[p] = newRec;
     }
+
+    console.log('parseRemap', parsed);
 
     return parsed
 }
@@ -74,7 +76,27 @@ export default function bookRestore(id, projName, postProcess=(x) => x){
                     book = result[i],
                     [_S, bookType,  _FileType] = fileName.split('.');
 
-                let parsed = parseRemap(bookType, book)
+                let parsed = parseRemap(bookType, book);
+
+                // 处理科目余额的情形
+                if (bookType === 'BALANCE'){
+                    const {mbc, mbd, mb} = parsed[0];
+                    if (mbc !== undefined && mbd !== undefined && mb === undefined){
+                        for (let rec of parsed){
+                            rec.mb = rec.mbc === 0 ? rec.mbd : rec.mbc;
+                        }
+                    }
+
+                    const {mec, med, me} = parsed[0];
+                    if (mec !== undefined && med !== undefined && me === undefined){
+                        for (let rec of parsed){
+                            rec.me = rec.mec === 0 ? rec.med : rec.mec;
+                        }
+                    }
+
+                    parsed = parsed.filter(rec => !rec.ccode_name.trim().startsWith('*'))
+                }
+
                 // 因为data中汇总了所有期间的数据，因此需要flatten，或者按记录push进来。
                 if(['CASHFLOW_WORKSHEET', 'FINANCIAL_WORKSHEET'].includes(bookType)){
                     data[bookType] = parsed;

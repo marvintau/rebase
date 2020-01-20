@@ -79,12 +79,15 @@ function importProc({CASHFLOW_WORKSHEET, BALANCE, CategoricalAccruals, savedCash
     // 把发生额添加到科目余额表中
     while(summedAccrual.length > 0){
 
-        let codeMatch = (codeA, codeB) => (codeA.valueOf() == codeB.valueOf());
+        let codeMatch = (codeA, codeB) => (codeA.valueOf() === codeB.valueOf());
 
         let summedAccrualEntry = summedAccrual.pop(),
             {mc, md, ccode} = summedAccrualEntry.cols,
-            balanceCate = balanceData.find(e => codeMatch(e.cols.ccode, ccode));
-        Object.assign(balanceCate.cols, {mc, md});
+            balanceCate = balanceData.find(e => e.get('ccode').valueOf() === ccode.valueOf())
+
+        if(balanceCate !== undefined){
+            Object.assign(balanceCate.cols, {mc, md});
+        }
     }
 
     // 由于科目余额表中只有末级科目的发生额被更新，这步操作会更新所有更高级的科目

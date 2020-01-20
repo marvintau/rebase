@@ -178,7 +178,8 @@ function importProc({BALANCE, JOURNAL}){
 
     let data = head.createBody(BALANCE.data)
         .uniq(entry => `${entry.get('ccode')}-${entry.get('iperiod')}`)
-        .orderBy('ccode').cascade('ccode');
+        .orderBy('ccode')
+        .cascade('ccode');
 
     console.log(data, 'balance');
 

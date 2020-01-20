@@ -41,6 +41,7 @@ export default class TableManager extends React.Component {
   }
 
   componentWillUnmount(){
+    console.log('will unmount');
     this.socket.close();
     this.sheetColl.clearSheets();
   }
@@ -91,6 +92,7 @@ export default class TableManager extends React.Component {
 
     console.log(projName, sheetName, 'fetch');
 
+    // this.sheetColl.clearSheets();
     this.sheetColl.fetchTable({
       projName,
       sheetName,

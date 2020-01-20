@@ -104,7 +104,7 @@ tableServer.on('connection', function (socket) {
         // 初始化的时候不需要指明size。会在open的时候获取。打开文件的后续操作即
         // 上面所述的发送第一个块。如果FileServ存在，则只需要完成后续的读取-发送
         // 操作，当然也是根据客户端发送来的position来读取。
-        let fileID = `${id}-${fileName}`
+        let fileID = `${id}-${fileName}-${projName}`
         if(Files[fileID] === undefined){
             Files[fileID] = new FileServ(path.resolve(BACKUP_PATH, id, projName, fileName));
         }

@@ -90,6 +90,7 @@ export default class FileServ {
             })
         })
         .catch(err => {
+            console.log(err);
             if (notExisted){
                 notExisted(err);
             } else {

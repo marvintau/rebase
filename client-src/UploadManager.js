@@ -87,7 +87,7 @@ export default class UploadManager extends React.Component{
         let {bookType, fileName} = this.state,
             fileType = fileName.split('.').pop().toLowerCase();
 
-        console.log(projName, 'projName');
+        console.log(projName, 'projName', id, 'user_id');
 
         let payload = {
             id,
