@@ -69,7 +69,9 @@ let BALANCE = [
 
 let CASHFLOW_WORKSHEET = [
     ['项目', 'item'],
-    ['值', 'value']
+    ['值', 'value'],
+    ['item', 'item'],
+    ['value', 'value']
 ]
 
 let FINANCIAL_WORKSHEET = [
