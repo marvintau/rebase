@@ -133,6 +133,7 @@ export default class UploadManager extends React.Component{
                     // ASSISTED : '辅助核算',
                     CASHFLOW_WORKSHEET : '现金流编制底稿',
                     FINANCIAL_WORKSHEET : '资产负债表编制底稿',
+                    EQUIVALENT_CATEGORY_NAMES: '等价的科目名称汇总表'
                 }
 
                 return <Form style={{display:"flex", flexDirection:'row'}}>

@@ -38,7 +38,9 @@ const handleSaved = (saved, defaultVal) => {
     }
 }
 
-function importProc({CASHFLOW_WORKSHEET, BALANCE, CategoricalAccruals, savedCashflowWorksheet}){
+function importProc({CASHFLOW_WORKSHEET, BALANCE, EQUIVALENT_CATEGORY_NAMES, CategoricalAccruals, savedCashflowWorksheet}){
+
+    // console.log(EQUIVALENT_CATEGORY_NAMES, 'equiv');
 
     let worksheetData = handleSaved(savedCashflowWorksheet, CASHFLOW_WORKSHEET.data);
 
@@ -108,6 +110,7 @@ function importProc({CASHFLOW_WORKSHEET, BALANCE, CategoricalAccruals, savedCash
     // specified in the worksheet, the worktable object will be created in the beginning.
     let workTable = new WorkTable(balanceData, cates, {editable: true, expandable: true, autoExpanded: true});
     workTable.parse(worksheetData);
+    workTable.addEquivNames(EQUIVALENT_CATEGORY_NAMES.data);
     workTable.evaluate();
     console.log(workTable);
 
@@ -140,6 +143,7 @@ export default function(){
     return new Sheet({
         referred: {
             CASHFLOW_WORKSHEET: {desc: '现金流量表底稿', location: 'remote'},
+            EQUIVALENT_CATEGORY_NAMES: {desc: '科目等价名称表', location: 'remote'},
             BALANCE: {desc: '科目余额', location: 'remote'},
             CategoricalAccruals: {desc: '科目发生额', location: 'local'},
             savedCashflowWorksheet: {desc: '已保存的现金流底稿模版', location:'remote', type:'CONF'}

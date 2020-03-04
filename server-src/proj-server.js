@@ -44,6 +44,9 @@ const createProject = (socket) => ({id, projName, year}) => {
       let {sourcePath, targetPath} = copyFromPublic('FINANCIAL_WORKSHEET.xlsx', id, projPath)
       return fs.copyFile(sourcePath, targetPath)
   }).then(() => {
+      let {sourcePath, targetPath} = copyFromPublic('EQUIVALENT_CATEGORY_NAMES.xlsx', id, projPath)
+      return fs.copyFile(sourcePath, targetPath)
+  }).then(() => {
       console.log('create directory done')
       socket.emit('CREATE_PROJECT_DONE', {});
   }).catch(({code}) => {

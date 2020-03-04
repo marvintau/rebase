@@ -7,6 +7,24 @@ import colRemap from './parseTypeDictionary';
 
 const BACKUP_PATH='../ServerStorage';
 
+function parseEquivArray(book){
+    let sheet = book.Sheets[book.SheetNames[0]],
+        parsed = XLSX.utils.sheet_to_json(sheet, {header: 1});
+
+    parsed = parsed
+        .filter(line => line.length > 1)
+        .map(line => line.slice(1).map(item => item.trim()))
+    
+    const table = {};
+    for (let line of parsed){
+        for (let name of line){
+            table[name] = line;
+        }
+    }
+
+    return table;
+}
+
 function parseRemap(type, book){
 
     let recRemap = colRemap[type];
@@ -33,7 +51,7 @@ function parseRemap(type, book){
         parsed[p] = newRec;
     }
 
-    console.log('parseRemap', parsed);
+    // console.log('parseRemap', parsed);
 
     return parsed
 }
@@ -56,7 +74,8 @@ export default function bookRestore(id, projName, postProcess=(x) => x){
             JOURNAL: [],
             ASSISTED: [],
             CASHFLOW_WORKSHEET: [],
-            FINANCIAL_WORKSHEET: []
+            FINANCIAL_WORKSHEET: [],
+            EQUIVALENT_CATEGORY_NAMES: {}
         };
 
         return Promise.all(fileNames.map(e => {
@@ -75,6 +94,11 @@ export default function bookRestore(id, projName, postProcess=(x) => x){
                 let fileName = fileNames[i],
                     book = result[i],
                     [_S, bookType,  _FileType] = fileName.split('.');
+
+                if (bookType === 'EQUIVALENT_CATEGORY_NAMES'){
+                    data[bookType] = parseEquivArray(book);
+                    continue;
+                }
 
                 let parsed = parseRemap(bookType, book);
 
@@ -97,7 +121,6 @@ export default function bookRestore(id, projName, postProcess=(x) => x){
                     parsed = parsed.filter(rec => !rec.ccode_name.trim().startsWith('*'))
                 }
 
-                // 因为data中汇总了所有期间的数据，因此需要flatten，或者按记录push进来。
                 if(['CASHFLOW_WORKSHEET', 'FINANCIAL_WORKSHEET'].includes(bookType)){
                     data[bookType] = parsed;
                 } else {
@@ -106,7 +129,7 @@ export default function bookRestore(id, projName, postProcess=(x) => x){
             }
 
             data = postProcess(data);
-            console.log(Object.values(data).map(e => e.length), 'restoring');
+
             return Promise.all(Object.keys(data).map(type => {
                 if(data[type].length === 0){
                     return true;
